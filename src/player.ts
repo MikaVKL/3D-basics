@@ -58,7 +58,10 @@ export class Player {
       forward.y = 0
       forward.normalize()
 
-      const right = new THREE.Vector3().crossVectors(forward, this.camera.up).negate()
+      // cross(forward, up) ergibt in Three.js' rechtshändigem Koordinatensystem
+      // bereits den korrekten "rechts"-Vektor der Kamera - kein .negate() nötig
+      // (das hätte links/rechts vertauscht, exakt der gemeldete Joystick-Bug).
+      const right = new THREE.Vector3().crossVectors(forward, this.camera.up)
 
       moveDirection.addScaledVector(forward, this.moveInputZ)
       moveDirection.addScaledVector(right, this.moveInputX)

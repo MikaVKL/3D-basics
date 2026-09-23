@@ -54,6 +54,11 @@ sunLight.shadow.camera.top = 25
 sunLight.shadow.camera.bottom = -25
 sunLight.shadow.camera.near = 1
 sunLight.shadow.camera.far = 60
+// Reduziert Schatten-Artefakte ("Shadow Acne"/abgelöste Schatten), die bei
+// steilem Lichtwinkel sonst als merkwürdige, dreieckige Schattenfetzen statt
+// eines sauberen Kisten-Schattens auftreten können.
+sunLight.shadow.bias = -0.0015
+sunLight.shadow.normalBias = 0.02
 scene.add(sunLight)
 
 // ---------------------------------------------------------------------------
