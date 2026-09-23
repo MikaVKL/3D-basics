@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dusk Arena</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Fadenkreuz in der Bildschirmmitte -->
+    <div id="crosshair"></div>
+
+    <!-- Overlay, das vor dem ersten Klick angezeigt wird (Pointer Lock
+         braucht eine echte Nutzer-Interaktion, siehe main.ts) -->
+    <div id="overlay">
+      <div id="overlay-content">
+        <h1>Dusk Arena</h1>
+        <p>Klicken, um zu spielen</p>
+        <p class="hint">WASD: Bewegen &nbsp;·&nbsp; Maus: Umschauen &nbsp;·&nbsp; Leertaste: Springen &nbsp;·&nbsp; ESC: Menü</p>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

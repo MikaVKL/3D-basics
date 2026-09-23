@@ -1,0 +1,96 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* keine Scrollbalken im Vollbild-Spiel */
+  background: #1a1f2e;
+  font-family: system-ui, sans-serif;
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+}
+
+#app canvas {
+  display: block;
+}
+
+/* Fadenkreuz: einfaches Kreuz aus zwei kleinen Balken in der Bildschirmmitte */
+#crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+#crosshair::before,
+#crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+#crosshair::before {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+#crosshair::after {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+/* Startbildschirm-Overlay */
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 31, 46, 0.75);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  z-index: 10;
+  transition: opacity 0.2s ease;
+}
+
+#overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#overlay-content {
+  text-align: center;
+  color: #e8ecf1;
+}
+
+#overlay-content h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2.5rem;
+  letter-spacing: 0.05em;
+  color: #33e6cc; /* Neon-Akzent aus der Palette */
+  text-shadow: 0 0 12px rgba(51, 230, 204, 0.6);
+}
+
+#overlay-content p {
+  margin: 0.25rem 0;
+  font-size: 1.1rem;
+  color: #cfd6e0;
+}
+
+#overlay-content .hint {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #8a97ab;
+}
