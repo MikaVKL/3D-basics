@@ -108,21 +108,49 @@ export class Player {
   // mit einem Solid (Wand/Kiste) kollidieren würde. X und Z werden getrennt
   // geprüft, damit man an Wänden "entlang gleiten" kann statt komplett
   // stecken zu bleiben.
+  //
+  // Wichtig: Wenn der volle Schritt kollidiert, wird nicht einfach die
+  // komplette Bewegung verworfen (das würde den Spieler eine sichtbare
+  // Lücke vor jeder Wand/Kiste "einfrieren" lassen, aus der er nie wieder
+  // herauskommt). Stattdessen wird per Bisektion die größte noch sichere
+  // Teilstrecke gesucht, damit man bis knapp an das Hindernis heranlaufen
+  // kann - wie man es aus jedem Shooter erwartet.
   private tryMove(delta: THREE.Vector3) {
     const camera = this.controls.object
     const position = camera.position
 
-    const nextX = position.clone()
-    nextX.x += delta.x
-    if (!this.collidesAt(nextX)) {
-      position.x = nextX.x
+    position.x = this.resolveAxis(position, 'x', delta.x)
+    position.z = this.resolveAxis(position, 'z', delta.z)
+  }
+
+  private resolveAxis(position: THREE.Vector3, axis: 'x' | 'z', delta: number): number {
+    const current = position[axis]
+    if (delta === 0) return current
+
+    const target = position.clone()
+    target[axis] = current + delta
+
+    if (!this.collidesAt(target)) {
+      return target[axis]
     }
 
-    const nextZ = position.clone()
-    nextZ.z += delta.z
-    if (!this.collidesAt(nextZ)) {
-      position.z = nextZ.z
+    // Bisektion: den größten Bruchteil von "delta" finden, der noch sicher ist.
+    let safeFraction = 0
+    let blockedFraction = 1
+    const probe = position.clone()
+
+    for (let i = 0; i < 8; i++) {
+      const midFraction = (safeFraction + blockedFraction) / 2
+      probe[axis] = current + delta * midFraction
+
+      if (this.collidesAt(probe)) {
+        blockedFraction = midFraction
+      } else {
+        safeFraction = midFraction
+      }
     }
+
+    return current + delta * safeFraction
   }
 
   private collidesAt(position: THREE.Vector3): boolean {
