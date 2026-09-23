@@ -18,6 +18,11 @@ export interface ArenaResult {
   group: THREE.Group
   solids: Solid[]
   spawnPoint: THREE.Vector3
+  // Objekte, auf die geschossen werden kann (für den Raycast der Waffe).
+  // Bewusst eine explizite Liste statt "einfach die ganze Gruppe" - sonst
+  // würde auch das dünne, dekorative Boden-Raster (GridHelper) versehentlich
+  // Treffer registrieren.
+  shootables: THREE.Object3D[]
 }
 
 const ARENA_SIZE = 40 // Kantenlänge der quadratischen Arena
@@ -123,5 +128,6 @@ export function buildArena(): ArenaResult {
     group,
     solids,
     spawnPoint: new THREE.Vector3(0, 1.7, 12), // 1.7 ≈ Augenhöhe eines Menschen
+    shootables: [ground, ...solids.map((s) => s.mesh)],
   }
 }

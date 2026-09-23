@@ -1,5 +1,6 @@
 import type { Player } from '../player'
 import type { LookControl } from '../lookControl'
+import type { Weapon } from '../weapon'
 
 // Touch-Steuerung fürs Tablet/Handy (z.B. iPad ohne Maus/Tastatur):
 // - Linke Bildschirmhälfte: virtueller Joystick zum Bewegen (erscheint dort,
@@ -18,6 +19,7 @@ interface TouchElements {
   joystickBase: HTMLElement
   joystickThumb: HTMLElement
   jumpButton: HTMLElement
+  shootButton: HTMLElement
 }
 
 export class TouchInput {
@@ -30,13 +32,15 @@ export class TouchInput {
   private elements: TouchElements
   private player: Player
   private lookControl: LookControl
+  private weapon: Weapon
 
-  constructor(elements: TouchElements, player: Player, lookControl: LookControl) {
+  constructor(elements: TouchElements, player: Player, lookControl: LookControl, weapon: Weapon) {
     this.elements = elements
     this.player = player
     this.lookControl = lookControl
+    this.weapon = weapon
 
-    const { moveZone, lookZone, jumpButton } = elements
+    const { moveZone, lookZone, jumpButton, shootButton } = elements
 
     moveZone.addEventListener('touchstart', (e) => this.onMoveStart(e), { passive: false })
     moveZone.addEventListener('touchmove', (e) => this.onMoveMove(e), { passive: false })
@@ -52,6 +56,12 @@ export class TouchInput {
       e.preventDefault()
       e.stopPropagation()
       this.player.jump()
+    })
+
+    shootButton.addEventListener('touchstart', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.weapon.tryShoot()
     })
   }
 

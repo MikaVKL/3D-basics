@@ -1,5 +1,6 @@
 import type { Player } from '../player'
 import type { LookControl } from '../lookControl'
+import type { Weapon } from '../weapon'
 
 // Steuerung für Maus + Tastatur (Desktop/Laptop).
 // Nutzt die rohe Pointer-Lock-API des Browsers direkt (statt des
@@ -12,23 +13,27 @@ export class DesktopInput {
   private domElement: HTMLElement
   private player: Player
   private lookControl: LookControl
+  private weapon: Weapon
   private onLockChange: (locked: boolean) => void
 
   constructor(
     domElement: HTMLElement,
     player: Player,
     lookControl: LookControl,
+    weapon: Weapon,
     onLockChange: (locked: boolean) => void
   ) {
     this.domElement = domElement
     this.player = player
     this.lookControl = lookControl
+    this.weapon = weapon
     this.onLockChange = onLockChange
 
     window.addEventListener('keydown', (e) => this.setKey(e.code, true))
     window.addEventListener('keyup', (e) => this.setKey(e.code, false))
 
     document.addEventListener('mousemove', (e) => this.handleMouseMove(e))
+    document.addEventListener('mousedown', (e) => this.handleMouseDown(e))
     document.addEventListener('pointerlockchange', () => {
       this.onLockChange(document.pointerLockElement === this.domElement)
     })
@@ -43,6 +48,12 @@ export class DesktopInput {
   private handleMouseMove(e: MouseEvent) {
     if (document.pointerLockElement !== this.domElement) return
     this.lookControl.rotate(e.movementX, e.movementY)
+  }
+
+  private handleMouseDown(e: MouseEvent) {
+    if (document.pointerLockElement !== this.domElement) return
+    if (e.button !== 0) return // nur linke Maustaste schießt
+    this.weapon.tryShoot()
   }
 
   private setKey(code: string, pressed: boolean) {

@@ -178,3 +178,22 @@ body {
 #jump-button:active {
   background: rgba(255, 107, 61, 0.35);
 }
+
+#shoot-button {
+  position: fixed;
+  right: 116px; /* links neben dem Sprung-Button, mit etwas Abstand */
+  bottom: 28px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgba(51, 230, 204, 0.6);
+  background: rgba(51, 230, 204, 0.18);
+  color: #d6fff8;
+  font-size: 1.6rem;
+  z-index: 6;
+  touch-action: none;
+}
+
+#shoot-button:active {
+  background: rgba(51, 230, 204, 0.35);
+}

@@ -6,6 +6,7 @@ import { Player } from './player'
 import { LookControl } from './lookControl'
 import { DesktopInput } from './input/DesktopInput'
 import { TouchInput } from './input/TouchInput'
+import { Weapon } from './weapon'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -77,6 +78,7 @@ const player = new Player(camera, arena.solids)
 player.spawn(arena.spawnPoint)
 
 const lookControl = new LookControl(camera)
+const weapon = new Weapon(camera, scene, arena.shootables)
 
 // ---------------------------------------------------------------------------
 // Eingabe: automatisch zwischen Maus+Tastatur (Desktop) und Touch (Tablet/
@@ -101,7 +103,8 @@ function setActive(active: boolean) {
 
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
-  overlayHint.textContent = 'Links: Joystick zum Bewegen · Rechts: Wischen zum Umschauen · Button: Springen'
+  overlayHint.textContent =
+    'Links: Joystick zum Bewegen · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen'
   touchControls.classList.remove('hidden')
 
   const touchInput = new TouchInput(
@@ -111,15 +114,17 @@ if (isTouchDevice) {
       joystickBase: document.querySelector<HTMLDivElement>('#joystick-base')!,
       joystickThumb: document.querySelector<HTMLDivElement>('#joystick-thumb')!,
       jumpButton: document.querySelector<HTMLButtonElement>('#jump-button')!,
+      shootButton: document.querySelector<HTMLButtonElement>('#shoot-button')!,
     },
     player,
-    lookControl
+    lookControl,
+    weapon
   )
   void touchInput // wird nur über die registrierten Event-Listener genutzt
 
   overlay.addEventListener('click', () => setActive(true))
 } else {
-  const desktopInput = new DesktopInput(renderer.domElement, player, lookControl, (locked) => {
+  const desktopInput = new DesktopInput(renderer.domElement, player, lookControl, weapon, (locked) => {
     setActive(locked)
   })
 
@@ -151,6 +156,7 @@ function animate() {
   if (isActive) {
     player.update(deltaSeconds)
   }
+  weapon.update(deltaSeconds)
 
   renderer.render(scene, camera)
 }
