@@ -3,6 +3,9 @@ import './style.css'
 import { Palette } from './palette'
 import { buildArena } from './arena'
 import { Player } from './player'
+import { LookControl } from './lookControl'
+import { DesktopInput } from './input/DesktopInput'
+import { TouchInput } from './input/TouchInput'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -18,6 +21,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
+scene.add(camera)
 
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
@@ -60,28 +64,62 @@ const arena = buildArena()
 scene.add(arena.group)
 
 // ---------------------------------------------------------------------------
-// Spieler (Kamera-Steuerung + Bewegung)
+// Spieler: Bewegung/Kollision (player) und Blickrichtung (lookControl) sind
+// bewusst von der Eingabequelle getrennt - siehe DesktopInput/TouchInput.
 // ---------------------------------------------------------------------------
 
-const player = new Player(camera, renderer.domElement, arena.solids)
+const player = new Player(camera, arena.solids)
 player.spawn(arena.spawnPoint)
-scene.add(player.controls.object)
 
-// "Klicken zum Spielen"-Overlay: Pointer Lock funktioniert nur nach einer
-// echten Nutzerinteraktion (Browser-Sicherheitsvorgabe), daher der Klick.
+const lookControl = new LookControl(camera)
+
+// ---------------------------------------------------------------------------
+// Eingabe: automatisch zwischen Maus+Tastatur (Desktop) und Touch (Tablet/
+// Handy) wählen. `pointer: coarse` erkennt "ungenaue" Zeigegeräte (Finger)
+// und ist zuverlässiger als reines Feature-Sniffing auf Touch-Events, da
+// z.B. manche Laptops auch einen Touchscreen UND eine Maus haben.
+// ---------------------------------------------------------------------------
+
+const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
+
 const overlay = document.querySelector<HTMLDivElement>('#overlay')!
+const overlayInstruction = document.querySelector<HTMLParagraphElement>('#overlay-instruction')!
+const overlayHint = document.querySelector<HTMLParagraphElement>('#overlay-hint')!
+const touchControls = document.querySelector<HTMLDivElement>('#touch-controls')!
 
-overlay.addEventListener('click', () => {
-  player.controls.lock()
-})
+let isActive = false
 
-player.controls.addEventListener('lock', () => {
-  overlay.classList.add('hidden')
-})
+function setActive(active: boolean) {
+  isActive = active
+  overlay.classList.toggle('hidden', active)
+}
 
-player.controls.addEventListener('unlock', () => {
-  overlay.classList.remove('hidden')
-})
+if (isTouchDevice) {
+  overlayInstruction.textContent = 'Tippen, um zu spielen'
+  overlayHint.textContent = 'Links: Joystick zum Bewegen · Rechts: Wischen zum Umschauen · Button: Springen'
+  touchControls.classList.remove('hidden')
+
+  const touchInput = new TouchInput(
+    {
+      moveZone: document.querySelector<HTMLDivElement>('#touch-move-zone')!,
+      lookZone: document.querySelector<HTMLDivElement>('#touch-look-zone')!,
+      joystickBase: document.querySelector<HTMLDivElement>('#joystick-base')!,
+      joystickThumb: document.querySelector<HTMLDivElement>('#joystick-thumb')!,
+      jumpButton: document.querySelector<HTMLButtonElement>('#jump-button')!,
+    },
+    player,
+    lookControl
+  )
+  void touchInput // wird nur über die registrierten Event-Listener genutzt
+
+  overlay.addEventListener('click', () => setActive(true))
+} else {
+  const desktopInput = new DesktopInput(renderer.domElement, player, lookControl, (locked) => {
+    setActive(locked)
+  })
+
+  overlay.addEventListener('click', () => desktopInput.requestActivation())
+}
 
 // ---------------------------------------------------------------------------
 // Fenstergröße ändern
@@ -105,7 +143,7 @@ function animate() {
   timer.update()
   const deltaSeconds = Math.min(timer.getDelta(), 0.1) // Cap gegen Ausreißer bei Tab-Wechsel
 
-  if (player.controls.isLocked) {
+  if (isActive) {
     player.update(deltaSeconds)
   }
 

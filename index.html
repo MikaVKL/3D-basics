@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Dusk Arena</title>
   </head>
   <body>
@@ -12,13 +12,28 @@
     <!-- Fadenkreuz in der Bildschirmmitte -->
     <div id="crosshair"></div>
 
-    <!-- Overlay, das vor dem ersten Klick angezeigt wird (Pointer Lock
+    <!-- Touch-Steuerung (nur auf Touch-Geräten sichtbar, siehe main.ts).
+         Linke Hälfte = Bewegungs-Joystick, rechte Hälfte = Umschauen per Wisch-Geste. -->
+    <div id="touch-controls" class="hidden">
+      <div id="touch-move-zone"></div>
+      <div id="touch-look-zone"></div>
+
+      <div id="joystick-base">
+        <div id="joystick-thumb"></div>
+      </div>
+
+      <button id="jump-button" aria-label="Springen">⤴</button>
+    </div>
+
+    <!-- Overlay, das vor dem ersten Klick/Tap angezeigt wird (Pointer Lock
          braucht eine echte Nutzer-Interaktion, siehe main.ts) -->
     <div id="overlay">
       <div id="overlay-content">
         <h1>Dusk Arena</h1>
-        <p>Klicken, um zu spielen</p>
-        <p class="hint">WASD: Bewegen &nbsp;·&nbsp; Maus: Umschauen &nbsp;·&nbsp; Leertaste: Springen &nbsp;·&nbsp; ESC: Menü</p>
+        <p id="overlay-instruction">Klicken, um zu spielen</p>
+        <p class="hint" id="overlay-hint">
+          WASD: Bewegen &nbsp;·&nbsp; Maus: Umschauen &nbsp;·&nbsp; Leertaste: Springen &nbsp;·&nbsp; ESC: Menü
+        </p>
       </div>
     </div>
 

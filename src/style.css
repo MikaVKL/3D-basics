@@ -94,3 +94,87 @@ body {
   font-size: 0.9rem;
   color: #8a97ab;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Touch-Steuerung (iPad/Handy)                                          */
+/* ---------------------------------------------------------------------- */
+
+#touch-controls {
+  position: fixed;
+  inset: 0;
+  z-index: 4; /* unter dem Overlay (10), über dem Canvas */
+}
+
+#touch-controls.hidden {
+  display: none;
+}
+
+/* Die beiden Touch-Zonen sind unsichtbar, reagieren aber auf Finger-Input.
+   touch-action: none verhindert, dass der Browser die Geste als Scrollen
+   oder Zoomen interpretiert. */
+#touch-move-zone,
+#touch-look-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  touch-action: none;
+}
+
+#touch-move-zone {
+  left: 0;
+}
+
+#touch-look-zone {
+  right: 0;
+}
+
+/* Der Joystick erscheint dort, wo man mit dem Finger hintippt ("floating") */
+#joystick-base {
+  position: fixed;
+  width: 100px;
+  height: 100px;
+  margin-left: -50px;
+  margin-top: -50px;
+  border-radius: 50%;
+  background: rgba(232, 236, 241, 0.08);
+  border: 2px solid rgba(51, 230, 204, 0.4);
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  pointer-events: none;
+}
+
+#joystick-base.active {
+  opacity: 1;
+}
+
+#joystick-thumb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin-left: -23px;
+  margin-top: -23px;
+  border-radius: 50%;
+  background: rgba(51, 230, 204, 0.55);
+}
+
+#jump-button {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 107, 61, 0.6);
+  background: rgba(255, 107, 61, 0.18);
+  color: #ffe4d6;
+  font-size: 1.6rem;
+  z-index: 6;
+  touch-action: none;
+}
+
+#jump-button:active {
+  background: rgba(255, 107, 61, 0.35);
+}

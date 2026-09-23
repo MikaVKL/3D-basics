@@ -21,12 +21,23 @@ Alle Farben sind zentral in [`src/palette.ts`](src/palette.ts) definiert.
 
 ```
 src/
-  palette.ts   Zentrale Farbpalette (alle Spielfarben an einem Ort)
-  arena.ts     Baut die Spiel-Arena (Boden, Wände, Deckungen)
-  player.ts    Kamera-Steuerung, Bewegung, Schwerkraft, Kollision
-  main.ts      Einstiegspunkt: Szene, Licht, Game Loop
-  style.css    UI (Fadenkreuz, Startbildschirm-Overlay)
+  palette.ts        Zentrale Farbpalette (alle Spielfarben an einem Ort)
+  arena.ts           Baut die Spiel-Arena (Boden, Wände, Deckungen)
+  player.ts          Bewegung/Physik/Kollision - unabhängig von der Eingabequelle
+  lookControl.ts      Kamera-Drehung (Yaw/Pitch) - wird von Maus UND Touch genutzt
+  input/
+    DesktopInput.ts   Maus + Tastatur (Pointer Lock)
+    TouchInput.ts     Touch-Steuerung (virtueller Joystick + Wisch-Look)
+  main.ts             Einstiegspunkt: Szene, Licht, Game Loop, wählt die Eingabe
+  style.css           UI (Fadenkreuz, Overlay, Touch-Joystick/Button)
 ```
+
+**Warum diese Aufteilung?** `player.ts` (Bewegung/Kollision) und `lookControl.ts`
+(Kamera-Drehung) wissen nichts davon, WOHER die Eingabe kommt. `DesktopInput`
+und `TouchInput` füttern beide nur `player.setMoveInput(x, z)`, `player.jump()`
+und `lookControl.rotate(deltaX, deltaY)`. Dadurch ist Touch-Support kein
+Wegwerf-Hack für die Entwicklung, sondern eine gleichwertige, dauerhafte
+zweite Eingabeart.
 
 ## Entwicklung starten
 
@@ -35,20 +46,28 @@ npm install
 npm run dev
 ```
 
-Dann im Browser die angezeigte URL (z.B. http://localhost:5173) öffnen und auf
-den Startbildschirm klicken, um die Maussteuerung zu aktivieren.
+Dann im Browser die angezeigte URL (z.B. http://localhost:5173) öffnen.
 
-**Steuerung:**
+Die Steuerung wird automatisch anhand des Geräts gewählt (per
+`window.matchMedia('(pointer: coarse)')` - erkennt Touch-Geräte wie Tablets
+zuverlässiger als reines Feature-Sniffing):
+
+**Desktop/Laptop (Maus + Tastatur):**
 - `W A S D`: Bewegen
-- Maus: Umschauen
+- Maus: Umschauen (Klick auf den Startbildschirm aktiviert die Maussteuerung)
 - `Leertaste`: Springen
 - `ESC`: Maussteuerung freigeben (Menü)
 
+**Tablet/Handy (Touch):**
+- Linke Bildschirmhälfte: virtueller Joystick zum Bewegen (erscheint dort, wo man hintippt)
+- Rechte Bildschirmhälfte: Wisch-Geste zum Umschauen
+- Button unten rechts: Springen
+
 ## Aktueller Stand (Etappe 1)
 
-- Ego-Perspektive mit Maussteuerung (Pointer Lock)
-- WASD-Bewegung inkl. Schwerkraft und Sprung
-- Einfache Kollision mit Wänden und Deckungs-Kisten
+- Ego-Perspektive, steuerbar per Maus+Tastatur ODER Touch (automatische Erkennung)
+- Bewegung inkl. Schwerkraft und Sprung
+- Kollision mit Wänden und Deckungs-Kisten (per Bisektion bis knapp ans Hindernis heran, kein "Stecken bleiben")
 - Arena mit durchdachtem, texturfreiem Farbschema und Schattenwurf
 
 ## Geplant (spätere Etappen)
