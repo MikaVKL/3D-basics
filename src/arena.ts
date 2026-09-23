@@ -97,13 +97,16 @@ export function buildArena(): ArenaResult {
     metalness: 0.15,
   })
 
+  // Höhe bewusst auf 1.4m begrenzt: hoch genug, um wirklich Deckung zu
+  // bieten, aber mit dem aktuellen Sprung (~1.6m Sprunghöhe) noch bequem
+  // erreichbar - man kann draufspringen und von dort weiterkämpfen.
   const coverPositions: Array<[number, number, number, number]> = [
     // [x, z, breite, höhe]
-    [-6, -4, 2.5, 1.5],
-    [6, -4, 2.5, 1.5],
-    [-6, 4, 2.5, 1.5],
-    [6, 4, 2.5, 1.5],
-    [0, 0, 3, 2.2],
+    [-6, -4, 2.5, 1.4],
+    [6, -4, 2.5, 1.4],
+    [-6, 4, 2.5, 1.4],
+    [6, 4, 2.5, 1.4],
+    [0, 0, 3, 1.4],
   ]
 
   for (const [x, z, size, height] of coverPositions) {

@@ -8,9 +8,16 @@ import type { Solid } from './arena'
 
 const EYE_HEIGHT = 1.7
 const MOVE_SPEED = 6 // Meter pro Sekunde
-const JUMP_SPEED = 6.5
+const JUMP_SPEED = 7.6 // reicht für gut 1,6m Sprunghöhe - genug, um auf die Deckungs-Kisten zu springen
 const GRAVITY = 18
 const PLAYER_RADIUS = 0.4 // für die Kollision mit Wänden/Kisten
+
+// Die Seiten-Kollision (collidesAt) lässt die untersten paar Zentimeter des
+// Spielers "durch" Hindernisse, die knapp unter den eigenen Füßen liegen.
+// Ohne das würde man beim Stehen exakt auf einer Kisten-Oberkante ständig
+// mit genau dieser Kiste seitlich kollidieren (die Fuß-Höhe berührt dann
+// exakt die Kisten-Oberkante) und könnte nicht mehr von ihr herunterlaufen.
+const STEP_CLEARANCE = 0.15
 
 export class Player {
   private velocity = new THREE.Vector3()
@@ -78,14 +85,36 @@ export class Player {
       this.tryMove(moveDirection)
     }
 
-    // Vertikale Bewegung (Springen/Fallen) + Boden-Kollision
+    // Vertikale Bewegung (Springen/Fallen)
     this.camera.position.y += this.velocity.y * deltaSeconds
 
-    if (this.camera.position.y <= EYE_HEIGHT) {
-      this.camera.position.y = EYE_HEIGHT
+    // Stand-Höhe unter den Füßen ermitteln: normalerweise der Arena-Boden
+    // (0), aber wenn man über einer Kiste steht, deren Oberkante. Dadurch
+    // kann man auf Kisten landen und stehen bleiben, statt durch sie
+    // hindurchzufallen oder immer auf y=0 zurückgesetzt zu werden.
+    const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z)
+    const standingY = groundHeight + EYE_HEIGHT
+
+    if (this.camera.position.y <= standingY) {
+      this.camera.position.y = standingY
       this.velocity.y = 0
       this.onGround = true
+    } else {
+      this.onGround = false
     }
+  }
+
+  // Höchste Solid-Oberkante direkt unter dem Punkt (x, z), oder 0 (Arena-
+  // Boden), falls dort keine Kiste/Wand ist.
+  private groundHeightAt(x: number, z: number): number {
+    let height = 0
+    for (const solid of this.solids) {
+      const box = solid.box
+      if (x >= box.min.x && x <= box.max.x && z >= box.min.z && z <= box.max.z) {
+        height = Math.max(height, box.max.y)
+      }
+    }
+    return height
   }
 
   // Bewegt die Kamera horizontal, aber prüft vorher, ob die Zielposition
@@ -138,7 +167,11 @@ export class Player {
 
   private collidesAt(position: THREE.Vector3): boolean {
     const playerBox = new THREE.Box3(
-      new THREE.Vector3(position.x - PLAYER_RADIUS, position.y - EYE_HEIGHT, position.z - PLAYER_RADIUS),
+      new THREE.Vector3(
+        position.x - PLAYER_RADIUS,
+        position.y - EYE_HEIGHT + STEP_CLEARANCE,
+        position.z - PLAYER_RADIUS
+      ),
       new THREE.Vector3(position.x + PLAYER_RADIUS, position.y + 0.3, position.z + PLAYER_RADIUS)
     )
 
