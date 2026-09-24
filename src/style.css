@@ -109,13 +109,22 @@ body {
   bottom: 24px;
   left: 24px;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   font-family: system-ui, sans-serif;
   pointer-events: none;
   z-index: 5;
 }
 
+#health-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#stamina-bar-track,
+#shield-bar-track,
 #health-bar-track {
   width: 140px;
   height: 14px;
@@ -123,6 +132,26 @@ body {
   background: rgba(232, 236, 241, 0.15);
   border: 1px solid rgba(232, 236, 241, 0.3);
   overflow: hidden;
+}
+
+/* Stamina/Schild sind schmaler - deutlich zweitrangig gegenüber Leben */
+#stamina-bar-track,
+#shield-bar-track {
+  height: 8px;
+}
+
+#stamina-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: #ffd166;
+  transition: width 0.1s linear;
+}
+
+#shield-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: #4da6ff;
+  transition: width 0.1s linear;
 }
 
 #health-bar-fill {

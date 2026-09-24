@@ -159,7 +159,7 @@ function setActive(active: boolean) {
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
   overlayHint.textContent =
-    'Links: Joystick zum Bewegen · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen/Ducken'
+    'Links: Joystick zum Bewegen (voll ausgelenkt = Sprinten) · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen/Ducken'
   touchControls.classList.remove('hidden')
 
   const touchInput = new TouchInput(
@@ -210,6 +210,8 @@ const deathOverlay = document.querySelector<HTMLDivElement>('#death-overlay')!
 const respawnCountdown = document.querySelector<HTMLSpanElement>('#respawn-countdown')!
 const scoreRed = document.querySelector<HTMLSpanElement>('#score-red')!
 const scoreBlue = document.querySelector<HTMLSpanElement>('#score-blue')!
+const shieldBarFill = document.querySelector<HTMLDivElement>('#shield-bar-fill')!
+const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill')!
 
 function updateScoreboardHud() {
   scoreRed.textContent = String(scoreboard.getScore('red'))
@@ -235,6 +237,14 @@ function updateHealthHud() {
   }
 }
 
+function updateShieldAndStaminaHud() {
+  const shield = player.getShieldState()
+  shieldBarFill.style.width = `${(shield.current / shield.max) * 100}%`
+
+  const stamina = player.getStaminaState()
+  staminaBarFill.style.width = `${(stamina.current / stamina.max) * 100}%`
+}
+
 function animate() {
   requestAnimationFrame(animate)
 
@@ -251,6 +261,7 @@ function animate() {
   playerAvatar.update()
   updateAmmoHud()
   updateHealthHud()
+  updateShieldAndStaminaHud()
   updateScoreboardHud()
 
   renderer.render(scene, camera)

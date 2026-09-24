@@ -17,7 +17,7 @@ const TRACER_MAX_DISTANCE = 60 // Länge des Tracers, falls der Schuss nichts tr
 
 const MAGAZINE_SIZE = 12
 const RELOAD_DURATION = 1.2 // Sekunden für einen Nachlade-Vorgang
-const HIT_DAMAGE = 1 // fester Schaden pro Treffer (bei 10 HP = 10 Treffer bis "Tod")
+const HIT_DAMAGE = 15 // fester Schaden pro Treffer (25 Schild absorbiert zuerst, siehe player.ts)
 
 export interface AmmoState {
   current: number

@@ -14,6 +14,7 @@ import type { Weapon } from '../weapon'
 // gleichzeitig laufen UND umschauen kann (Multi-Touch).
 
 const JOYSTICK_RADIUS = 45 // maximaler Ausschlag des Joystick-Daumens in Pixel
+const SPRINT_JOYSTICK_THRESHOLD = 0.9 // ab dieser Auslenkung (Anteil von JOYSTICK_RADIUS) wird gesprintet
 
 interface TouchElements {
   moveZone: HTMLElement
@@ -118,10 +119,17 @@ export class TouchInput {
 
     // Nach oben ziehen = vorwärts, daher das Minus bei y.
     this.player.setMoveInput(dx / JOYSTICK_RADIUS, -dy / JOYSTICK_RADIUS)
+
+    // Kein extra Sprint-Button auf Touch (der Bildschirm ist schon voll
+    // genug) - stattdessen läuft man automatisch, wenn der Joystick fast
+    // bis zum Anschlag ausgelenkt wird. Fühlt sich intuitiv an: "voll
+    // drücken" = "voll rennen", wie in vielen Mobile-Shootern.
+    this.player.setSprinting(distance >= JOYSTICK_RADIUS * SPRINT_JOYSTICK_THRESHOLD)
   }
 
   private onMoveEnd(e: TouchEvent) {
     if (!this.findTouch(e.changedTouches, this.moveTouchId)) return
+    this.player.setSprinting(false)
 
     this.moveTouchId = null
     this.player.setMoveInput(0, 0)

@@ -22,9 +22,22 @@ const CROUCH_SPEED_MULTIPLIER = 0.6 // langsamer im Ducken, wie in den meisten S
 // Fallweg unter Schwerkraft - deshalb nur in eine Richtung sichtbar).
 const CROUCH_TRANSITION_SPEED = 6
 const MOVE_SPEED = 6 // Meter pro Sekunde
+const SPRINT_SPEED_MULTIPLIER = 1.6
 const JUMP_SPEED = 7.6 // reicht für gut 1,6m Sprunghöhe - genug, um auf die Deckungs-Kisten zu springen
 const GRAVITY = 18
 const PLAYER_RADIUS = 0.4 // für die Kollision mit Wänden/Kisten
+
+const MAX_STAMINA = 100
+const STAMINA_DRAIN_RATE = 25 // pro Sekunde beim Sprinten (~4s Dauersprint aus vollem Vorrat)
+const STAMINA_REGEN_RATE = 15 // pro Sekunde, wenn nicht gesprintet wird
+// Erst ab so viel Vorrat darf man ÜBERHAUPT anfangen zu sprinten - verhindert
+// ein nerviges Sofort-wieder-Abbrechen, wenn der Vorrat gerade eben bei >0
+// liegt. Einmal gestartet, läuft der Sprint aber bis auf 0 weiter.
+const MIN_STAMINA_TO_START_SPRINT = 15
+
+const MAX_SHIELD = 25
+const SHIELD_REGEN_DELAY = 3 // Sekunden ohne Treffer, bevor das Schild wieder auflädt
+const SHIELD_REGEN_RATE = 10 // pro Sekunde (volles Schild in 2.5s nach der Regen-Verzögerung)
 
 // Die Seiten-Kollision (collidesAt) lässt die untersten paar Zentimeter des
 // Spielers "durch" Hindernisse, die knapp unter den eigenen Füßen liegen.
@@ -37,6 +50,16 @@ const MAX_HEALTH = 100
 const RESPAWN_DELAY = 3 // Sekunden bis der Spieler nach dem Tod wieder auftaucht
 
 export interface HealthState {
+  current: number
+  max: number
+}
+
+export interface ShieldState {
+  current: number
+  max: number
+}
+
+export interface StaminaState {
   current: number
   max: number
 }
@@ -54,6 +77,9 @@ export interface PlayerNetworkState {
   maxHealth: number
   isAlive: boolean
   crouching: boolean
+  sprinting: boolean
+  shield: number
+  maxShield: number
   team: Team
 }
 
@@ -76,6 +102,13 @@ export class Player implements Damageable {
   private wantsToCrouch = false
   private isCrouching = false
   private eyeHeight = EYE_HEIGHT
+
+  private wantsToSprint = false
+  private isSprinting = false
+  private stamina = MAX_STAMINA
+
+  private shield = MAX_SHIELD
+  private shieldRegenCooldown = 0
 
   // Boden-/Fallhöhe OHNE Augenhöhen-Anteil (also z.B. 0 auf Arena-Boden,
   // unabhängig davon ob man steht oder duckt). Schwerkraft/Sprung wirken
@@ -108,6 +141,11 @@ export class Player implements Damageable {
     this.isCrouching = false
     this.eyeHeight = EYE_HEIGHT
     this.bodyY = position.y - EYE_HEIGHT
+    this.wantsToSprint = false
+    this.isSprinting = false
+    this.stamina = MAX_STAMINA
+    this.shield = MAX_SHIELD
+    this.shieldRegenCooldown = 0
   }
 
   get isAlive(): boolean {
@@ -116,6 +154,14 @@ export class Player implements Damageable {
 
   getHealthState(): HealthState {
     return { current: this.health, max: MAX_HEALTH }
+  }
+
+  getShieldState(): ShieldState {
+    return { current: this.shield, max: MAX_SHIELD }
+  }
+
+  getStaminaState(): StaminaState {
+    return { current: this.stamina, max: MAX_STAMINA }
   }
 
   // Sekunden bis zum Respawn, für die HUD-Anzeige ("Respawn in 3s").
@@ -141,6 +187,9 @@ export class Player implements Damageable {
       maxHealth: MAX_HEALTH,
       isAlive: this.isAlive,
       crouching: this.isCrouching,
+      sprinting: this.isSprinting,
+      shield: this.shield,
+      maxShield: MAX_SHIELD,
       team: this.team,
     }
   }
@@ -148,10 +197,27 @@ export class Player implements Damageable {
   // Es gibt aktuell noch keine Gegner, die das hier tatsächlich aufrufen -
   // die Infrastruktur (Schaden, Tod, Respawn) steht aber schon, damit
   // spätere Gegner/Multiplayer nur noch takeDamage() aufrufen müssen.
+  //
+  // Schild absorbiert Schaden zuerst, komplett bis es leer ist, erst der
+  // Rest geht auf die Lebenspunkte (klassisches Shield-vor-Health-Modell).
+  // Jeder Treffer setzt außerdem die Regenerations-Verzögerung zurück - das
+  // Schild lädt erst wieder auf, wenn man eine Zeit lang keinen Treffer
+  // kassiert hat, siehe update().
   takeDamage(amount: number) {
     if (!this.isAlive) return
 
-    this.health = Math.max(0, this.health - amount)
+    this.shieldRegenCooldown = SHIELD_REGEN_DELAY
+
+    let remaining = amount
+    if (this.shield > 0) {
+      const absorbed = Math.min(this.shield, remaining)
+      this.shield -= absorbed
+      remaining -= absorbed
+    }
+
+    if (remaining <= 0) return
+
+    this.health = Math.max(0, this.health - remaining)
     if (this.health === 0) {
       this.respawnRemaining = RESPAWN_DELAY
       this.velocity.set(0, 0, 0)
@@ -165,6 +231,10 @@ export class Player implements Damageable {
 
   setCrouching(crouching: boolean) {
     this.wantsToCrouch = crouching
+  }
+
+  setSprinting(sprinting: boolean) {
+    this.wantsToSprint = sprinting
   }
 
   jump() {
@@ -210,6 +280,31 @@ export class Player implements Damageable {
     }
     this.camera.position.y = this.bodyY + this.eyeHeight
 
+    // Schild-Regeneration: erst nach einer Verzögerung ohne Treffer, siehe
+    // takeDamage(). Läuft unabhängig davon, ob gerade gesprintet wird.
+    if (this.shieldRegenCooldown > 0) {
+      this.shieldRegenCooldown = Math.max(0, this.shieldRegenCooldown - deltaSeconds)
+    } else if (this.shield < MAX_SHIELD) {
+      this.shield = Math.min(MAX_SHIELD, this.shield + SHIELD_REGEN_RATE * deltaSeconds)
+    }
+
+    // Sprinten auflösen: nicht im Ducken, nur bei aktiver Bewegungseingabe,
+    // und nur mit genug Stamina. Einmal gestartet läuft der Sprint bis auf
+    // 0 Stamina weiter (kein Abbruch exakt an der Startschwelle); zum
+    // (Wieder-)Starten braucht es MIN_STAMINA_TO_START_SPRINT.
+    const isMoving = this.moveInputX !== 0 || this.moveInputZ !== 0
+    if (this.wantsToSprint && !this.isCrouching && isMoving) {
+      this.isSprinting = this.isSprinting ? this.stamina > 0 : this.stamina >= MIN_STAMINA_TO_START_SPRINT
+    } else {
+      this.isSprinting = false
+    }
+
+    if (this.isSprinting) {
+      this.stamina = Math.max(0, this.stamina - STAMINA_DRAIN_RATE * deltaSeconds)
+    } else {
+      this.stamina = Math.min(MAX_STAMINA, this.stamina + STAMINA_REGEN_RATE * deltaSeconds)
+    }
+
     // Schwerkraft anwenden
     this.velocity.y -= GRAVITY * deltaSeconds
 
@@ -236,7 +331,12 @@ export class Player implements Damageable {
       if (moveDirection.length() > 1) {
         moveDirection.normalize()
       }
-      const speed = this.isCrouching ? MOVE_SPEED * CROUCH_SPEED_MULTIPLIER : MOVE_SPEED
+      let speed = MOVE_SPEED
+      if (this.isCrouching) {
+        speed = MOVE_SPEED * CROUCH_SPEED_MULTIPLIER
+      } else if (this.isSprinting) {
+        speed = MOVE_SPEED * SPRINT_SPEED_MULTIPLIER
+      }
       moveDirection.multiplyScalar(speed * deltaSeconds)
 
       this.tryMove(moveDirection)

@@ -86,6 +86,10 @@ export class DesktopInput {
       case 'KeyC':
         this.player.setCrouching(pressed)
         break
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        this.player.setSprinting(pressed)
+        break
       default:
         return // bei irrelevanten Tasten gar nicht erst updateMoveInput aufrufen
     }

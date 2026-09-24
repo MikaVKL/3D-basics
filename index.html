@@ -22,12 +22,20 @@
       <span id="score-blue">0</span>
     </div>
 
-    <!-- Lebensanzeige (unten links) -->
+    <!-- Lebensanzeige (unten links): Stamina + Schild + Leben gestapelt -->
     <div id="health-hud">
-      <div id="health-bar-track">
-        <div id="health-bar-fill"></div>
+      <div id="stamina-bar-track">
+        <div id="stamina-bar-fill"></div>
       </div>
-      <span id="health-text">100</span>
+      <div id="shield-bar-track">
+        <div id="shield-bar-fill"></div>
+      </div>
+      <div id="health-row">
+        <div id="health-bar-track">
+          <div id="health-bar-fill"></div>
+        </div>
+        <span id="health-text">100</span>
+      </div>
     </div>
 
     <!-- Erscheint kurz beim Tod, bis der Spieler respawnt -->
@@ -57,7 +65,7 @@
         <p id="overlay-instruction">Klicken, um zu spielen</p>
         <p class="hint" id="overlay-hint">
           WASD: Bewegen &nbsp;·&nbsp; Maus: Umschauen &nbsp;·&nbsp; Klick: Schießen &nbsp;·&nbsp; R: Nachladen &nbsp;·&nbsp;
-          Leertaste: Springen &nbsp;·&nbsp; Strg/C: Ducken &nbsp;·&nbsp; ESC: Menü
+          Leertaste: Springen &nbsp;·&nbsp; Strg/C: Ducken &nbsp;·&nbsp; Shift: Sprinten &nbsp;·&nbsp; ESC: Menü
         </p>
       </div>
     </div>
