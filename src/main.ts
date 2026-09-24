@@ -7,6 +7,7 @@ import { LookControl } from './lookControl'
 import { DesktopInput } from './input/DesktopInput'
 import { TouchInput } from './input/TouchInput'
 import { Weapon } from './weapon'
+import { Target } from './target'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -59,6 +60,20 @@ scene.add(sunLight)
 
 const arena = buildArena()
 scene.add(arena.group)
+
+// ---------------------------------------------------------------------------
+// Ziele zum Testen von Treffererkennung/Schaden (10 Treffer = "Tod",
+// respawnen nach ein paar Sekunden automatisch wieder).
+// ---------------------------------------------------------------------------
+
+const targets = [
+  new Target(new THREE.Vector3(3, 0.8, -6)),
+  new Target(new THREE.Vector3(-3, 0.8, 6)),
+]
+for (const target of targets) {
+  scene.add(target.mesh)
+  arena.shootables.push(target.mesh)
+}
 
 // ---------------------------------------------------------------------------
 // Spieler: Bewegung/Kollision (player) und Blickrichtung (lookControl) sind
@@ -156,6 +171,9 @@ function animate() {
     player.update(deltaSeconds)
   }
   weapon.update(deltaSeconds)
+  for (const target of targets) {
+    target.update(deltaSeconds)
+  }
   updateAmmoHud()
 
   renderer.render(scene, camera)

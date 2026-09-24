@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
 import { WeaponView } from './weaponView'
+import type { Target } from './target'
 
 // Einfachste Form von Ego-Shooter-"Schießen": ein Hitscan-Raycast genau aus
 // der Bildschirmmitte (dahin zeigt ja das Fadenkreuz), plus ein sichtbares
@@ -14,6 +15,7 @@ const TRACER_MAX_DISTANCE = 60 // Länge des Tracers, falls der Schuss nichts tr
 
 const MAGAZINE_SIZE = 12
 const RELOAD_DURATION = 1.2 // Sekunden für einen Nachlade-Vorgang
+const HIT_DAMAGE = 1 // fester Schaden pro Treffer (bei 10 HP = 10 Treffer bis "Tod")
 
 export interface AmmoState {
   current: number
@@ -114,6 +116,13 @@ export class Weapon {
     this.ammo -= 1
     this.view.playShootEffect()
 
+    // Kamera-Matrix sicherstellen: Mausbewegung aktualisiert die Blickrichtung
+    // sofort bei jedem 'mousemove', aber die matrixWorld der Kamera wird
+    // normalerweise erst beim nächsten renderer.render() neu berechnet. Ohne
+    // dieses explizite Update könnte ein Schuss direkt nach einer schnellen
+    // Mausbewegung noch mit der (minimal) veralteten Blickrichtung zielen.
+    this.camera.updateMatrixWorld()
+
     // (0, 0) in normalisierten Bildschirmkoordinaten ist die Bildschirmmitte -
     // exakt dort, wo das Fadenkreuz sitzt.
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
@@ -122,7 +131,14 @@ export class Weapon {
     const hits = this.raycaster.intersectObjects(this.shootables, false)
 
     if (hits.length > 0) {
-      this.spawnImpactMarker(hits[0])
+      const target = hits[0].object.userData.target as Target | undefined
+      if (target) {
+        // Ziel getroffen: Schaden statt des statischen Einschuss-Markers -
+        // das Aufblitzen des Ziels selbst ist hier das Treffer-Feedback.
+        target.takeDamage(HIT_DAMAGE)
+      } else {
+        this.spawnImpactMarker(hits[0])
+      }
       this.spawnTracer(muzzlePosition, hits[0].point)
     } else {
       // Kein Treffer: Tracer trotzdem bis zu einem weit entfernten Punkt in
