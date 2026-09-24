@@ -15,6 +15,17 @@
     <!-- Munitionsanzeige -->
     <div id="ammo-hud">12 / 12</div>
 
+    <!-- Lebensanzeige (unten links) -->
+    <div id="health-hud">
+      <div id="health-bar-track">
+        <div id="health-bar-fill"></div>
+      </div>
+      <span id="health-text">100</span>
+    </div>
+
+    <!-- Erscheint kurz beim Tod, bis der Spieler respawnt -->
+    <div id="death-overlay" class="hidden">Gefallen&nbsp;&hellip; Respawn in&nbsp;<span id="respawn-countdown">3</span>s</div>
+
     <!-- Touch-Steuerung (nur auf Touch-Geräten sichtbar, siehe main.ts).
          Linke Hälfte = Bewegungs-Joystick, rechte Hälfte = Umschauen per Wisch-Geste. -->
     <div id="touch-controls" class="hidden">

@@ -72,6 +72,70 @@ body {
   text-shadow: 0 0 8px rgba(255, 107, 61, 0.5);
 }
 
+/* Lebensanzeige unten links: Balken + Zahl */
+#health-hud {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: system-ui, sans-serif;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#health-bar-track {
+  width: 140px;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(232, 236, 241, 0.15);
+  border: 1px solid rgba(232, 236, 241, 0.3);
+  overflow: hidden;
+}
+
+#health-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: #33e6cc;
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+
+/* Bei niedrigem Leben wird der Balken warnend orange/rot statt Neon-Cyan */
+#health-bar-fill.low {
+  background: #ff6b3d;
+}
+
+#health-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e8ecf1;
+  min-width: 2.5em;
+}
+
+/* Sterbebildschirm während der Respawn-Wartezeit */
+#death-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ff6b3d;
+  background: rgba(10, 5, 5, 0.55);
+  pointer-events: none;
+  z-index: 8;
+  transition: opacity 0.2s ease;
+}
+
+#death-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none;
+}
+
 /* Startbildschirm-Overlay */
 #overlay {
   position: fixed;

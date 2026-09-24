@@ -19,6 +19,14 @@ const PLAYER_RADIUS = 0.4 // für die Kollision mit Wänden/Kisten
 // exakt die Kisten-Oberkante) und könnte nicht mehr von ihr herunterlaufen.
 const STEP_CLEARANCE = 0.15
 
+const MAX_HEALTH = 100
+const RESPAWN_DELAY = 3 // Sekunden bis der Spieler nach dem Tod wieder auftaucht
+
+export interface HealthState {
+  current: number
+  max: number
+}
+
 export class Player {
   private velocity = new THREE.Vector3()
   private onGround = true
@@ -31,14 +39,47 @@ export class Player {
   private moveInputZ = 0
   private camera: THREE.PerspectiveCamera
 
+  private health = MAX_HEALTH
+  private respawnRemaining = 0
+  private spawnPoint = new THREE.Vector3()
+
   constructor(camera: THREE.PerspectiveCamera, solids: Solid[]) {
     this.camera = camera
     this.solids = solids
   }
 
   spawn(position: THREE.Vector3) {
+    this.spawnPoint.copy(position)
     this.camera.position.copy(position)
     this.velocity.set(0, 0, 0)
+    this.health = MAX_HEALTH
+    this.respawnRemaining = 0
+  }
+
+  get isAlive(): boolean {
+    return this.health > 0
+  }
+
+  getHealthState(): HealthState {
+    return { current: this.health, max: MAX_HEALTH }
+  }
+
+  // Sekunden bis zum Respawn, für die HUD-Anzeige ("Respawn in 3s").
+  getRespawnCountdown(): number {
+    return this.respawnRemaining
+  }
+
+  // Es gibt aktuell noch keine Gegner, die das hier tatsächlich aufrufen -
+  // die Infrastruktur (Schaden, Tod, Respawn) steht aber schon, damit
+  // spätere Gegner/Multiplayer nur noch takeDamage() aufrufen müssen.
+  takeDamage(amount: number) {
+    if (!this.isAlive) return
+
+    this.health = Math.max(0, this.health - amount)
+    if (this.health === 0) {
+      this.respawnRemaining = RESPAWN_DELAY
+      this.velocity.set(0, 0, 0)
+    }
   }
 
   setMoveInput(x: number, z: number) {
@@ -47,13 +88,21 @@ export class Player {
   }
 
   jump() {
-    if (this.onGround) {
+    if (this.onGround && this.isAlive) {
       this.velocity.y = JUMP_SPEED
       this.onGround = false
     }
   }
 
   update(deltaSeconds: number) {
+    if (!this.isAlive) {
+      this.respawnRemaining = Math.max(0, this.respawnRemaining - deltaSeconds)
+      if (this.respawnRemaining === 0) {
+        this.spawn(this.spawnPoint)
+      }
+      return
+    }
+
     // Schwerkraft anwenden
     this.velocity.y -= GRAVITY * deltaSeconds
 

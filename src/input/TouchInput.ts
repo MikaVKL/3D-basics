@@ -61,6 +61,7 @@ export class TouchInput {
     shootButton.addEventListener('touchstart', (e) => {
       e.preventDefault()
       e.stopPropagation()
+      if (!this.player.isAlive) return
       this.weapon.tryShoot()
     })
   }

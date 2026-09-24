@@ -154,11 +154,28 @@ window.addEventListener('resize', () => {
 
 const timer = new THREE.Timer()
 const ammoHud = document.querySelector<HTMLDivElement>('#ammo-hud')!
+const healthBarFill = document.querySelector<HTMLDivElement>('#health-bar-fill')!
+const healthText = document.querySelector<HTMLSpanElement>('#health-text')!
+const deathOverlay = document.querySelector<HTMLDivElement>('#death-overlay')!
+const respawnCountdown = document.querySelector<HTMLSpanElement>('#respawn-countdown')!
 
 function updateAmmoHud() {
   const ammo = weapon.getAmmoState()
   ammoHud.textContent = ammo.reloading ? 'Nachladen...' : `${ammo.current} / ${ammo.max}`
   ammoHud.classList.toggle('reloading', ammo.reloading)
+}
+
+function updateHealthHud() {
+  const health = player.getHealthState()
+  const ratio = health.current / health.max
+  healthBarFill.style.width = `${ratio * 100}%`
+  healthBarFill.classList.toggle('low', ratio <= 0.3)
+  healthText.textContent = String(health.current)
+
+  deathOverlay.classList.toggle('hidden', player.isAlive)
+  if (!player.isAlive) {
+    respawnCountdown.textContent = String(Math.ceil(player.getRespawnCountdown()))
+  }
 }
 
 function animate() {
@@ -175,6 +192,7 @@ function animate() {
     target.update(deltaSeconds)
   }
   updateAmmoHud()
+  updateHealthHud()
 
   renderer.render(scene, camera)
 }

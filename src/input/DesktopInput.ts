@@ -53,6 +53,7 @@ export class DesktopInput {
   private handleMouseDown(e: MouseEvent) {
     if (document.pointerLockElement !== this.domElement) return
     if (e.button !== 0) return // nur linke Maustaste schießt
+    if (!this.player.isAlive) return
     this.weapon.tryShoot()
   }
 
