@@ -81,6 +81,11 @@ export class DesktopInput {
       case 'KeyR':
         if (pressed) this.weapon.reload()
         break
+      case 'ControlLeft':
+      case 'ControlRight':
+      case 'KeyC':
+        this.player.setCrouching(pressed)
+        break
       default:
         return // bei irrelevanten Tasten gar nicht erst updateMoveInput aufrufen
     }

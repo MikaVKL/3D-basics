@@ -152,7 +152,7 @@ function setActive(active: boolean) {
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
   overlayHint.textContent =
-    'Links: Joystick zum Bewegen · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen'
+    'Links: Joystick zum Bewegen · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen/Ducken'
   touchControls.classList.remove('hidden')
 
   const touchInput = new TouchInput(
@@ -164,6 +164,7 @@ if (isTouchDevice) {
       jumpButton: document.querySelector<HTMLButtonElement>('#jump-button')!,
       shootButton: document.querySelector<HTMLButtonElement>('#shoot-button')!,
       reloadButton: document.querySelector<HTMLButtonElement>('#reload-button')!,
+      crouchButton: document.querySelector<HTMLButtonElement>('#crouch-button')!,
     },
     player,
     lookControl,

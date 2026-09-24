@@ -301,3 +301,27 @@ body {
 #reload-button:active {
   background: rgba(232, 236, 241, 0.3);
 }
+
+/* Vorläufige Position (über dem Sprung-Button) - finales Layout kommt erst,
+   wenn alle Buttons stehen, siehe Kommentar bei den anderen Buttons. */
+#crouch-button {
+  position: fixed;
+  right: 28px;
+  bottom: 112px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 107, 61, 0.6);
+  background: rgba(255, 107, 61, 0.18);
+  color: #ffe4d6;
+  font-size: 1.5rem;
+  z-index: 6;
+  touch-action: none;
+}
+
+/* Ducken ist ein Umschalter (siehe TouchInput.ts) - "active" markiert den
+   Zustand dauerhaft, nicht nur während des Antippens wie bei :active. */
+#crouch-button.active {
+  background: rgba(255, 107, 61, 0.55);
+  border-color: rgba(255, 107, 61, 0.9);
+}

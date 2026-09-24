@@ -6,7 +6,9 @@ import type { Weapon } from '../weapon'
 // - Linke Bildschirmhälfte: virtueller Joystick zum Bewegen (erscheint dort,
 //   wo man hintippt - "floating joystick", wie in den meisten Mobile-Shootern)
 // - Rechte Bildschirmhälfte: Wisch-Geste zum Umschauen (wie ein Kamera-Drag)
-// - Extra Button: Springen
+// - Extra Buttons: Springen, Ducken (Ducken ist ein Umschalter/Toggle statt
+//   "gedrückt halten" - auf einem Touchscreen ist ein Dauerhalten während man
+//   gleichzeitig den Joystick bedient unpraktisch)
 //
 // Beide Zonen tracken ihren eigenen Finger über die Touch-ID, damit man
 // gleichzeitig laufen UND umschauen kann (Multi-Touch).
@@ -21,6 +23,7 @@ interface TouchElements {
   jumpButton: HTMLElement
   shootButton: HTMLElement
   reloadButton: HTMLElement
+  crouchButton: HTMLElement
 }
 
 export class TouchInput {
@@ -34,6 +37,7 @@ export class TouchInput {
   private player: Player
   private lookControl: LookControl
   private weapon: Weapon
+  private isCrouching = false
 
   constructor(elements: TouchElements, player: Player, lookControl: LookControl, weapon: Weapon) {
     this.elements = elements
@@ -41,7 +45,7 @@ export class TouchInput {
     this.lookControl = lookControl
     this.weapon = weapon
 
-    const { moveZone, lookZone, jumpButton, shootButton, reloadButton } = elements
+    const { moveZone, lookZone, jumpButton, shootButton, reloadButton, crouchButton } = elements
 
     moveZone.addEventListener('touchstart', (e) => this.onMoveStart(e), { passive: false })
     moveZone.addEventListener('touchmove', (e) => this.onMoveMove(e), { passive: false })
@@ -70,6 +74,14 @@ export class TouchInput {
       e.preventDefault()
       e.stopPropagation()
       this.weapon.reload()
+    })
+
+    crouchButton.addEventListener('touchstart', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.isCrouching = !this.isCrouching
+      this.player.setCrouching(this.isCrouching)
+      crouchButton.classList.toggle('active', this.isCrouching)
     })
   }
 

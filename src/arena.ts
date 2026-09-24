@@ -235,38 +235,38 @@ export function buildArena(): ArenaResult {
     group.add(stripe)
   }
 
-  // --- Freistehendes Fenster-Objekt (Deckung) ---
-  // Statt einer Lücke in einer Außen-/Trennwand: eine dünne, freistehende
-  // Doppelwand mitten im Raum. Sockel (unten) + Sturz (oben) sind zwei
-  // getrennte Solids mit Lücke dazwischen - man kann durchsehen und
-  // durchschießen, aber NICHT durchlaufen. Als freistehendes Objekt ist es
-  // vielseitiger als Deckung nutzbar (von beiden Seiten anspringbar) als
-  // eine Wandlücke.
-  function buildFreestandingWindow(centerX: number, centerZ: number, width: number) {
-    const WINDOW_THICKNESS = 0.4
+  // --- Freistehende Wand mit Fenster (Deckung) ---
+  // Eine dünne, freistehende Wand mitten im Raum (nicht an eine Außen-/
+  // Trennwand angebunden), mit einem echten Fenster-Ausschnitt: Sockel
+  // (unten) + Sturz (oben) UND zwei seitliche Pfosten, die den Rahmen
+  // schließen - sieht dadurch wirklich wie ein Fenster in einer Wand aus,
+  // statt wie ein offener Rahmen ohne Seiten. Nur die Lücke zwischen Sockel
+  // und Sturz lässt Sicht/Schuss durch, der Rest blockt komplett.
+  function buildWindowWall(centerX: number, centerZ: number, totalWidth: number, windowWidth: number) {
+    const THICKNESS = 0.4
     const SILL_HEIGHT = 1.1 // bis hier blockt der Sockel (verhindert Durchlaufen)
-    const OPENING_HEIGHT = 1.2 // Sicht-/Schuss-Lücke dazwischen
-    const LINTEL_HEIGHT = 0.7 // Sturz oben drauf
+    const OPENING_HEIGHT = 1.2 // Sicht-/Schuss-Lücke
+    const WALL_TOP = SILL_HEIGHT + OPENING_HEIGHT + 1.1 // Sturz-Oberkante = Gesamthöhe der Wand
+    const sidePostWidth = (totalWidth - windowWidth) / 2
 
-    const sill = new THREE.Mesh(
-      new THREE.BoxGeometry(width, SILL_HEIGHT, WINDOW_THICKNESS),
-      wallMaterial
-    )
-    sill.position.set(centerX, SILL_HEIGHT / 2, centerZ)
-    group.add(sill)
-    solids.push({ mesh: sill, box: new THREE.Box3().setFromObject(sill) })
+    function addPiece(offsetX: number, width: number, bottomY: number, topY: number) {
+      const height = topY - bottomY
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, THICKNESS), wallMaterial)
+      mesh.position.set(centerX + offsetX, bottomY + height / 2, centerZ)
+      group.add(mesh)
+      solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh) })
+    }
 
-    const lintelCenterY = SILL_HEIGHT + OPENING_HEIGHT + LINTEL_HEIGHT / 2
-    const lintel = new THREE.Mesh(
-      new THREE.BoxGeometry(width, LINTEL_HEIGHT, WINDOW_THICKNESS),
-      wallMaterial
-    )
-    lintel.position.set(centerX, lintelCenterY, centerZ)
-    group.add(lintel)
-    solids.push({ mesh: lintel, box: new THREE.Box3().setFromObject(lintel) })
+    // Linker und rechter Pfosten: volle Höhe, schließen den Rahmen seitlich.
+    addPiece(-(windowWidth + sidePostWidth) / 2, sidePostWidth, 0, WALL_TOP)
+    addPiece((windowWidth + sidePostWidth) / 2, sidePostWidth, 0, WALL_TOP)
+
+    // Sockel (unten) + Sturz (oben) über der Fenster-Breite, mit Lücke dazwischen.
+    addPiece(0, windowWidth, 0, SILL_HEIGHT)
+    addPiece(0, windowWidth, SILL_HEIGHT + OPENING_HEIGHT, WALL_TOP)
   }
 
-  buildFreestandingWindow(9, -15, 5)
+  buildWindowWall(9, -15, 8, 3.5)
 
   // --- L-förmige Deckung ---
   // Zwei Kisten-Arme im rechten Winkel statt einer einzelnen Box - bietet
@@ -316,27 +316,31 @@ export function buildArena(): ArenaResult {
   // Bewusst UNGLEICHMÄSSIG verteilt (anders große Kisten, kein gespiegeltes
   // Muster) statt symmetrischer Ecken - und bewusst nicht alle quadratisch:
   // lange schmale Barrieren und breite niedrige Wände decken mehr/andere
-  // Laufwege ab als lauter gleich große Würfel. Zwei Höhen-Kategorien:
-  // - 1.4m: klassische Deckung, man kann draufspringen (~1.6m Sprunghöhe)
-  //   und von dort weiterkämpfen - man sieht/wird gesehen, wenn man nah dran ist.
-  // - 2.2m: höher als Augenhöhe (1.7m) - blockt die Sicht komplett, kein
-  //   Draufspringen möglich. Echte "Wand"-Deckung statt nur Sichtschutz.
+  // Laufwege ab als lauter gleich große Würfel. Drei Höhen-Kategorien:
+  // - 1.4m: bei 1.7m Augenhöhe schaut man im Stehen ~30cm heraus - volle
+  //   Deckung nur im Ducken (siehe player.ts), im Stehen kann man draufspringen
+  //   (~1.6m Sprunghöhe) und von dort weiterkämpfen. Bewusst nur etwa die
+  //   Hälfte der Kisten, damit Ducken auch wirklich einen Unterschied macht.
+  // - 1.9m: knapp über Augenhöhe - volle Deckung auch im Stehen, aber (wie
+  //   1.4m) noch keine komplette Sichtblockade aus der Distanz.
+  // - 2.2m: deutlich höher - blockt die Sicht komplett, kein Draufspringen
+  //   möglich. Echte "Wand"-Deckung statt nur Sichtschutz.
   const coverPositions: Array<[number, number, number, number, number]> = [
     // [x, z, breite (X), tiefe (Z), höhe] - Hauptraum (östliche/zentrale Zone)
-    [-14, -8, 3, 3, 1.4],
+    [-14, -8, 3, 3, 1.9],
     [-12, 7, 4, 1.5, 1.4], // lang und schmal
-    [3, -9, 2.6, 2.6, 1.4],
+    [3, -9, 2.6, 2.6, 1.9],
     [4, 9, 5, 2, 1.4], // breite niedrige Wand
-    [-2, 0, 4, 4, 1.4],
+    [-2, 0, 4, 4, 1.9],
     [24, -16, 1.5, 4, 1.4], // schmal und tief
     [22, 16, 2.6, 2.6, 2.2],
     // Hauptraum, westliche Zone (jenseits der Trennwand, Richtung Spawns)
-    [-28, -9, 4.5, 1.8, 1.4], // lang und schmal
+    [-28, -9, 4.5, 1.8, 1.9], // lang und schmal
     [-27, 8, 3, 3, 2.2],
-    [-24, -16, 3, 2, 1.4], // zusätzliche Deckung, mehr Gesamtdichte
+    [-24, -16, 3, 2, 1.9], // zusätzliche Deckung, mehr Gesamtdichte
     [15, -8, 2, 2, 1.4], // zusätzliche Deckung nahe der Haupt-Plattform
     // Flankenraum
-    [sideRoomMinX + 6, -5, 2.4, 2.4, 1.4],
+    [sideRoomMinX + 6, -5, 2.4, 2.4, 1.9],
     [sideRoomMinX + 13, 7, 2, 4.5, 2.2], // schmal und tief
     [44, -8, 2.2, 2.2, 1.4], // zusätzliche Deckung
   ]

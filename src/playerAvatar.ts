@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
+import { EYE_HEIGHT, CROUCH_EYE_HEIGHT } from './player'
 import type { Player } from './player'
 import type { Damageable } from './damageable'
 
@@ -23,7 +24,12 @@ import type { Damageable } from './damageable'
 
 const CAPSULE_RADIUS = 0.35
 const CAPSULE_LENGTH = 1.0 // Zylinderteil; Gesamthöhe = LENGTH + 2*RADIUS
-const EYE_HEIGHT = 1.7
+const STANDING_HEIGHT = CAPSULE_LENGTH + 2 * CAPSULE_RADIUS
+// Beim Ducken wird die Hülle vertikal gestaucht (per scale.y), damit sie
+// nicht durch den Boden clippt oder in der Luft hängt - sichtbares Pendant
+// zur reduzierten Augenhöhe in player.ts.
+const CROUCH_HEIGHT = 1.1
+const CROUCH_SCALE_Y = CROUCH_HEIGHT / STANDING_HEIGHT
 
 export class PlayerAvatar implements Damageable {
   readonly mesh: THREE.Mesh
@@ -55,8 +61,12 @@ export class PlayerAvatar implements Damageable {
   // neigen, siehe Kommentar oben).
   update() {
     const state = this.player.getNetworkState()
-    const capsuleCenterY = state.position.y - EYE_HEIGHT + CAPSULE_LENGTH / 2 + CAPSULE_RADIUS
-    this.mesh.position.set(state.position.x, capsuleCenterY, state.position.z)
+    const eyeHeight = state.crouching ? CROUCH_EYE_HEIGHT : EYE_HEIGHT
+    const groundY = state.position.y - eyeHeight
+
+    this.mesh.scale.y = state.crouching ? CROUCH_SCALE_Y : 1
+    const totalHeight = state.crouching ? CROUCH_HEIGHT : STANDING_HEIGHT
+    this.mesh.position.set(state.position.x, groundY + totalHeight / 2, state.position.z)
     this.mesh.rotation.set(0, state.yaw, 0)
 
     this.mesh.visible = state.isAlive

@@ -8,7 +8,12 @@ import type { Damageable } from './damageable'
 // rufen einfach setMoveInput(x,z) und jump() auf, die Physik dahinter ist
 // für beide identisch.
 
-const EYE_HEIGHT = 1.7
+export const EYE_HEIGHT = 1.7
+// Augenhöhe im Ducken: deutlich unter die 1.4m-Deckungskisten, damit man
+// dahinter wirklich komplett gedeckt ist (im Stehen schaut man bei 1.7m
+// Augenhöhe sonst ~30cm über eine 1.4m-Kiste).
+export const CROUCH_EYE_HEIGHT = 1.0
+const CROUCH_SPEED_MULTIPLIER = 0.6 // langsamer im Ducken, wie in den meisten Shootern
 const MOVE_SPEED = 6 // Meter pro Sekunde
 const JUMP_SPEED = 7.6 // reicht für gut 1,6m Sprunghöhe - genug, um auf die Deckungs-Kisten zu springen
 const GRAVITY = 18
@@ -41,6 +46,7 @@ export interface PlayerNetworkState {
   health: number
   maxHealth: number
   isAlive: boolean
+  crouching: boolean
 }
 
 export class Player implements Damageable {
@@ -55,6 +61,13 @@ export class Player implements Damageable {
   private moveInputX = 0
   private moveInputZ = 0
   private camera: THREE.PerspectiveCamera
+
+  // "Möchte ducken" (Eingabe) vs. "duckt tatsächlich" (nach Kopffreiheits-
+  // Check, siehe update()) - man darf nicht mitten in einem zu niedrigen
+  // Zwischenraum plötzlich aufstehen und in etwas hineinclippen.
+  private wantsToCrouch = false
+  private isCrouching = false
+  private eyeHeight = EYE_HEIGHT
 
   private health = MAX_HEALTH
   private respawnRemaining = 0
@@ -72,6 +85,9 @@ export class Player implements Damageable {
     this.velocity.set(0, 0, 0)
     this.health = MAX_HEALTH
     this.respawnRemaining = 0
+    this.wantsToCrouch = false
+    this.isCrouching = false
+    this.eyeHeight = EYE_HEIGHT
   }
 
   get isAlive(): boolean {
@@ -104,6 +120,7 @@ export class Player implements Damageable {
       health: this.health,
       maxHealth: MAX_HEALTH,
       isAlive: this.isAlive,
+      crouching: this.isCrouching,
     }
   }
 
@@ -125,6 +142,10 @@ export class Player implements Damageable {
     this.moveInputZ = THREE.MathUtils.clamp(z, -1, 1)
   }
 
+  setCrouching(crouching: boolean) {
+    this.wantsToCrouch = crouching
+  }
+
   jump() {
     if (this.onGround && this.isAlive) {
       this.velocity.y = JUMP_SPEED
@@ -140,6 +161,21 @@ export class Player implements Damageable {
       }
       return
     }
+
+    // Ducken auflösen: Hinsetzen geht immer sofort, Aufstehen nur, wenn über
+    // dem Kopf tatsächlich Platz ist (sonst bliebe man z.B. unter einer
+    // niedrigen Deckung "stecken" und würde optisch/kollisionsmäßig
+    // hineinclippen). Beeinflusst die Augenhöhe für diesen gesamten Frame -
+    // muss vor der Kollisionsprüfung stehen, damit tryMove() weiter unten
+    // schon die richtige Körpergröße verwendet.
+    if (this.wantsToCrouch) {
+      this.isCrouching = true
+    } else if (this.isCrouching && !this.canStandAt(this.camera.position.x, this.camera.position.z)) {
+      this.isCrouching = true // bleibt vorerst geduckt, wird jeden Frame neu geprüft
+    } else {
+      this.isCrouching = false
+    }
+    this.eyeHeight = this.isCrouching ? CROUCH_EYE_HEIGHT : EYE_HEIGHT
 
     // Schwerkraft anwenden
     this.velocity.y -= GRAVITY * deltaSeconds
@@ -167,7 +203,8 @@ export class Player implements Damageable {
       if (moveDirection.length() > 1) {
         moveDirection.normalize()
       }
-      moveDirection.multiplyScalar(MOVE_SPEED * deltaSeconds)
+      const speed = this.isCrouching ? MOVE_SPEED * CROUCH_SPEED_MULTIPLIER : MOVE_SPEED
+      moveDirection.multiplyScalar(speed * deltaSeconds)
 
       this.tryMove(moveDirection)
     }
@@ -180,7 +217,7 @@ export class Player implements Damageable {
     // kann man auf Kisten landen und stehen bleiben, statt durch sie
     // hindurchzufallen oder immer auf y=0 zurückgesetzt zu werden.
     const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z)
-    const standingY = groundHeight + EYE_HEIGHT
+    const standingY = groundHeight + this.eyeHeight
 
     if (this.camera.position.y <= standingY) {
       this.camera.position.y = standingY
@@ -263,7 +300,7 @@ export class Player implements Damageable {
     const playerBox = new THREE.Box3(
       new THREE.Vector3(
         position.x - PLAYER_RADIUS,
-        position.y - EYE_HEIGHT + STEP_CLEARANCE,
+        position.y - this.eyeHeight + STEP_CLEARANCE,
         position.z - PLAYER_RADIUS
       ),
       new THREE.Vector3(position.x + PLAYER_RADIUS, position.y + 0.3, position.z + PLAYER_RADIUS)
@@ -275,5 +312,23 @@ export class Player implements Damageable {
       }
     }
     return false
+  }
+
+  // Prüft, ob am Punkt (x, z) genug Kopffreiheit zum Aufstehen wäre: eine
+  // Box exakt im Bereich zwischen Duck- und Steh-Augenhöhe (der Teil, der
+  // beim Aufstehen zusätzlich beansprucht würde) darf nichts überschneiden.
+  private canStandAt(x: number, z: number): boolean {
+    const groundHeight = this.groundHeightAt(x, z)
+    const standBox = new THREE.Box3(
+      new THREE.Vector3(x - PLAYER_RADIUS, groundHeight + CROUCH_EYE_HEIGHT, z - PLAYER_RADIUS),
+      new THREE.Vector3(x + PLAYER_RADIUS, groundHeight + EYE_HEIGHT + 0.3, z + PLAYER_RADIUS)
+    )
+
+    for (const solid of this.solids) {
+      if (standBox.intersectsBox(solid.box)) {
+        return false
+      }
+    }
+    return true
   }
 }
