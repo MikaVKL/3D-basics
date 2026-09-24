@@ -3,38 +3,49 @@ import { Palette } from './palette'
 import type { Damageable } from './damageable'
 import { TeamColor, type Team } from './team'
 
-// Einfaches Schießziel mit festem Leben: 10 Treffer = Tod. Kein Gegner-
-// Verhalten (keine Bewegung/KI) - nur zum Testen, ob Treffererkennung und
-// Schaden grundsätzlich funktionieren. Nach dem "Tod" taucht das Ziel nach
-// ein paar Sekunden wieder auf, damit man ohne Neuladen weiter testen kann.
+// Schießziel mit denselben Werten wie der echte Spieler (100 HP + 25
+// Schild, siehe player.ts) - vorher hatte es nur 10 HP und starb bei 15
+// Schaden/Treffer in einem Schuss, was sich als Übungsziel unrealistisch
+// anfühlte. Kein Gegner-Verhalten (keine Bewegung/KI) - nur zum Testen, ob
+// Treffererkennung/Schaden/Schild-Absorption grundsätzlich funktionieren.
+// Nach dem "Tod" taucht das Ziel nach ein paar Sekunden wieder auf, damit
+// man ohne Neuladen weiter testen kann.
 //
 // Steht bis zum echten Multiplayer als Platzhalter für "das gegnerische
 // Team" - fest dem roten Team zugeordnet (der Spieler ist blau, siehe
 // playerAvatar.ts), damit sich das Team-System/Kill-Counter schon jetzt
 // im Singleplayer sinnvoll testen lässt.
 
-const MAX_HEALTH = 10
+const MAX_HEALTH = 100
+const MAX_SHIELD = 25
+const SHIELD_REGEN_DELAY = 3 // wie bei player.ts - Sekunden ohne Treffer, bis das Schild wieder auflädt
+const SHIELD_REGEN_RATE = 10
 const RESPAWN_DELAY = 2.5 // Sekunden bis das Ziel nach dem Tod wieder erscheint
 const HIT_FLASH_DURATION = 0.08 // Sekunden, wie lange das Ziel bei einem Treffer aufleuchtet
 
 const HEALTH_BAR_WIDTH = 0.8
 const HEALTH_BAR_HEIGHT = 0.08
 const HEALTH_BAR_Y_OFFSET = 1.05 // knapp über dem Kopf der Kapsel
+const SHIELD_BAR_Y_OFFSET = HEALTH_BAR_Y_OFFSET + HEALTH_BAR_HEIGHT + 0.03 // dünner Balken direkt darüber
 
 export class Target implements Damageable {
   readonly mesh: THREE.Mesh
   readonly team: Team = 'red'
   private health = MAX_HEALTH
+  private shield = MAX_SHIELD
+  private shieldRegenCooldown = 0
   private respawnRemaining = 0
   private hitFlashRemaining = 0
   private material: THREE.MeshStandardMaterial
 
-  // Schwebender Lebensbalken über dem Kopf: zwei einfache Ebenen
-  // (dunkler Hintergrund + farbige Füllung), keine Texturdatei nötig.
+  // Schwebende Balken über dem Kopf: zwei einfache Ebenen (dunkler
+  // Hintergrund + farbige Füllung) pro Balken, keine Texturdatei nötig.
   // Wird pro Frame per Quaternion zur Kamera ausgerichtet ("Billboard").
   private healthBarGroup: THREE.Group
   private healthBarFill: THREE.Mesh
   private healthBarFillMaterial: THREE.MeshBasicMaterial
+  private shieldBarGroup: THREE.Group
+  private shieldBarFill: THREE.Mesh
 
   constructor(position: THREE.Vector3) {
     this.material = new THREE.MeshStandardMaterial({ color: TeamColor.red })
@@ -70,17 +81,50 @@ export class Target implements Damageable {
     )
     this.healthBarFill.position.z = 0.001 // knapp davor, gegen Z-Fighting mit dem Hintergrund
     this.healthBarGroup.add(this.healthBarFill)
+
+    this.shieldBarGroup = new THREE.Group()
+    this.shieldBarGroup.position.set(0, SHIELD_BAR_Y_OFFSET, 0)
+    this.mesh.add(this.shieldBarGroup)
+
+    const shieldBackground = new THREE.Mesh(
+      new THREE.PlaneGeometry(HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT * 0.6),
+      new THREE.MeshBasicMaterial({ color: 0x10161f })
+    )
+    this.shieldBarGroup.add(shieldBackground)
+
+    this.shieldBarFill = new THREE.Mesh(
+      new THREE.PlaneGeometry(HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT * 0.6),
+      // Bewusst dieselbe Schild-Farbe wie im Spieler-HUD (#4da6ff) - hat
+      // nichts mit der Team-Farbe zu tun, auch wenn der Wert zufällig
+      // identisch mit TeamColor.blue ist.
+      new THREE.MeshBasicMaterial({ color: 0x4da6ff })
+    )
+    this.shieldBarFill.position.z = 0.001
+    this.shieldBarGroup.add(this.shieldBarFill)
   }
 
   get isAlive(): boolean {
     return this.health > 0
   }
 
+  // Schild absorbiert Schaden zuerst, komplett bis es leer ist - identisches
+  // Modell wie beim Spieler (siehe player.ts).
   takeDamage(amount: number) {
     if (!this.isAlive) return
 
-    this.health = Math.max(0, this.health - amount)
+    this.shieldRegenCooldown = SHIELD_REGEN_DELAY
+
+    let remaining = amount
+    if (this.shield > 0) {
+      const absorbed = Math.min(this.shield, remaining)
+      this.shield -= absorbed
+      remaining -= absorbed
+    }
+
     this.hitFlashRemaining = HIT_FLASH_DURATION
+    if (remaining <= 0) return
+
+    this.health = Math.max(0, this.health - remaining)
 
     if (this.health === 0) {
       this.mesh.visible = false
@@ -93,8 +137,16 @@ export class Target implements Damageable {
       this.respawnRemaining = Math.max(0, this.respawnRemaining - deltaSeconds)
       if (this.respawnRemaining === 0) {
         this.health = MAX_HEALTH
+        this.shield = MAX_SHIELD
+        this.shieldRegenCooldown = 0
         this.mesh.visible = true
       }
+    }
+
+    if (this.shieldRegenCooldown > 0) {
+      this.shieldRegenCooldown = Math.max(0, this.shieldRegenCooldown - deltaSeconds)
+    } else if (this.shield < MAX_SHIELD) {
+      this.shield = Math.min(MAX_SHIELD, this.shield + SHIELD_REGEN_RATE * deltaSeconds)
     }
 
     if (this.hitFlashRemaining > 0) {
@@ -118,5 +170,9 @@ export class Target implements Damageable {
 
     // Nur sichtbar, solange das Ziel selbst lebt/sichtbar ist.
     this.healthBarGroup.visible = this.mesh.visible
+
+    this.shieldBarGroup.quaternion.copy(camera.quaternion)
+    this.shieldBarFill.scale.x = this.shield / MAX_SHIELD
+    this.shieldBarGroup.visible = this.mesh.visible
   }
 }

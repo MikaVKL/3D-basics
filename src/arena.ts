@@ -378,27 +378,29 @@ export function buildArena(): ArenaResult {
   //   Deckung nur im Ducken (siehe player.ts), im Stehen kann man draufspringen
   //   (~1.6m Sprunghöhe) und von dort weiterkämpfen. Bewusst nur etwa die
   //   Hälfte der Kisten, damit Ducken auch wirklich einen Unterschied macht.
-  // - 1.9m: knapp über Augenhöhe - volle Deckung auch im Stehen, aber (wie
-  //   1.4m) noch keine komplette Sichtblockade aus der Distanz.
-  // - 2.2m: deutlich höher - blockt die Sicht komplett, kein Draufspringen
-  //   möglich. Echte "Wand"-Deckung statt nur Sichtschutz.
+  // - 2.4m: deutlich über Augenhöhe - volle Deckung auch im Stehen, kein
+  //   Draufspringen möglich (~1.6m Sprunghöhe reicht nicht annähernd).
+  // - 2.8m: nochmal klar höher - damit auch auf den ersten Blick eindeutig
+  //   ist "das ist eine Wand, kein Klettern", nicht nur knapp über der
+  //   Sprunghöhe (frühere 1.9m/2.2m-Stufen wirkten dafür zu ähnlich zur
+  //   kletterbaren 1.4m-Kategorie und sorgten für Verwechslung).
   const coverPositions: Array<[number, number, number, number, number]> = [
     // [x, z, breite (X), tiefe (Z), höhe] - Hauptraum (östliche/zentrale Zone)
-    [-14, -8, 3, 3, 1.9],
+    [-14, -8, 3, 3, 2.4],
     [-12, 7, 4, 1.5, 1.4], // lang und schmal
-    [3, -9, 2.6, 2.6, 1.9],
+    [3, -9, 2.6, 2.6, 2.4],
     [4, 9, 5, 2, 1.4], // breite niedrige Wand
-    [-2, 0, 4, 4, 1.9],
+    [-2, 0, 4, 4, 2.4],
     [24, -16, 1.5, 4, 1.4], // schmal und tief
-    [22, 16, 2.6, 2.6, 2.2],
+    [22, 16, 2.6, 2.6, 2.8],
     // Hauptraum, westliche Zone (jenseits der Trennwand, Richtung Spawns)
-    [-28, -9, 4.5, 1.8, 1.9], // lang und schmal
-    [-27, 8, 3, 3, 2.2],
-    [-24, -16, 3, 2, 1.9], // zusätzliche Deckung, mehr Gesamtdichte
+    [-28, -9, 4.5, 1.8, 2.4], // lang und schmal
+    [-27, 8, 3, 3, 2.8],
+    [-24, -16, 3, 2, 2.4], // zusätzliche Deckung, mehr Gesamtdichte
     [15, -8, 2, 2, 1.4], // zusätzliche Deckung nahe der Haupt-Plattform
     // Flankenraum
-    [sideRoomMinX + 6, -5, 2.4, 2.4, 1.9],
-    [sideRoomMinX + 13, 7, 2, 4.5, 2.2], // schmal und tief
+    [sideRoomMinX + 6, -5, 2.4, 2.4, 2.4],
+    [sideRoomMinX + 13, 7, 2, 4.5, 2.8], // schmal und tief
     [44, -8, 2.2, 2.2, 1.4], // zusätzliche Deckung
   ]
 
@@ -410,8 +412,13 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }
 
-  buildLCover(-6, -16, 4, 0.8, 1.6, 1, 1)
-  buildLCover(sideRoomMinX + 2, -7, 4, 0.8, 1.6, 1, -1)
+  // Höhe bewusst auf 1.4m gesenkt (war 1.6m, genau an der Sprunghöhen-
+  // Grenze von ~1.604m - dadurch war das Draufspringen unzuverlässig).
+  // Jetzt dieselbe zuverlässig kletterbare Höhe wie die 1.4m-Kisten.
+  buildLCover(-6, -16, 4, 0.8, 1.4, 1, 1)
+  buildLCover(sideRoomMinX + 2, -7, 4, 0.8, 1.4, 1, -1)
+  buildLCover(9, 16, 3, 0.7, 1.4, 1, -1)
+  buildLCover(50, 2, 3, 0.7, 1.4, -1, -1)
 
   // --- Erhöhte Plattformen + Rampen (echte Höhenstufen, größer als jede
   // Deckungskiste) - geben "King of the Hill"-Punkte mit Überblick. Kühle
@@ -487,9 +494,23 @@ export function buildArena(): ArenaResult {
     // Rampenhöhe, sobald der Kollisionspunkt die Rampen-Grundfläche von der
     // Seite aus betritt - man "bugt" dann schlagartig nach oben, statt die
     // Schräge hochzulaufen. Die Borde zwingen dazu, nur von vorne (unten)
-    // einzusteigen. Hoch genug, um auch am oberen Rampen-Ende (nahe
-    // Plattformhöhe) nicht überspringbar zu sein.
-    const curbHeight = platformHeight + 1.5
+    // einzusteigen.
+    //
+    // Zwei Details, die beim ersten Versuch zu einem neuen Stecken-Bug
+    // geführt haben (in Tests reproduziert):
+    // 1) Die Borde lagen GENAU auf der Rampen-Randlinie (halb innerhalb,
+    //    halb außerhalb) - an exakt dieser Stelle lieferte das
+    //    Rampen-Höhenfeld UND die Bord-Kollision gleichzeitig einen
+    //    Treffer, was zu einem Klemm-Zustand führen konnte. Jetzt liegen
+    //    die Borde komplett AUSSERHALB der Rampenbreite (nur die Innenkante
+    //    berührt die Randlinie) - die volle Rampenbreite bleibt frei begehbar.
+    // 2) Die Borde waren höher als die Plattform-Wand selbst, wodurch an der
+    //    Stelle, wo Bord und Plattform aufeinandertreffen, eine Stufe
+    //    entstand (kleine Überhang-Falle). Jetzt exakt plattformhoch - das
+    //    reicht längst aus, um ein Überspringen von ebenem Boden aus (nur
+    //    ~1.6m Sprunghöhe) zu verhindern, und der Übergang zur
+    //    Plattform-Wand ist dadurch bündig, ohne Stufe.
+    const curbHeight = platformHeight
     const curbThickness = 0.2
     const curbMid = (rampMin + rampMax) / 2
     const curbLength = rampMax - rampMin
@@ -499,10 +520,11 @@ export function buildArena(): ArenaResult {
           ? new THREE.BoxGeometry(curbLength, curbHeight, curbThickness)
           : new THREE.BoxGeometry(curbThickness, curbHeight, curbLength)
       const curb = new THREE.Mesh(curbGeometry, wallMaterial)
+      const outwardOffset = rampWidth / 2 + curbThickness / 2
       if (rampAxis === 'x') {
-        curb.position.set(curbMid, curbHeight / 2, centerZ + (side * rampWidth) / 2)
+        curb.position.set(curbMid, curbHeight / 2, centerZ + side * outwardOffset)
       } else {
-        curb.position.set(centerX + (side * rampWidth) / 2, curbHeight / 2, curbMid)
+        curb.position.set(centerX + side * outwardOffset, curbHeight / 2, curbMid)
       }
       group.add(curb)
       solids.push({ mesh: curb, box: new THREE.Box3().setFromObject(curb) })
