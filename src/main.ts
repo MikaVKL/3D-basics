@@ -50,10 +50,14 @@ appElement.appendChild(renderer.domElement)
 // - DirectionalLight: simuliert Mond-/Abendlicht, wirft die eigentlichen
 //   (weichen) Schatten und gibt den Objekten Tiefe
 
-const ambientLight = new THREE.AmbientLight(Palette.ambientLight, 1.2)
+// Intensitäten erhöht (1.2 -> 1.8 / 2.2 -> 2.8): Nutzerfeedback, dass Kanten
+// im Dämmerungslicht schwer zu erkennen waren. Zusammen mit den neuen
+// Kanten-Outlines (siehe arena.ts, addEdgeOutline) sollte das die Lesbarkeit
+// deutlich verbessern, ohne die Dusk-Stimmung komplett zu verlieren.
+const ambientLight = new THREE.AmbientLight(Palette.ambientLight, 1.8)
 scene.add(ambientLight)
 
-const sunLight = new THREE.DirectionalLight(Palette.sunLight, 2.2)
+const sunLight = new THREE.DirectionalLight(Palette.sunLight, 2.8)
 sunLight.position.set(-15, 20, 10)
 scene.add(sunLight)
 

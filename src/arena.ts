@@ -119,6 +119,22 @@ function createWedgeGeometry(length: number, width: number, height: number): THR
   return geometry
 }
 
+// Leuchtende Kanten-Outline für ein Mesh: macht Kanten/Silhouetten auch bei
+// gedämpfter Dämmerungsbeleuchtung klar erkennbar (Nutzerfeedback: "schwer
+// Kanten zu erkennen"). EdgesGeometry extrahiert nur die "harten" Kanten
+// (Winkel zwischen Nachbarflächen über dem Schwellenwert), nicht jede
+// Dreiecks-Kante - bei den hier verwendeten Boxen/Keilen also genau die
+// sichtbaren Silhouetten-/Kantenlinien. Als Kind-Objekt hinzugefügt, damit
+// es automatisch der Position/Rotation des Eltern-Meshes folgt.
+function addEdgeOutline(mesh: THREE.Mesh, color: number = Palette.accentNeon) {
+  const edges = new THREE.EdgesGeometry(mesh.geometry)
+  const line = new THREE.LineSegments(
+    edges,
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.85 })
+  )
+  mesh.add(line)
+}
+
 export function buildArena(): ArenaResult {
   const group = new THREE.Group()
   const solids: Solid[] = []
@@ -250,6 +266,7 @@ export function buildArena(): ArenaResult {
     const wallGeometry = new THREE.BoxGeometry(def.w, WALL_HEIGHT, def.d)
     const wall = new THREE.Mesh(wallGeometry, wallMaterial)
     wall.position.set(def.x, WALL_HEIGHT / 2, def.z)
+    addEdgeOutline(wall)
     group.add(wall)
     solids.push({ mesh: wall, box: new THREE.Box3().setFromObject(wall) })
 
@@ -280,6 +297,7 @@ export function buildArena(): ArenaResult {
     wallMaterial
   )
   doorwaySillMesh.position.set(DIVIDER_X, WEST_PLATFORM_HEIGHT / 2, WEST_PLATFORM_CENTER_Z)
+  addEdgeOutline(doorwaySillMesh)
   group.add(doorwaySillMesh)
   solids.push({ mesh: doorwaySillMesh, box: new THREE.Box3().setFromObject(doorwaySillMesh) })
 
@@ -289,6 +307,7 @@ export function buildArena(): ArenaResult {
     wallMaterial
   )
   doorwayLintelMesh.position.set(DIVIDER_X, DOORWAY_TOP + doorwayLintelHeight / 2, WEST_PLATFORM_CENTER_Z)
+  addEdgeOutline(doorwayLintelMesh)
   group.add(doorwayLintelMesh)
   solids.push({ mesh: doorwayLintelMesh, box: new THREE.Box3().setFromObject(doorwayLintelMesh) })
 
@@ -310,6 +329,7 @@ export function buildArena(): ArenaResult {
       const height = topY - bottomY
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, THICKNESS), wallMaterial)
       mesh.position.set(centerX + offsetX, bottomY + height / 2, centerZ)
+      addEdgeOutline(mesh)
       group.add(mesh)
       solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh) })
     }
@@ -347,6 +367,7 @@ export function buildArena(): ArenaResult {
       height / 2,
       cornerZ + (armZDir * thickness) / 2
     )
+    addEdgeOutline(armAlongX)
     group.add(armAlongX)
     solids.push({ mesh: armAlongX, box: new THREE.Box3().setFromObject(armAlongX) })
 
@@ -359,6 +380,7 @@ export function buildArena(): ArenaResult {
       height / 2,
       cornerZ + (armZDir * armLength) / 2
     )
+    addEdgeOutline(armAlongZ)
     group.add(armAlongZ)
     solids.push({ mesh: armAlongZ, box: new THREE.Box3().setFromObject(armAlongZ) })
   }
@@ -408,6 +430,7 @@ export function buildArena(): ArenaResult {
     const boxGeometry = new THREE.BoxGeometry(width, height, depth)
     const box = new THREE.Mesh(boxGeometry, boxMaterial)
     box.position.set(x, height / 2, z)
+    addEdgeOutline(box)
     group.add(box)
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }
@@ -445,6 +468,7 @@ export function buildArena(): ArenaResult {
     const platformGeometry = new THREE.BoxGeometry(platformSize, platformHeight, platformSize)
     const platform = new THREE.Mesh(platformGeometry, wallMaterial)
     platform.position.set(centerX, platformHeight / 2, centerZ)
+    addEdgeOutline(platform)
     group.add(platform)
     solids.push({ mesh: platform, box: new THREE.Box3().setFromObject(platform) })
 
@@ -485,6 +509,7 @@ export function buildArena(): ArenaResult {
       rampMesh.rotation.y = rampAscending ? -Math.PI / 2 : Math.PI / 2
       rampMesh.position.set(centerX, 0, rampAscending ? rampMin : rampMax)
     }
+    addEdgeOutline(rampMesh)
     group.add(rampMesh)
     shootableExtras.push(rampMesh)
 
@@ -526,6 +551,7 @@ export function buildArena(): ArenaResult {
       } else {
         curb.position.set(centerX + side * outwardOffset, curbHeight / 2, curbMid)
       }
+      addEdgeOutline(curb)
       group.add(curb)
       solids.push({ mesh: curb, box: new THREE.Box3().setFromObject(curb) })
     }
