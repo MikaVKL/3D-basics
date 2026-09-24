@@ -314,30 +314,32 @@ export function buildArena(): ArenaResult {
   })
 
   // Bewusst UNGLEICHMÄSSIG verteilt (anders große Kisten, kein gespiegeltes
-  // Muster) statt symmetrischer Ecken. Zwei Höhen-Kategorien:
+  // Muster) statt symmetrischer Ecken - und bewusst nicht alle quadratisch:
+  // lange schmale Barrieren und breite niedrige Wände decken mehr/andere
+  // Laufwege ab als lauter gleich große Würfel. Zwei Höhen-Kategorien:
   // - 1.4m: klassische Deckung, man kann draufspringen (~1.6m Sprunghöhe)
   //   und von dort weiterkämpfen - man sieht/wird gesehen, wenn man nah dran ist.
   // - 2.2m: höher als Augenhöhe (1.7m) - blockt die Sicht komplett, kein
   //   Draufspringen möglich. Echte "Wand"-Deckung statt nur Sichtschutz.
-  const coverPositions: Array<[number, number, number, number]> = [
-    // [x, z, breite, höhe] - Hauptraum (östliche/zentrale Zone)
-    [-14, -8, 3, 1.4],
-    [-12, 7, 2.2, 1.4],
-    [3, -9, 2.6, 1.4],
-    [4, 9, 3.4, 1.4],
-    [-2, 0, 4, 1.4],
-    [24, -16, 2.6, 1.4],
-    [22, 16, 2.6, 2.2],
+  const coverPositions: Array<[number, number, number, number, number]> = [
+    // [x, z, breite (X), tiefe (Z), höhe] - Hauptraum (östliche/zentrale Zone)
+    [-14, -8, 3, 3, 1.4],
+    [-12, 7, 4, 1.5, 1.4], // lang und schmal
+    [3, -9, 2.6, 2.6, 1.4],
+    [4, 9, 5, 2, 1.4], // breite niedrige Wand
+    [-2, 0, 4, 4, 1.4],
+    [24, -16, 1.5, 4, 1.4], // schmal und tief
+    [22, 16, 2.6, 2.6, 2.2],
     // Hauptraum, westliche Zone (jenseits der Trennwand, Richtung Spawns)
-    [-28, -9, 2.6, 1.4],
-    [-27, 8, 3, 2.2],
+    [-28, -9, 4.5, 1.8, 1.4], // lang und schmal
+    [-27, 8, 3, 3, 2.2],
     // Flankenraum
-    [sideRoomMinX + 6, -5, 2.4, 1.4],
-    [sideRoomMinX + 13, 7, 2.6, 2.2],
+    [sideRoomMinX + 6, -5, 2.4, 2.4, 1.4],
+    [sideRoomMinX + 13, 7, 2, 4.5, 2.2], // schmal und tief
   ]
 
-  for (const [x, z, size, height] of coverPositions) {
-    const boxGeometry = new THREE.BoxGeometry(size, height, size)
+  for (const [x, z, width, depth, height] of coverPositions) {
+    const boxGeometry = new THREE.BoxGeometry(width, height, depth)
     const box = new THREE.Mesh(boxGeometry, boxMaterial)
     box.position.set(x, height / 2, z)
     group.add(box)
