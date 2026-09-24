@@ -333,9 +333,12 @@ export function buildArena(): ArenaResult {
     // Hauptraum, westliche Zone (jenseits der Trennwand, Richtung Spawns)
     [-28, -9, 4.5, 1.8, 1.4], // lang und schmal
     [-27, 8, 3, 3, 2.2],
+    [-24, -16, 3, 2, 1.4], // zusätzliche Deckung, mehr Gesamtdichte
+    [15, -8, 2, 2, 1.4], // zusätzliche Deckung nahe der Haupt-Plattform
     // Flankenraum
     [sideRoomMinX + 6, -5, 2.4, 2.4, 1.4],
     [sideRoomMinX + 13, 7, 2, 4.5, 2.2], // schmal und tief
+    [44, -8, 2.2, 2.2, 1.4], // zusätzliche Deckung
   ]
 
   for (const [x, z, width, depth, height] of coverPositions) {
@@ -349,52 +352,84 @@ export function buildArena(): ArenaResult {
   buildLCover(-6, -16, 4, 0.8, 1.6, 1, 1)
   buildLCover(sideRoomMinX + 2, -7, 4, 0.8, 1.6, 1, -1)
 
-  // --- Erhöhte Plattform + Rampe (echte Höhenstufe, größer als jede
-  // Deckungskiste) - gibt bei 2-4 Spielern einen "King of the Hill"-Punkt
-  // mit Überblick. Kühle Struktur-Farbe (wie die Wände), nicht die warme
-  // Deckungs-Farbe, damit man Struktur/Deckung optisch unterscheidet.
-  const PLATFORM_HEIGHT = 2.8
-  const PLATFORM_SIZE = 6
-  const PLATFORM_CENTER_X = 15
-  const PLATFORM_CENTER_Z = 0
-  // Bewusst recht lang (flache Steigung von PLATFORM_HEIGHT über RAMP_LENGTH):
-  // ist die Rampe zu steil, "berührt" die Spieler-Kollisionsbox (die einen
-  // Radius von PLAYER_RADIUS hat) die senkrechte Plattform-Seitenwand schon,
-  // bevor die Rampe an dieser Stelle hoch genug ist - der Spieler bleibt dann
-  // exakt am Übergang stecken (in Tests reproduziert und so behoben).
-  const RAMP_LENGTH = 10
-  const RAMP_WIDTH = 4
+  // --- Erhöhte Plattformen + Rampen (echte Höhenstufen, größer als jede
+  // Deckungskiste) - geben "King of the Hill"-Punkte mit Überblick. Kühle
+  // Struktur-Farbe (wie die Wände), nicht die warme Deckungs-Farbe, damit
+  // man Struktur/Deckung optisch unterscheidet.
+  //
+  // Bewusst als Funktion: die Rampe muss immer recht lang sein (flache
+  // Steigung von platformHeight über rampLength) - ist sie zu steil,
+  // "berührt" die Spieler-Kollisionsbox (Radius PLAYER_RADIUS) die
+  // senkrechte Plattform-Seitenwand schon, bevor die Rampe an dieser Stelle
+  // hoch genug ist, und der Spieler bleibt exakt am Übergang stecken (in
+  // Tests reproduziert und so behoben) - dieselbe Regel gilt für jede
+  // weitere Plattform, daher hier einmal zentral statt pro Kopie neu bedacht.
+  function buildPlatformWithRamp(
+    centerX: number,
+    centerZ: number,
+    platformSize: number,
+    platformHeight: number,
+    rampLength: number,
+    rampWidth: number,
+    rampAxis: 'x' | 'z',
+    rampAscending: boolean
+  ): Ramp {
+    const platformGeometry = new THREE.BoxGeometry(platformSize, platformHeight, platformSize)
+    const platform = new THREE.Mesh(platformGeometry, wallMaterial)
+    platform.position.set(centerX, platformHeight / 2, centerZ)
+    group.add(platform)
+    solids.push({ mesh: platform, box: new THREE.Box3().setFromObject(platform) })
 
-  const platformGeometry = new THREE.BoxGeometry(PLATFORM_SIZE, PLATFORM_HEIGHT, PLATFORM_SIZE)
-  const platform = new THREE.Mesh(platformGeometry, wallMaterial)
-  platform.position.set(PLATFORM_CENTER_X, PLATFORM_HEIGHT / 2, PLATFORM_CENTER_Z)
-  group.add(platform)
-  solids.push({ mesh: platform, box: new THREE.Box3().setFromObject(platform) })
+    const platformHalf = platformSize / 2
+    // Rampen-Kante an der Plattform sowie Rampen-Start, je nach Achse und
+    // Anstiegsrichtung - die Rampe reicht immer exakt bis an die
+    // Plattform-Kante heran, damit der Übergang nahtlos ist (kein Sprung).
+    const edgeAtPlatform = rampAscending
+      ? (rampAxis === 'x' ? centerX : centerZ) - platformHalf
+      : (rampAxis === 'x' ? centerX : centerZ) + platformHalf
+    const rampStart = rampAscending ? edgeAtPlatform - rampLength : edgeAtPlatform + rampLength
+    const rampMin = Math.min(edgeAtPlatform, rampStart)
+    const rampMax = Math.max(edgeAtPlatform, rampStart)
 
-  const platformMinX = PLATFORM_CENTER_X - PLATFORM_SIZE / 2
-  const rampMinX = platformMinX - RAMP_LENGTH
+    const ramp: Ramp = {
+      minX: rampAxis === 'x' ? rampMin : centerX - rampWidth / 2,
+      maxX: rampAxis === 'x' ? rampMax : centerX + rampWidth / 2,
+      minZ: rampAxis === 'z' ? rampMin : centerZ - rampWidth / 2,
+      maxZ: rampAxis === 'z' ? rampMax : centerZ + rampWidth / 2,
+      axis: rampAxis,
+      ascending: rampAscending,
+      bottomHeight: 0,
+      topHeight: platformHeight,
+    }
 
-  // Die Rampe steigt von 0 auf PLATFORM_HEIGHT an, exakt bis an die
-  // Plattform-Kante heran - so geht der Übergang nahtlos, ohne Sprung.
-  const ramp: Ramp = {
-    minX: rampMinX,
-    maxX: platformMinX,
-    minZ: PLATFORM_CENTER_Z - RAMP_WIDTH / 2,
-    maxZ: PLATFORM_CENTER_Z + RAMP_WIDTH / 2,
-    axis: 'x',
-    ascending: true,
-    bottomHeight: 0,
-    topHeight: PLATFORM_HEIGHT,
+    // Sichtbares Rampen-Mesh: ein dreiseitiges Prisma (Keilform), damit die
+    // Schräge auch wirklich schräg AUSSIEHT statt wie eine liegende Box.
+    // Die Wedge-Geometrie steigt lokal entlang +X an - für eine Z-Achsen-
+    // Rampe wird das Mesh um 90° gedreht.
+    const rampMesh = new THREE.Mesh(
+      createWedgeGeometry(rampLength, rampWidth, platformHeight),
+      wallMaterial
+    )
+    if (rampAxis === 'x') {
+      rampMesh.position.set(rampAscending ? rampMin : rampMax, 0, centerZ)
+      if (!rampAscending) rampMesh.rotation.y = Math.PI
+    } else {
+      rampMesh.rotation.y = rampAscending ? -Math.PI / 2 : Math.PI / 2
+      rampMesh.position.set(centerX, 0, rampAscending ? rampMin : rampMax)
+    }
+    group.add(rampMesh)
+    shootableExtras.push(rampMesh)
+
+    return ramp
   }
 
-  // Sichtbares Rampen-Mesh: ein dreiseitiges Prisma (Keilform), damit die
-  // Schräge auch wirklich schräg AUSSIEHT statt wie eine liegende Box.
-  const rampMesh = new THREE.Mesh(
-    createWedgeGeometry(RAMP_LENGTH, RAMP_WIDTH, PLATFORM_HEIGHT),
-    wallMaterial
-  )
-  rampMesh.position.set(rampMinX, 0, PLATFORM_CENTER_Z)
-  group.add(rampMesh)
+  const shootableExtras: THREE.Object3D[] = []
+
+  const rampToMainPlatform = buildPlatformWithRamp(15, 0, 6, 2.8, 10, 4, 'x', true)
+
+  // Zweite Plattform am Rand der West-Zone (siehe Wunsch nach mehr
+  // Rampen/Höhenstufen "am Rand"): etwas kleiner, Rampe steigt entlang Z an.
+  const rampToWestPlatform = buildPlatformWithRamp(-23.5, 14, 5, 2.4, 8, 3, 'z', true)
 
   // Fünf Punkte, mit Abstand zu Wänden/Kisten und zueinander verteilt -
   // vier in den Ecken des Hauptraums, einer tief im (kleineren) Flankenraum,
@@ -413,7 +448,7 @@ export function buildArena(): ArenaResult {
     group,
     solids,
     spawnPoints,
-    ramps: [ramp],
-    shootables: [mainGround, sideGround, rampMesh, ...solids.map((s) => s.mesh)],
+    ramps: [rampToMainPlatform, rampToWestPlatform],
+    shootables: [mainGround, sideGround, ...shootableExtras, ...solids.map((s) => s.mesh)],
   }
 }
