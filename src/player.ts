@@ -14,6 +14,12 @@ export const EYE_HEIGHT = 1.7
 // Augenhöhe sonst ~30cm über eine 1.4m-Kiste).
 export const CROUCH_EYE_HEIGHT = 1.0
 const CROUCH_SPEED_MULTIPLIER = 0.6 // langsamer im Ducken, wie in den meisten Shootern
+// Wie schnell sich die Augenhöhe beim Ducken/Aufstehen annähert (Meter pro
+// Sekunde) - für BEIDE Richtungen gleich, damit es nicht (wie ursprünglich)
+// beim Aufstehen abrupt und nur beim Runter-Ducken "zufällig smooth" wirkt
+// (das war vorher gar keine Animation, sondern einfach der normale
+// Fallweg unter Schwerkraft - deshalb nur in eine Richtung sichtbar).
+const CROUCH_TRANSITION_SPEED = 6
 const MOVE_SPEED = 6 // Meter pro Sekunde
 const JUMP_SPEED = 7.6 // reicht für gut 1,6m Sprunghöhe - genug, um auf die Deckungs-Kisten zu springen
 const GRAVITY = 18
@@ -69,6 +75,15 @@ export class Player implements Damageable {
   private isCrouching = false
   private eyeHeight = EYE_HEIGHT
 
+  // Boden-/Fallhöhe OHNE Augenhöhen-Anteil (also z.B. 0 auf Arena-Boden,
+  // unabhängig davon ob man steht oder duckt). Schwerkraft/Sprung wirken
+  // ausschließlich hier - die Augenhöhe wird erst am Ende jedes Frames
+  // addiert. Ohne diese Trennung würde eine Änderung der Augenhöhe (Ducken)
+  // mit der Fall-Physik verrechnet und wirkte in eine Richtung "smooth"
+  // (zufällig wie ein normaler Fall) und in die andere abrupt (sofortiges
+  // Hochspringen der Kamera) - genau der gemeldete Bug.
+  private bodyY = 0
+
   private health = MAX_HEALTH
   private respawnRemaining = 0
   private spawnPoint = new THREE.Vector3()
@@ -88,6 +103,7 @@ export class Player implements Damageable {
     this.wantsToCrouch = false
     this.isCrouching = false
     this.eyeHeight = EYE_HEIGHT
+    this.bodyY = position.y - EYE_HEIGHT
   }
 
   get isAlive(): boolean {
@@ -175,7 +191,19 @@ export class Player implements Damageable {
     } else {
       this.isCrouching = false
     }
-    this.eyeHeight = this.isCrouching ? CROUCH_EYE_HEIGHT : EYE_HEIGHT
+
+    // Augenhöhe nicht instant springen lassen, sondern gleichmäßig
+    // annähern - in beide Richtungen mit derselben Geschwindigkeit. Wirkt
+    // direkt auf camera.position.y (über bodyY + eyeHeight), komplett
+    // unabhängig von Schwerkraft/Sprung-Physik weiter unten.
+    const targetEyeHeight = this.isCrouching ? CROUCH_EYE_HEIGHT : EYE_HEIGHT
+    const maxStep = CROUCH_TRANSITION_SPEED * deltaSeconds
+    if (this.eyeHeight < targetEyeHeight) {
+      this.eyeHeight = Math.min(targetEyeHeight, this.eyeHeight + maxStep)
+    } else if (this.eyeHeight > targetEyeHeight) {
+      this.eyeHeight = Math.max(targetEyeHeight, this.eyeHeight - maxStep)
+    }
+    this.camera.position.y = this.bodyY + this.eyeHeight
 
     // Schwerkraft anwenden
     this.velocity.y -= GRAVITY * deltaSeconds
@@ -209,23 +237,25 @@ export class Player implements Damageable {
       this.tryMove(moveDirection)
     }
 
-    // Vertikale Bewegung (Springen/Fallen)
-    this.camera.position.y += this.velocity.y * deltaSeconds
+    // Vertikale Bewegung (Springen/Fallen) - rein auf bodyY, ohne
+    // Augenhöhen-Anteil (siehe Kommentar beim Feld weiter oben).
+    this.bodyY += this.velocity.y * deltaSeconds
 
-    // Stand-Höhe unter den Füßen ermitteln: normalerweise der Arena-Boden
+    // Boden-Höhe unter den Füßen ermitteln: normalerweise der Arena-Boden
     // (0), aber wenn man über einer Kiste steht, deren Oberkante. Dadurch
     // kann man auf Kisten landen und stehen bleiben, statt durch sie
     // hindurchzufallen oder immer auf y=0 zurückgesetzt zu werden.
     const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z)
-    const standingY = groundHeight + this.eyeHeight
 
-    if (this.camera.position.y <= standingY) {
-      this.camera.position.y = standingY
+    if (this.bodyY <= groundHeight) {
+      this.bodyY = groundHeight
       this.velocity.y = 0
       this.onGround = true
     } else {
       this.onGround = false
     }
+
+    this.camera.position.y = this.bodyY + this.eyeHeight
   }
 
   // Höchste Stand-Höhe direkt unter dem Punkt (x, z): entweder eine
