@@ -82,7 +82,12 @@ for (const target of targets) {
 // ---------------------------------------------------------------------------
 
 const player = new Player(camera, arena.solids)
-player.spawn(arena.spawnPoint)
+// Zufälligen Spawn-Punkt wählen: aktuell nur kosmetisch relevant (man spawnt
+// mal hier, mal dort), aber im Multiplayer bräuchte jeder Spieler ohnehin
+// einen zufälligen/zugewiesenen Punkt aus genau dieser Liste.
+const randomSpawnPoint =
+  arena.spawnPoints[Math.floor(Math.random() * arena.spawnPoints.length)]
+player.spawn(randomSpawnPoint)
 
 // Sichtbare Spieler-Hülle (Vorbereitung für Multiplayer, siehe playerAvatar.ts).
 // Bewusst NICHT in arena.shootables aufgenommen - man soll sich nicht selbst

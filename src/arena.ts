@@ -17,7 +17,12 @@ export interface Solid {
 export interface ArenaResult {
   group: THREE.Group
   solids: Solid[]
-  spawnPoint: THREE.Vector3
+  // Mehrere Spawn-Punkte statt nur einem: im Singleplayer wird einfach
+  // einer davon zufällig gewählt, aber die Liste ist schon jetzt so
+  // angelegt, dass später jeder Mitspieler (2-4 im Multiplayer) einen
+  // eigenen, weit genug entfernten Punkt bekommen könnte, ohne dass sich
+  // mehrere Spieler direkt aufeinander spawnen.
+  spawnPoints: THREE.Vector3[]
   // Objekte, auf die geschossen werden kann (für den Raycast der Waffe).
   // Bewusst eine explizite Liste statt "einfach die ganze Gruppe" - sonst
   // würde auch das dünne, dekorative Boden-Raster (GridHelper) versehentlich
@@ -119,10 +124,21 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }
 
+  // Vier Punkte, je einer nahe einer Wand-Seite, alle gleich weit von der
+  // Mitte (wo die größte Deckungskiste steht) entfernt und mit deutlichem
+  // Abstand zueinander - so würden sich 2-4 Spieler im Multiplayer nicht
+  // direkt ins Gesicht spawnen. 1.7 ≈ Augenhöhe eines Menschen.
+  const spawnPoints = [
+    new THREE.Vector3(0, 1.7, 12),
+    new THREE.Vector3(0, 1.7, -12),
+    new THREE.Vector3(12, 1.7, 0),
+    new THREE.Vector3(-12, 1.7, 0),
+  ]
+
   return {
     group,
     solids,
-    spawnPoint: new THREE.Vector3(0, 1.7, 12), // 1.7 ≈ Augenhöhe eines Menschen
+    spawnPoints,
     shootables: [ground, ...solids.map((s) => s.mesh)],
   }
 }
