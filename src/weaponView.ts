@@ -5,6 +5,9 @@ import { Palette } from './palette'
 // Boxen (Körper, Lauf, Griff) - keine Texturdatei nötig, nur Farben aus
 // der Palette. Wird als Kind der Kamera angehängt, damit es sich beim
 // Umschauen automatisch mitbewegt (klassisches Ego-Shooter-"View Model").
+//
+// Bewusst OHNE Mündungsfeuer: Die Waffe ist konzeptionell eine Laserpistole
+// (passend zum Neon-Tracer-Look) - ein Pulverblitz würde da nicht dazu passen.
 
 const REST_POSITION = new THREE.Vector3(0.28, -0.28, -0.5)
 const REST_ROTATION_Y = -0.05
@@ -13,13 +16,10 @@ const RECOIL_DURATION = 0.12 // Sekunden für den Rückstoß-Kick beim Schuss
 const RECOIL_KICK_Z = 0.08 // wie weit die Waffe beim Schuss nach hinten ruckt
 const RECOIL_KICK_ROTATION = 0.12 // leichtes Hochkippen beim Schuss
 
-const MUZZLE_FLASH_DURATION = 0.06 // Sekunden, wie lange das Mündungsfeuer aufblitzt
-
 export class WeaponView {
   readonly group: THREE.Group
-  private muzzleFlash: THREE.Mesh
+  private muzzle: THREE.Object3D
   private recoilRemaining = 0
-  private flashRemaining = 0
 
   constructor(camera: THREE.Camera) {
     this.group = new THREE.Group()
@@ -55,30 +55,23 @@ export class WeaponView {
     stripe.position.set(0, 0.055, 0.05)
     this.group.add(stripe)
 
-    // Bewusst weiß/warm statt Neon-Cyan - sonst verschmilzt der kurze Blitz
-    // optisch mit dem dauerhaften Neon-Streifen und fällt kaum auf. Leicht
-    // über der Lauf-Mitte versetzt, damit er nicht exakt hinter dem Lauf
-    // liegt und von ihm verdeckt wird.
-    const flashMaterial = new THREE.MeshBasicMaterial({ color: 0xfff4e0 })
-    this.muzzleFlash = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), flashMaterial)
-    this.muzzleFlash.position.set(0, 0.06, -0.4)
-    this.muzzleFlash.visible = false
-    this.group.add(this.muzzleFlash)
+    // Unsichtbarer Referenzpunkt am Lauf-Ende - nur für die Weltposition
+    // gebraucht (Startpunkt des Bullet-Tracers), kein eigenes Mesh nötig.
+    this.muzzle = new THREE.Object3D()
+    this.muzzle.position.set(0, 0.02, -0.4)
+    this.group.add(this.muzzle)
 
     camera.add(this.group)
   }
 
-  // Weltposition der Mündung (Lauf-Ende) - das ist der Startpunkt für den
-  // Bullet-Tracer. Der Blitz sitzt ohnehin schon genau dort.
+  // Weltposition der Mündung (Lauf-Ende) - Startpunkt für den Bullet-Tracer.
   getMuzzleWorldPosition(target: THREE.Vector3): THREE.Vector3 {
-    return this.muzzleFlash.getWorldPosition(target)
+    return this.muzzle.getWorldPosition(target)
   }
 
-  // Wird bei jedem Schuss aufgerufen und stößt Rückstoß + Mündungsfeuer an.
+  // Wird bei jedem Schuss aufgerufen und stößt den Rückstoß-Kick an.
   playShootEffect() {
     this.recoilRemaining = RECOIL_DURATION
-    this.flashRemaining = MUZZLE_FLASH_DURATION
-    this.muzzleFlash.visible = true
   }
 
   update(deltaSeconds: number) {
@@ -90,13 +83,6 @@ export class WeaponView {
     } else {
       this.group.position.z = REST_POSITION.z
       this.group.rotation.x = 0
-    }
-
-    if (this.flashRemaining > 0) {
-      this.flashRemaining = Math.max(0, this.flashRemaining - deltaSeconds)
-      if (this.flashRemaining === 0) {
-        this.muzzleFlash.visible = false
-      }
     }
   }
 }
