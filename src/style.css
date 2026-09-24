@@ -51,6 +51,27 @@ body {
   transform: translateY(-50%);
 }
 
+/* Munitionsanzeige unten mittig */
+#ammo-hud {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: system-ui, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #e8ecf1;
+  text-shadow: 0 0 8px rgba(51, 230, 204, 0.5);
+  pointer-events: none;
+  z-index: 5;
+}
+
+#ammo-hud.reloading {
+  color: #ff6b3d;
+  text-shadow: 0 0 8px rgba(255, 107, 61, 0.5);
+}
+
 /* Startbildschirm-Overlay */
 #overlay {
   position: fixed;

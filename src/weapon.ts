@@ -12,6 +12,15 @@ const IMPACT_MARKER_LIFETIME = 2 // Sekunden, bis ein Einschussloch wieder versc
 const TRACER_LIFETIME = 0.06 // Sekunden, wie lange die Leuchtspur sichtbar bleibt
 const TRACER_MAX_DISTANCE = 60 // Länge des Tracers, falls der Schuss nichts trifft (fliegt "ins Leere")
 
+const MAGAZINE_SIZE = 12
+const RELOAD_DURATION = 1.2 // Sekunden für einen Nachlade-Vorgang
+
+export interface AmmoState {
+  current: number
+  max: number
+  reloading: boolean
+}
+
 interface ImpactMarker {
   mesh: THREE.Mesh
   remainingLifetime: number
@@ -47,6 +56,9 @@ export class Weapon {
   private shootables: THREE.Object3D[]
   private view: WeaponView
 
+  private ammo = MAGAZINE_SIZE
+  private reloadRemaining = 0
+
   constructor(camera: THREE.Camera, scene: THREE.Scene, shootables: THREE.Object3D[]) {
     this.camera = camera
     this.scene = scene
@@ -59,6 +71,13 @@ export class Weapon {
   update(deltaSeconds: number) {
     this.cooldownRemaining = Math.max(0, this.cooldownRemaining - deltaSeconds)
     this.view.update(deltaSeconds)
+
+    if (this.reloadRemaining > 0) {
+      this.reloadRemaining = Math.max(0, this.reloadRemaining - deltaSeconds)
+      if (this.reloadRemaining === 0) {
+        this.ammo = MAGAZINE_SIZE
+      }
+    }
 
     for (let i = this.impactMarkers.length - 1; i >= 0; i--) {
       const marker = this.impactMarkers[i]
@@ -80,10 +99,19 @@ export class Weapon {
   }
 
   // Versucht, einen Schuss auszulösen. Schlägt fehl (macht nichts), solange
-  // die Feuerpause noch läuft.
+  // die Feuerpause noch läuft, während des Nachladens, oder wenn das
+  // Magazin leer ist (in dem Fall wird automatisch nachgeladen, damit man
+  // auf Touch-Geräten keinen extra Nachlade-Button braucht).
   tryShoot() {
+    if (this.reloadRemaining > 0) return
+    if (this.ammo <= 0) {
+      this.reload()
+      return
+    }
     if (this.cooldownRemaining > 0) return
+
     this.cooldownRemaining = FIRE_COOLDOWN
+    this.ammo -= 1
     this.view.playShootEffect()
 
     // (0, 0) in normalisierten Bildschirmkoordinaten ist die Bildschirmmitte -
@@ -105,6 +133,18 @@ export class Weapon {
         .addScaledVector(this.raycaster.ray.direction, TRACER_MAX_DISTANCE)
       this.spawnTracer(muzzlePosition, missEnd)
     }
+  }
+
+  // Startet das Nachladen manuell (z.B. per Taste), falls das Magazin nicht
+  // schon voll ist und nicht schon nachgeladen wird.
+  reload() {
+    if (this.reloadRemaining > 0 || this.ammo === MAGAZINE_SIZE) return
+    this.reloadRemaining = RELOAD_DURATION
+  }
+
+  // Für die HUD-Anzeige (Munition/Nachladen).
+  getAmmoState(): AmmoState {
+    return { current: this.ammo, max: MAGAZINE_SIZE, reloading: this.reloadRemaining > 0 }
   }
 
   private spawnImpactMarker(hit: THREE.Intersection) {

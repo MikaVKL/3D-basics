@@ -95,7 +95,8 @@ function setActive(active: boolean) {
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
   overlayHint.textContent =
-    'Links: Joystick zum Bewegen · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen'
+    'Links: Joystick zum Bewegen · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen ' +
+    '(leeres Magazin lädt automatisch nach)'
   touchControls.classList.remove('hidden')
 
   const touchInput = new TouchInput(
@@ -137,6 +138,13 @@ window.addEventListener('resize', () => {
 // ---------------------------------------------------------------------------
 
 const timer = new THREE.Timer()
+const ammoHud = document.querySelector<HTMLDivElement>('#ammo-hud')!
+
+function updateAmmoHud() {
+  const ammo = weapon.getAmmoState()
+  ammoHud.textContent = ammo.reloading ? 'Nachladen...' : `${ammo.current} / ${ammo.max}`
+  ammoHud.classList.toggle('reloading', ammo.reloading)
+}
 
 function animate() {
   requestAnimationFrame(animate)
@@ -148,6 +156,7 @@ function animate() {
     player.update(deltaSeconds)
   }
   weapon.update(deltaSeconds)
+  updateAmmoHud()
 
   renderer.render(scene, camera)
 }

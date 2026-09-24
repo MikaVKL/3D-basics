@@ -77,6 +77,9 @@ export class DesktopInput {
       case 'Space':
         this.player.jump()
         break
+      case 'KeyR':
+        if (pressed) this.weapon.reload()
+        break
       default:
         return // bei irrelevanten Tasten gar nicht erst updateMoveInput aufrufen
     }
