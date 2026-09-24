@@ -68,6 +68,12 @@ export class WeaponView {
     camera.add(this.group)
   }
 
+  // Weltposition der Mündung (Lauf-Ende) - das ist der Startpunkt für den
+  // Bullet-Tracer. Der Blitz sitzt ohnehin schon genau dort.
+  getMuzzleWorldPosition(target: THREE.Vector3): THREE.Vector3 {
+    return this.muzzleFlash.getWorldPosition(target)
+  }
+
   // Wird bei jedem Schuss aufgerufen und stößt Rückstoß + Mündungsfeuer an.
   playShootEffect() {
     this.recoilRemaining = RECOIL_DURATION
