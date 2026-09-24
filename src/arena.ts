@@ -30,7 +30,20 @@ export interface ArenaResult {
   shootables: THREE.Object3D[]
 }
 
-const ARENA_SIZE = 40 // Kantenlänge der quadratischen Arena
+// Die Arena ist bewusst NICHT quadratisch/symmetrisch: ein großer
+// "Hauptraum" plus ein seitlich angesetzter, schmalerer "Flankenraum" (durch
+// eine Öffnung in der Ost-Wand verbunden). Das gibt zwei unterschiedlich
+// große Kampfzonen statt vier gespiegelten Ecken - interessanter zum Spielen
+// und näher am Krunker.io-Stil als eine reine Box.
+const MAIN_ROOM_WIDTH = 44 // X-Ausdehnung
+const MAIN_ROOM_DEPTH = 30 // Z-Ausdehnung
+const MAIN_HALF_W = MAIN_ROOM_WIDTH / 2
+const MAIN_HALF_D = MAIN_ROOM_DEPTH / 2
+
+const SIDE_ROOM_WIDTH = 12 // X-Ausdehnung (wie weit er nach außen ragt)
+const SIDE_ROOM_DEPTH = 16 // Z-Ausdehnung (= Breite der Öffnung zum Hauptraum)
+const SIDE_HALF_D = SIDE_ROOM_DEPTH / 2
+
 const WALL_HEIGHT = 6
 const WALL_THICKNESS = 1
 
@@ -38,39 +51,78 @@ export function buildArena(): ArenaResult {
   const group = new THREE.Group()
   const solids: Solid[] = []
 
-  // --- Boden ---
-  const groundGeometry = new THREE.PlaneGeometry(ARENA_SIZE, ARENA_SIZE)
+  // --- Boden: zwei Flächen, eine pro Raum (der Flankenraum ist schmaler) ---
   const groundMaterial = new THREE.MeshStandardMaterial({
     color: Palette.ground,
     roughness: 0.9,
     metalness: 0.05,
   })
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial)
-  ground.rotation.x = -Math.PI / 2 // liegend statt stehend ausrichten
-  group.add(ground)
 
-  // --- Ein leichtes Raster auf dem Boden als visuelle Orientierungshilfe ---
-  // (dezente Linien, kein Texturbild - nur Geometrie)
-  const grid = new THREE.GridHelper(ARENA_SIZE, 20, Palette.accentNeon, 0x2a3a4a)
-  ;(grid.material as THREE.Material).transparent = true
-  ;(grid.material as THREE.Material).opacity = 0.15
-  grid.position.y = 0.01 // knapp über dem Boden, gegen Z-Fighting
-  group.add(grid)
+  const mainGround = new THREE.Mesh(
+    new THREE.PlaneGeometry(MAIN_ROOM_WIDTH, MAIN_ROOM_DEPTH),
+    groundMaterial
+  )
+  mainGround.rotation.x = -Math.PI / 2 // liegend statt stehend ausrichten
+  group.add(mainGround)
 
-  // --- Umgebende Wände (4 Stück, bilden ein Quadrat) ---
+  const sideGround = new THREE.Mesh(
+    new THREE.PlaneGeometry(SIDE_ROOM_WIDTH, SIDE_ROOM_DEPTH),
+    groundMaterial
+  )
+  sideGround.rotation.x = -Math.PI / 2
+  sideGround.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0, 0)
+  group.add(sideGround)
+
+  // --- Leichtes Raster auf beiden Böden als Orientierungshilfe ---
+  // (dezente Linien, kein Texturbild - nur Geometrie). GridHelper ist immer
+  // quadratisch, daher wird per scale auf das jeweilige Rechteck gestreckt.
+  const mainGrid = new THREE.GridHelper(MAIN_ROOM_WIDTH, 22, Palette.accentNeon, 0x2a3a4a)
+  mainGrid.scale.z = MAIN_ROOM_DEPTH / MAIN_ROOM_WIDTH
+  ;(mainGrid.material as THREE.Material).transparent = true
+  ;(mainGrid.material as THREE.Material).opacity = 0.15
+  mainGrid.position.y = 0.01 // knapp über dem Boden, gegen Z-Fighting
+  group.add(mainGrid)
+
+  const sideGrid = new THREE.GridHelper(SIDE_ROOM_DEPTH, 8, Palette.accentNeon, 0x2a3a4a)
+  sideGrid.scale.x = SIDE_ROOM_WIDTH / SIDE_ROOM_DEPTH
+  ;(sideGrid.material as THREE.Material).transparent = true
+  ;(sideGrid.material as THREE.Material).opacity = 0.15
+  sideGrid.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0.01, 0)
+  group.add(sideGrid)
+
+  // --- Umgebende Wände ---
   const wallMaterial = new THREE.MeshStandardMaterial({
     color: Palette.wall,
     roughness: 0.8,
     metalness: 0.1,
   })
 
-  const half = ARENA_SIZE / 2
+  const sideRoomMinX = MAIN_HALF_W
+  const sideRoomMaxX = MAIN_HALF_W + SIDE_ROOM_WIDTH
+  const sideRoomCenterX = (sideRoomMinX + sideRoomMaxX) / 2
+
   const wallDefs = [
-    // [breite, tiefe, x, z]
-    { w: ARENA_SIZE, d: WALL_THICKNESS, x: 0, z: -half },
-    { w: ARENA_SIZE, d: WALL_THICKNESS, x: 0, z: half },
-    { w: WALL_THICKNESS, d: ARENA_SIZE, x: -half, z: 0 },
-    { w: WALL_THICKNESS, d: ARENA_SIZE, x: half, z: 0 },
+    // [breite, tiefe, x, z] - Hauptraum (Süd/Nord/West komplett, Ost mit
+    // Lücke in der Mitte für den Durchgang zum Flankenraum)
+    { w: MAIN_ROOM_WIDTH, d: WALL_THICKNESS, x: 0, z: -MAIN_HALF_D },
+    { w: MAIN_ROOM_WIDTH, d: WALL_THICKNESS, x: 0, z: MAIN_HALF_D },
+    { w: WALL_THICKNESS, d: MAIN_ROOM_DEPTH, x: -MAIN_HALF_W, z: 0 },
+    {
+      w: WALL_THICKNESS,
+      d: MAIN_HALF_D - SIDE_HALF_D,
+      x: MAIN_HALF_W,
+      z: (MAIN_HALF_D + SIDE_HALF_D) / 2,
+    },
+    {
+      w: WALL_THICKNESS,
+      d: MAIN_HALF_D - SIDE_HALF_D,
+      x: MAIN_HALF_W,
+      z: -(MAIN_HALF_D + SIDE_HALF_D) / 2,
+    },
+    // Flankenraum (Nord/Süd/Ost - West ist die offene Verbindung zum Hauptraum)
+    { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: SIDE_HALF_D },
+    { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: -SIDE_HALF_D },
+    { w: WALL_THICKNESS, d: SIDE_ROOM_DEPTH, x: sideRoomMaxX, z: 0 },
   ]
 
   for (const def of wallDefs) {
@@ -97,23 +149,26 @@ export function buildArena(): ArenaResult {
     group.add(stripe)
   }
 
-  // --- Deckungs-Kisten in der Mitte der Arena (warme Akzentfarbe) ---
+  // --- Deckungs-Kisten (warme Akzentfarbe) ---
   const boxMaterial = new THREE.MeshStandardMaterial({
     color: Palette.accentWarm,
     roughness: 0.6,
     metalness: 0.15,
   })
 
-  // Höhe bewusst auf 1.4m begrenzt: hoch genug, um wirklich Deckung zu
-  // bieten, aber mit dem aktuellen Sprung (~1.6m Sprunghöhe) noch bequem
-  // erreichbar - man kann draufspringen und von dort weiterkämpfen.
+  // Bewusst UNGLEICHMÄSSIG verteilt (anders große Kisten, kein gespiegeltes
+  // Muster) statt der bisherigen vier symmetrischen Ecken - passend zur
+  // asymmetrischen Raumform. Höhe bleibt bei max. 1.4m, damit man mit dem
+  // aktuellen Sprung (~1.6m) noch draufspringen kann.
   const coverPositions: Array<[number, number, number, number]> = [
-    // [x, z, breite, höhe]
-    [-6, -4, 2.5, 1.4],
-    [6, -4, 2.5, 1.4],
-    [-6, 4, 2.5, 1.4],
-    [6, 4, 2.5, 1.4],
-    [0, 0, 3, 1.4],
+    // [x, z, breite, höhe] - Hauptraum
+    [-14, -8, 3, 1.4],
+    [-12, 7, 2.2, 1.4],
+    [3, -9, 2.6, 1.4],
+    [4, 9, 3.4, 1.4],
+    [-2, 0, 4, 1.4],
+    // Flankenraum - kleiner Raum, daher nur eine Kiste nahe dem Eingang
+    [24, -4, 2.2, 1.4],
   ]
 
   for (const [x, z, size, height] of coverPositions) {
@@ -124,21 +179,23 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }
 
-  // Vier Punkte, je einer nahe einer Wand-Seite, alle gleich weit von der
-  // Mitte (wo die größte Deckungskiste steht) entfernt und mit deutlichem
-  // Abstand zueinander - so würden sich 2-4 Spieler im Multiplayer nicht
-  // direkt ins Gesicht spawnen. 1.7 ≈ Augenhöhe eines Menschen.
+  // Fünf Punkte, mit Abstand zu Wänden/Kisten und zueinander verteilt -
+  // vier in den Ecken des Hauptraums, einer tief im (kleineren) Flankenraum,
+  // damit dieser auch als Spawn-Option genutzt wird. So würden sich 2-4
+  // Spieler im Multiplayer nicht direkt ins Gesicht spawnen.
+  // 1.7 ≈ Augenhöhe eines Menschen.
   const spawnPoints = [
-    new THREE.Vector3(0, 1.7, 12),
+    new THREE.Vector3(-18, 1.7, -12),
+    new THREE.Vector3(-18, 1.7, 12),
     new THREE.Vector3(0, 1.7, -12),
-    new THREE.Vector3(12, 1.7, 0),
-    new THREE.Vector3(-12, 1.7, 0),
+    new THREE.Vector3(0, 1.7, 12),
+    new THREE.Vector3(sideRoomMaxX - 4, 1.7, 4),
   ]
 
   return {
     group,
     solids,
     spawnPoints,
-    shootables: [ground, ...solids.map((s) => s.mesh)],
+    shootables: [mainGround, sideGround, ...solids.map((s) => s.mesh)],
   }
 }
