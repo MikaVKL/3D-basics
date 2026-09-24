@@ -68,15 +68,16 @@ export interface ArenaResult {
 // eine Öffnung in der Ost-Wand verbunden). Das gibt zwei unterschiedlich
 // große Kampfzonen statt vier gespiegelten Ecken - interessanter zum Spielen
 // und näher am Krunker.io-Stil als eine reine Box.
-// Moderat vergrößert gegenüber der ersten Fassung (+~20%) - bei 2-4
-// Spielern gleichzeitig wirkte die vorherige Größe schnell eng.
-const MAIN_ROOM_WIDTH = 52 // X-Ausdehnung
-const MAIN_ROOM_DEPTH = 36 // Z-Ausdehnung
+// Nochmal deutlich vergrößert (52x36 -> 64x42) und mit mehr innerer Struktur
+// versehen (Trennwand mit Durchgang + Fenster, mehr/höhere Deckung) - eine
+// reine leere Halle wird auf Dauer langweilig, gerade bei mehreren Spielern.
+const MAIN_ROOM_WIDTH = 64 // X-Ausdehnung
+const MAIN_ROOM_DEPTH = 42 // Z-Ausdehnung
 const MAIN_HALF_W = MAIN_ROOM_WIDTH / 2
 const MAIN_HALF_D = MAIN_ROOM_DEPTH / 2
 
-const SIDE_ROOM_WIDTH = 16 // X-Ausdehnung (wie weit er nach außen ragt)
-const SIDE_ROOM_DEPTH = 20 // Z-Ausdehnung (= Breite der Öffnung zum Hauptraum)
+const SIDE_ROOM_WIDTH = 20 // X-Ausdehnung (wie weit er nach außen ragt)
+const SIDE_ROOM_DEPTH = 24 // Z-Ausdehnung (= Breite der Öffnung zum Hauptraum)
 const SIDE_HALF_D = SIDE_ROOM_DEPTH / 2
 
 const WALL_HEIGHT = 6
@@ -172,6 +173,17 @@ export function buildArena(): ArenaResult {
   const sideRoomMaxX = MAIN_HALF_W + SIDE_ROOM_WIDTH
   const sideRoomCenterX = (sideRoomMinX + sideRoomMaxX) / 2
 
+  // Innere Trennwand (siehe unten für das Fenster dazwischen): teilt den
+  // Hauptraum in zwei Zonen statt einer durchgehend offenen Halle. Zwei
+  // durchgehende Abschnitte entlang Z, mit einer Lücke in der Mitte für
+  // Durchgang (begehbar) + Fenster (nur Sicht/Schuss, siehe unten).
+  const DIVIDER_X = -20
+  const DIVIDER_SOLID_SOUTH_Z_MAX = -11
+  const DIVIDER_GAP_Z_MAX = -3 // Durchgang: von SOLID_SOUTH_Z_MAX bis hier
+  const WINDOW_Z_MAX = 3 // Fenster: von DIVIDER_GAP_Z_MAX bis hier
+  const dividerSouthDepth = DIVIDER_SOLID_SOUTH_Z_MAX - -MAIN_HALF_D
+  const dividerNorthDepth = MAIN_HALF_D - WINDOW_Z_MAX
+
   const wallDefs = [
     // [breite, tiefe, x, z] - Hauptraum (Süd/Nord/West komplett, Ost mit
     // Lücke in der Mitte für den Durchgang zum Flankenraum)
@@ -194,6 +206,9 @@ export function buildArena(): ArenaResult {
     { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: SIDE_HALF_D },
     { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: -SIDE_HALF_D },
     { w: WALL_THICKNESS, d: SIDE_ROOM_DEPTH, x: sideRoomMaxX, z: 0 },
+    // Innere Trennwand (Süd- und Nord-Abschnitt, siehe oben)
+    { w: WALL_THICKNESS, d: dividerSouthDepth, x: DIVIDER_X, z: -MAIN_HALF_D + dividerSouthDepth / 2 },
+    { w: WALL_THICKNESS, d: dividerNorthDepth, x: DIVIDER_X, z: WINDOW_Z_MAX + dividerNorthDepth / 2 },
   ]
 
   for (const def of wallDefs) {
@@ -220,6 +235,38 @@ export function buildArena(): ArenaResult {
     group.add(stripe)
   }
 
+  // --- Fenster in der inneren Trennwand (Sockel + Sturz, siehe oben) ---
+  // Zwischen den beiden Trennwand-Abschnitten liegt die Lücke von
+  // DIVIDER_SOLID_SOUTH_Z_MAX bis MAIN_HALF_D-dividerNorthDepth (=WINDOW_Z_MAX);
+  // darin liegt zuerst der begehbare Durchgang (bis DIVIDER_GAP_Z_MAX), dann
+  // das Fenster: Sockel (unten) + Sturz (oben) als zwei getrennte Solids mit
+  // Lücke dazwischen - man kann durchsehen und durchschießen, aber NICHT
+  // durchlaufen (anders als der Durchgang direkt daneben).
+  const WINDOW_SILL_HEIGHT = 1.1 // bis hier blockt der Sockel (verhindert Durchlaufen)
+  const WINDOW_OPENING_TOP = 2.6 // ab hier blockt der Sturz wieder
+  const windowDepth = WINDOW_Z_MAX - DIVIDER_GAP_Z_MAX
+
+  const windowSill = new THREE.Mesh(
+    new THREE.BoxGeometry(WALL_THICKNESS, WINDOW_SILL_HEIGHT, windowDepth),
+    wallMaterial
+  )
+  windowSill.position.set(DIVIDER_X, WINDOW_SILL_HEIGHT / 2, DIVIDER_GAP_Z_MAX + windowDepth / 2)
+  group.add(windowSill)
+  solids.push({ mesh: windowSill, box: new THREE.Box3().setFromObject(windowSill) })
+
+  const windowLintelHeight = WALL_HEIGHT - WINDOW_OPENING_TOP
+  const windowLintel = new THREE.Mesh(
+    new THREE.BoxGeometry(WALL_THICKNESS, windowLintelHeight, windowDepth),
+    wallMaterial
+  )
+  windowLintel.position.set(
+    DIVIDER_X,
+    WINDOW_OPENING_TOP + windowLintelHeight / 2,
+    DIVIDER_GAP_Z_MAX + windowDepth / 2
+  )
+  group.add(windowLintel)
+  solids.push({ mesh: windowLintel, box: new THREE.Box3().setFromObject(windowLintel) })
+
   // --- Deckungs-Kisten (warme Akzentfarbe) ---
   const boxMaterial = new THREE.MeshStandardMaterial({
     color: Palette.accentWarm,
@@ -228,18 +275,26 @@ export function buildArena(): ArenaResult {
   })
 
   // Bewusst UNGLEICHMÄSSIG verteilt (anders große Kisten, kein gespiegeltes
-  // Muster) statt der bisherigen vier symmetrischen Ecken - passend zur
-  // asymmetrischen Raumform. Höhe bleibt bei max. 1.4m, damit man mit dem
-  // aktuellen Sprung (~1.6m) noch draufspringen kann.
+  // Muster) statt symmetrischer Ecken. Zwei Höhen-Kategorien:
+  // - 1.4m: klassische Deckung, man kann draufspringen (~1.6m Sprunghöhe)
+  //   und von dort weiterkämpfen - man sieht/wird gesehen, wenn man nah dran ist.
+  // - 2.2m: höher als Augenhöhe (1.7m) - blockt die Sicht komplett, kein
+  //   Draufspringen möglich. Echte "Wand"-Deckung statt nur Sichtschutz.
   const coverPositions: Array<[number, number, number, number]> = [
-    // [x, z, breite, höhe] - Hauptraum
+    // [x, z, breite, höhe] - Hauptraum (östliche/zentrale Zone)
     [-14, -8, 3, 1.4],
     [-12, 7, 2.2, 1.4],
     [3, -9, 2.6, 1.4],
     [4, 9, 3.4, 1.4],
     [-2, 0, 4, 1.4],
-    // Flankenraum - kleiner Raum, daher nur eine Kiste nahe dem Eingang
-    [sideRoomMinX + 6, -4, 2.2, 1.4],
+    [24, -16, 2.6, 1.4],
+    [22, 16, 2.6, 2.2],
+    // Hauptraum, westliche Zone (jenseits der Trennwand, Richtung Spawns)
+    [-28, -9, 2.6, 1.4],
+    [-27, 8, 3, 2.2],
+    // Flankenraum
+    [sideRoomMinX + 6, -5, 2.4, 1.4],
+    [sideRoomMinX + 13, 7, 2.6, 2.2],
   ]
 
   for (const [x, z, size, height] of coverPositions) {
@@ -303,11 +358,11 @@ export function buildArena(): ArenaResult {
   // Spieler im Multiplayer nicht direkt ins Gesicht spawnen.
   // 1.7 ≈ Augenhöhe eines Menschen.
   const spawnPoints = [
-    new THREE.Vector3(-22, 1.7, -14),
-    new THREE.Vector3(-22, 1.7, 14),
-    new THREE.Vector3(0, 1.7, -14),
-    new THREE.Vector3(0, 1.7, 14),
-    new THREE.Vector3(sideRoomMaxX - 4, 1.7, 6),
+    new THREE.Vector3(-28, 1.7, -18),
+    new THREE.Vector3(-28, 1.7, 18),
+    new THREE.Vector3(0, 1.7, -18),
+    new THREE.Vector3(0, 1.7, 18),
+    new THREE.Vector3(sideRoomMaxX - 5, 1.7, 8),
   ]
 
   return {
