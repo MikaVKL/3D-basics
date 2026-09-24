@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
+import type { Damageable } from './damageable'
 
 // Einfaches Schießziel mit festem Leben: 10 Treffer = Tod. Kein Gegner-
 // Verhalten (keine Bewegung/KI) - nur zum Testen, ob Treffererkennung und
@@ -14,7 +15,7 @@ const HEALTH_BAR_WIDTH = 0.8
 const HEALTH_BAR_HEIGHT = 0.08
 const HEALTH_BAR_Y_OFFSET = 1.05 // knapp über dem Kopf der Kapsel
 
-export class Target {
+export class Target implements Damageable {
   readonly mesh: THREE.Mesh
   private health = MAX_HEALTH
   private respawnRemaining = 0
@@ -37,9 +38,11 @@ export class Target {
     this.mesh = new THREE.Mesh(geometry, this.material)
     this.mesh.position.copy(position)
 
-    // Verweis zurück auf dieses Target - so kann die Waffe beim Raycast-
-    // Treffer direkt erkennen "das ist ein Ziel" und takeDamage() aufrufen.
-    this.mesh.userData.target = this
+    // Verweis zurück auf dieses Target über die gemeinsame Damageable-
+    // Schnittstelle - so kann die Waffe beim Raycast-Treffer generisch
+    // erkennen "das kann Schaden nehmen" und takeDamage() aufrufen, ohne
+    // zu wissen, ob es ein Ziel-Dummy oder (später) ein anderer Spieler ist.
+    this.mesh.userData.damageable = this as Damageable
 
     this.healthBarGroup = new THREE.Group()
     this.healthBarGroup.position.set(0, HEALTH_BAR_Y_OFFSET, 0)

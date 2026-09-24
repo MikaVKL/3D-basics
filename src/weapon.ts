@@ -1,12 +1,13 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
 import { WeaponView } from './weaponView'
-import type { Target } from './target'
+import type { Damageable } from './damageable'
 
-// Einfachste Form von Ego-Shooter-"Schießen": ein Hitscan-Raycast genau aus
-// der Bildschirmmitte (dahin zeigt ja das Fadenkreuz), plus ein sichtbares
-// Waffenmodell mit Rückstoß/Mündungsfeuer (siehe weaponView.ts). Noch keine
-// Munition, kein Schaden an Gegnern - das kommt in späteren kleinen Schritten.
+// Hitscan-Raycast genau aus der Bildschirmmitte (dahin zeigt das Fadenkreuz),
+// plus sichtbares Waffenmodell mit Rückstoß (siehe weaponView.ts), Munition
+// und Nachladen. Getroffene Objekte werden generisch über die Damageable-
+// Schnittstelle behandelt (siehe damageable.ts) - das ist absichtlich so
+// entkoppelt, damit später Multiplayer-Gegner ohne Änderungen hier andocken.
 
 const FIRE_COOLDOWN = 0.15 // Sekunden zwischen zwei Schüssen (verhindert Spam)
 const IMPACT_MARKER_LIFETIME = 2 // Sekunden, bis ein Einschussloch wieder verschwindet
@@ -132,11 +133,13 @@ export class Weapon {
     const hits = this.raycaster.intersectObjects(this.shootables, false)
 
     if (hits.length > 0) {
-      const target = hits[0].object.userData.target as Target | undefined
-      if (target) {
-        // Ziel getroffen: Schaden statt des statischen Einschuss-Markers -
-        // das Aufblitzen des Ziels selbst ist hier das Treffer-Feedback.
-        target.takeDamage(HIT_DAMAGE)
+      // Generisch: könnte ein Ziel-Dummy oder (später) ein anderer Spieler
+      // sein - weapon.ts muss den Unterschied nicht kennen, siehe damageable.ts.
+      const damageable = hits[0].object.userData.damageable as Damageable | undefined
+      if (damageable) {
+        // Treffer auf etwas Lebendes: Schaden statt des statischen
+        // Einschuss-Markers - das Aufblitzen des Ziels ist hier das Feedback.
+        damageable.takeDamage(HIT_DAMAGE)
       } else {
         this.spawnImpactMarker(hits[0])
       }

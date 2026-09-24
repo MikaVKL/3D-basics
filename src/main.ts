@@ -8,6 +8,7 @@ import { DesktopInput } from './input/DesktopInput'
 import { TouchInput } from './input/TouchInput'
 import { Weapon } from './weapon'
 import { Target } from './target'
+import { PlayerAvatar } from './playerAvatar'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -82,6 +83,13 @@ for (const target of targets) {
 
 const player = new Player(camera, arena.solids)
 player.spawn(arena.spawnPoint)
+
+// Sichtbare Spieler-Hülle (Vorbereitung für Multiplayer, siehe playerAvatar.ts).
+// Bewusst NICHT in arena.shootables aufgenommen - man soll sich nicht selbst
+// treffen können. Man sieht sich selbst in der Ego-Perspektive nicht, aber
+// die Hülle existiert schon und reagiert korrekt auf Schaden.
+const playerAvatar = new PlayerAvatar(player)
+scene.add(playerAvatar.mesh)
 
 const lookControl = new LookControl(camera)
 const weapon = new Weapon(camera, scene, arena.shootables)
@@ -191,6 +199,7 @@ function animate() {
   for (const target of targets) {
     target.update(deltaSeconds, camera)
   }
+  playerAvatar.update(camera)
   updateAmmoHud()
   updateHealthHud()
 

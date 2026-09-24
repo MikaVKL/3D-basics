@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { Solid } from './arena'
+import type { Damageable } from './damageable'
 
 // Diese Klasse kümmert sich NUR um Bewegung/Physik/Kollision des Spielers.
 // Bewusst getrennt von der Eingabequelle (Tastatur+Maus vs. Touch) - beide
@@ -27,7 +28,7 @@ export interface HealthState {
   max: number
 }
 
-export class Player {
+export class Player implements Damageable {
   private velocity = new THREE.Vector3()
   private onGround = true
   private solids: Solid[]
