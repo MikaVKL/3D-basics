@@ -28,6 +28,20 @@ export interface HealthState {
   max: number
 }
 
+// Genau das, was ein Multiplayer-Client später pro Frame an andere Spieler
+// schicken müsste, um sie korrekt darzustellen: Position, Blickrichtung
+// (nur Yaw - Pitch ist rein lokal für die eigene Kamera relevant, siehe
+// playerAvatar.ts) und Leben. Absichtlich ein einfaches, flaches Objekt aus
+// Zahlen (kein THREE.Vector3/Quaternion) - das lässt sich 1:1 als JSON über
+// ein Netzwerk schicken, ohne Klassen-Instanzen (de-)serialisieren zu müssen.
+export interface PlayerNetworkState {
+  position: { x: number; y: number; z: number }
+  yaw: number
+  health: number
+  maxHealth: number
+  isAlive: boolean
+}
+
 export class Player implements Damageable {
   private velocity = new THREE.Vector3()
   private onGround = true
@@ -68,6 +82,26 @@ export class Player implements Damageable {
   // Sekunden bis zum Respawn, für die HUD-Anzeige ("Respawn in 3s").
   getRespawnCountdown(): number {
     return this.respawnRemaining
+  }
+
+  // Bündelt alles, was für einen späteren Multiplayer-Sync relevant wäre
+  // (siehe PlayerNetworkState oben). Wird aktuell noch nirgends "verschickt",
+  // aber playerAvatar.ts könnte damit z.B. auch die Hülle EINES ANDEREN
+  // Spielers positionieren - dieselbe Funktion, nur mit fremden Zustands-
+  // Daten statt der eigenen Kamera.
+  getNetworkState(): PlayerNetworkState {
+    const euler = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ')
+    return {
+      position: {
+        x: this.camera.position.x,
+        y: this.camera.position.y,
+        z: this.camera.position.z,
+      },
+      yaw: euler.y,
+      health: this.health,
+      maxHealth: MAX_HEALTH,
+      isAlive: this.isAlive,
+    }
   }
 
   // Es gibt aktuell noch keine Gegner, die das hier tatsächlich aufrufen -

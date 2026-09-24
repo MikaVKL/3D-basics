@@ -13,6 +13,13 @@ import type { Damageable } from './damageable'
 // der eigenen Waffe aufgenommen (siehe main.ts) - man soll sich nicht
 // selbst treffen können. Im Multiplayer bekäme jeder Client nur die
 // Hüllen der ANDEREN Spieler in seine eigene Schussliste.
+//
+// update() liest bewusst NICHT mehr direkt die Kamera, sondern
+// player.getNetworkState() (siehe player.ts) - genau die Daten, die ein
+// Multiplayer-Client später per Netzwerk für ANDERE Spieler bekommen würde.
+// Für die eigene Hülle kommt der Zustand hier noch lokal von der eigenen
+// Kamera, aber der Code kennt intern schon keinen Unterschied mehr zu
+// "fremden" Zustandsdaten.
 
 const CAPSULE_RADIUS = 0.35
 const CAPSULE_LENGTH = 1.0 // Zylinderteil; Gesamthöhe = LENGTH + 2*RADIUS
@@ -43,16 +50,15 @@ export class PlayerAvatar implements Damageable {
   }
 
   // Muss jeden Frame aufgerufen werden: Position/Ausrichtung der Hülle
-  // folgt der Kamera. Nur der Yaw (Drehung um die Hochachse) wird übernommen,
-  // nicht der Pitch (Hoch-/Runterschauen) - sonst würde sich die Figur beim
-  // Umschauen nach oben/unten seltsam nach vorne/hinten neigen.
-  update(camera: THREE.Camera) {
-    const capsuleCenterY = camera.position.y - EYE_HEIGHT + CAPSULE_LENGTH / 2 + CAPSULE_RADIUS
-    this.mesh.position.set(camera.position.x, capsuleCenterY, camera.position.z)
+  // folgt dem Netzwerk-Zustand des Spielers (Yaw, nicht Pitch - sonst würde
+  // sich die Figur beim Umschauen nach oben/unten seltsam nach vorne/hinten
+  // neigen, siehe Kommentar oben).
+  update() {
+    const state = this.player.getNetworkState()
+    const capsuleCenterY = state.position.y - EYE_HEIGHT + CAPSULE_LENGTH / 2 + CAPSULE_RADIUS
+    this.mesh.position.set(state.position.x, capsuleCenterY, state.position.z)
+    this.mesh.rotation.set(0, state.yaw, 0)
 
-    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ')
-    this.mesh.rotation.set(0, euler.y, 0)
-
-    this.mesh.visible = this.player.isAlive
+    this.mesh.visible = state.isAlive
   }
 }

@@ -91,6 +91,17 @@ player.spawn(arena.spawnPoint)
 const playerAvatar = new PlayerAvatar(player)
 scene.add(playerAvatar.mesh)
 
+// TEMPORÄR: statische Kopie der Spieler-Hülle in einer Arena-Ecke, nur damit
+// das Modell direkt begutachtet werden kann (man sieht sich selbst sonst nie,
+// da man immer aus der Ego-Perspektive schaut). Kann wieder entfernt werden,
+// sobald das Modell überprüft wurde.
+const inspectionAvatarMesh = new THREE.Mesh(
+  new THREE.CapsuleGeometry(0.35, 1.0, 4, 8),
+  new THREE.MeshStandardMaterial({ color: Palette.accentWarm })
+)
+inspectionAvatarMesh.position.set(16, 0.85, 16) // Ecke der Arena (halbe Kantenlänge = 20)
+scene.add(inspectionAvatarMesh)
+
 const lookControl = new LookControl(camera)
 const weapon = new Weapon(camera, scene, arena.shootables)
 
@@ -199,7 +210,7 @@ function animate() {
   for (const target of targets) {
     target.update(deltaSeconds, camera)
   }
-  playerAvatar.update(camera)
+  playerAvatar.update()
   updateAmmoHud()
   updateHealthHud()
 
