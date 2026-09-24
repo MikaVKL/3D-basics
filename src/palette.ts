@@ -31,4 +31,8 @@ export const Palette = {
 
   // Hauptlichtquelle (simuliert Mond-/Abendlicht): kühles, leicht bläuliches Weiß
   sunLight: 0xaebfd9,
+
+  // Waffen-/Ausrüstungs-Grau: bewusst deutlich heller als "wall", sonst geht
+  // das Waffen-Modell im dunklen Hintergrund optisch fast unter.
+  weaponBody: 0x6b7a8c,
 } as const

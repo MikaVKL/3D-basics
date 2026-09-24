@@ -1,10 +1,11 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
+import { WeaponView } from './weaponView'
 
 // Einfachste Form von Ego-Shooter-"Schießen": ein Hitscan-Raycast genau aus
-// der Bildschirmmitte (dahin zeigt ja das Fadenkreuz). Kein Waffenmodell,
-// keine Munition, kein Schaden an Gegnern - das ist bewusst der kleinstmögliche
-// erste Schritt, auf dem später Munition/Gegner/Waffenwechsel aufbauen.
+// der Bildschirmmitte (dahin zeigt ja das Fadenkreuz), plus ein sichtbares
+// Waffenmodell mit Rückstoß/Mündungsfeuer (siehe weaponView.ts). Noch keine
+// Munition, kein Schaden an Gegnern - das kommt in späteren kleinen Schritten.
 
 const FIRE_COOLDOWN = 0.15 // Sekunden zwischen zwei Schüssen (verhindert Spam)
 const IMPACT_MARKER_LIFETIME = 2 // Sekunden, bis ein Einschussloch wieder verschwindet
@@ -27,17 +28,20 @@ export class Weapon {
   private camera: THREE.Camera
   private scene: THREE.Scene
   private shootables: THREE.Object3D[]
+  private view: WeaponView
 
   constructor(camera: THREE.Camera, scene: THREE.Scene, shootables: THREE.Object3D[]) {
     this.camera = camera
     this.scene = scene
     this.shootables = shootables
+    this.view = new WeaponView(camera)
   }
 
   // Muss jeden Frame aufgerufen werden, damit Feuerpause und die
   // Einschuss-Marker (die nach einer Weile wieder verschwinden) funktionieren.
   update(deltaSeconds: number) {
     this.cooldownRemaining = Math.max(0, this.cooldownRemaining - deltaSeconds)
+    this.view.update(deltaSeconds)
 
     for (let i = this.impactMarkers.length - 1; i >= 0; i--) {
       const marker = this.impactMarkers[i]
@@ -54,6 +58,7 @@ export class Weapon {
   tryShoot() {
     if (this.cooldownRemaining > 0) return
     this.cooldownRemaining = FIRE_COOLDOWN
+    this.view.playShootEffect()
 
     // (0, 0) in normalisierten Bildschirmkoordinaten ist die Bildschirmmitte -
     // exakt dort, wo das Fadenkreuz sitzt.
