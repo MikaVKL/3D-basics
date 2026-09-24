@@ -72,6 +72,37 @@ body {
   text-shadow: 0 0 8px rgba(255, 107, 61, 0.5);
 }
 
+#scoreboard {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: system-ui, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#score-red {
+  color: #ff4d5a;
+  text-shadow: 0 0 8px rgba(255, 77, 90, 0.5);
+}
+
+#score-blue {
+  color: #4da6ff;
+  text-shadow: 0 0 8px rgba(77, 166, 255, 0.5);
+}
+
+#score-divider {
+  color: #e8ecf1;
+  opacity: 0.6;
+}
+
 /* Lebensanzeige unten links: Balken + Zahl */
 #health-hud {
   position: fixed;

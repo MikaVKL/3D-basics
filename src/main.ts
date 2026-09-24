@@ -10,6 +10,7 @@ import { Weapon } from './weapon'
 import { Target } from './target'
 import { PlayerAvatar } from './playerAvatar'
 import { DebugMarkers } from './debugMarkers'
+import { Scoreboard } from './scoreboard'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -99,7 +100,10 @@ for (const target of targets) {
 // bewusst von der Eingabequelle getrennt - siehe DesktopInput/TouchInput.
 // ---------------------------------------------------------------------------
 
-const player = new Player(camera, arena.solids, arena.ramps)
+// Im Singleplayer immer Team Blau (siehe team.ts) - die Ziel-Dummies stehen
+// als Platzhalter für "das gegnerische Team" (Rot), damit sich der
+// Kill-Counter schon jetzt sinnvoll testen lässt.
+const player = new Player(camera, arena.solids, arena.ramps, 'blue')
 // Zufälligen Spawn-Punkt wählen: aktuell nur kosmetisch relevant (man spawnt
 // mal hier, mal dort), aber im Multiplayer bräuchte jeder Spieler ohnehin
 // einen zufälligen/zugewiesenen Punkt aus genau dieser Liste.
@@ -126,7 +130,10 @@ inspectionAvatarMesh.position.set(16, 0.85, 16) // Ecke der Arena (halbe Kantenl
 scene.add(inspectionAvatarMesh)
 
 const lookControl = new LookControl(camera)
-const weapon = new Weapon(camera, scene, arena.shootables)
+const scoreboard = new Scoreboard()
+const weapon = new Weapon(camera, scene, arena.shootables, player.team, (killerTeam) =>
+  scoreboard.addKill(killerTeam)
+)
 
 // ---------------------------------------------------------------------------
 // Eingabe: automatisch zwischen Maus+Tastatur (Desktop) und Touch (Tablet/
@@ -201,6 +208,13 @@ const healthBarFill = document.querySelector<HTMLDivElement>('#health-bar-fill')
 const healthText = document.querySelector<HTMLSpanElement>('#health-text')!
 const deathOverlay = document.querySelector<HTMLDivElement>('#death-overlay')!
 const respawnCountdown = document.querySelector<HTMLSpanElement>('#respawn-countdown')!
+const scoreRed = document.querySelector<HTMLSpanElement>('#score-red')!
+const scoreBlue = document.querySelector<HTMLSpanElement>('#score-blue')!
+
+function updateScoreboardHud() {
+  scoreRed.textContent = String(scoreboard.getScore('red'))
+  scoreBlue.textContent = String(scoreboard.getScore('blue'))
+}
 
 function updateAmmoHud() {
   const ammo = weapon.getAmmoState()
@@ -237,6 +251,7 @@ function animate() {
   playerAvatar.update()
   updateAmmoHud()
   updateHealthHud()
+  updateScoreboardHud()
 
   renderer.render(scene, camera)
 }

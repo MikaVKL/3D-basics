@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { Solid, Ramp } from './arena'
 import { rampHeightAt } from './arena'
 import type { Damageable } from './damageable'
+import type { Team } from './team'
 
 // Diese Klasse kümmert sich NUR um Bewegung/Physik/Kollision des Spielers.
 // Bewusst getrennt von der Eingabequelle (Tastatur+Maus vs. Touch) - beide
@@ -53,6 +54,7 @@ export interface PlayerNetworkState {
   maxHealth: number
   isAlive: boolean
   crouching: boolean
+  team: Team
 }
 
 export class Player implements Damageable {
@@ -87,11 +89,13 @@ export class Player implements Damageable {
   private health = MAX_HEALTH
   private respawnRemaining = 0
   private spawnPoint = new THREE.Vector3()
+  readonly team: Team
 
-  constructor(camera: THREE.PerspectiveCamera, solids: Solid[], ramps: Ramp[] = []) {
+  constructor(camera: THREE.PerspectiveCamera, solids: Solid[], ramps: Ramp[] = [], team: Team = 'blue') {
     this.camera = camera
     this.solids = solids
     this.ramps = ramps
+    this.team = team
   }
 
   spawn(position: THREE.Vector3) {
@@ -137,6 +141,7 @@ export class Player implements Damageable {
       maxHealth: MAX_HEALTH,
       isAlive: this.isAlive,
       crouching: this.isCrouching,
+      team: this.team,
     }
   }
 

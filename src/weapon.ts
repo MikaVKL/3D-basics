@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { Palette } from './palette'
 import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
+import type { Team } from './team'
 
 // Hitscan-Raycast genau aus der Bildschirmmitte (dahin zeigt das Fadenkreuz),
 // plus sichtbares Waffenmodell mit Rückstoß (siehe weaponView.ts), Munition
@@ -58,15 +59,25 @@ export class Weapon {
   private scene: THREE.Scene
   private shootables: THREE.Object3D[]
   private view: WeaponView
+  private shooterTeam: Team
+  private onKill?: (killerTeam: Team) => void
 
   private ammo = MAGAZINE_SIZE
   private reloadRemaining = 0
 
-  constructor(camera: THREE.Camera, scene: THREE.Scene, shootables: THREE.Object3D[]) {
+  constructor(
+    camera: THREE.Camera,
+    scene: THREE.Scene,
+    shootables: THREE.Object3D[],
+    shooterTeam: Team,
+    onKill?: (killerTeam: Team) => void
+  ) {
     this.camera = camera
     this.scene = scene
     this.shootables = shootables
     this.view = new WeaponView(camera)
+    this.shooterTeam = shooterTeam
+    this.onKill = onKill
   }
 
   // Muss jeden Frame aufgerufen werden, damit Feuerpause und die
@@ -136,10 +147,20 @@ export class Weapon {
       // Generisch: könnte ein Ziel-Dummy oder (später) ein anderer Spieler
       // sein - weapon.ts muss den Unterschied nicht kennen, siehe damageable.ts.
       const damageable = hits[0].object.userData.damageable as Damageable | undefined
-      if (damageable) {
+      const targetTeam = hits[0].object.userData.team as Team | undefined
+
+      if (damageable && targetTeam === this.shooterTeam) {
+        // Freundschaftliches Feuer: kein Schaden, verhält sich wie ein
+        // normaler Wand-Treffer (statischer Marker statt Aufblitzen).
+        this.spawnImpactMarker(hits[0])
+      } else if (damageable) {
         // Treffer auf etwas Lebendes: Schaden statt des statischen
         // Einschuss-Markers - das Aufblitzen des Ziels ist hier das Feedback.
+        const wasAlive = damageable.isAlive
         damageable.takeDamage(HIT_DAMAGE)
+        if (wasAlive && !damageable.isAlive) {
+          this.onKill?.(this.shooterTeam)
+        }
       } else {
         this.spawnImpactMarker(hits[0])
       }

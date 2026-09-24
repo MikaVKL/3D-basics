@@ -1,11 +1,17 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
 import type { Damageable } from './damageable'
+import { TeamColor, type Team } from './team'
 
 // Einfaches Schießziel mit festem Leben: 10 Treffer = Tod. Kein Gegner-
 // Verhalten (keine Bewegung/KI) - nur zum Testen, ob Treffererkennung und
 // Schaden grundsätzlich funktionieren. Nach dem "Tod" taucht das Ziel nach
 // ein paar Sekunden wieder auf, damit man ohne Neuladen weiter testen kann.
+//
+// Steht bis zum echten Multiplayer als Platzhalter für "das gegnerische
+// Team" - fest dem roten Team zugeordnet (der Spieler ist blau, siehe
+// playerAvatar.ts), damit sich das Team-System/Kill-Counter schon jetzt
+// im Singleplayer sinnvoll testen lässt.
 
 const MAX_HEALTH = 10
 const RESPAWN_DELAY = 2.5 // Sekunden bis das Ziel nach dem Tod wieder erscheint
@@ -17,6 +23,7 @@ const HEALTH_BAR_Y_OFFSET = 1.05 // knapp über dem Kopf der Kapsel
 
 export class Target implements Damageable {
   readonly mesh: THREE.Mesh
+  readonly team: Team = 'red'
   private health = MAX_HEALTH
   private respawnRemaining = 0
   private hitFlashRemaining = 0
@@ -30,7 +37,7 @@ export class Target implements Damageable {
   private healthBarFillMaterial: THREE.MeshBasicMaterial
 
   constructor(position: THREE.Vector3) {
-    this.material = new THREE.MeshStandardMaterial({ color: Palette.accentNeon })
+    this.material = new THREE.MeshStandardMaterial({ color: TeamColor.red })
 
     // Kapsel = grobe, aber sofort erkennbare "Figur"-Silhouette, ohne dass
     // wir ein echtes Charaktermodell bauen müssen.
@@ -43,6 +50,8 @@ export class Target implements Damageable {
     // erkennen "das kann Schaden nehmen" und takeDamage() aufrufen, ohne
     // zu wissen, ob es ein Ziel-Dummy oder (später) ein anderer Spieler ist.
     this.mesh.userData.damageable = this as Damageable
+    // Team-Zugehörigkeit direkt am Mesh - siehe playerAvatar.ts.
+    this.mesh.userData.team = this.team
 
     this.healthBarGroup = new THREE.Group()
     this.healthBarGroup.position.set(0, HEALTH_BAR_Y_OFFSET, 0)
@@ -54,7 +63,7 @@ export class Target implements Damageable {
     )
     this.healthBarGroup.add(background)
 
-    this.healthBarFillMaterial = new THREE.MeshBasicMaterial({ color: Palette.accentNeon })
+    this.healthBarFillMaterial = new THREE.MeshBasicMaterial({ color: TeamColor.red })
     this.healthBarFill = new THREE.Mesh(
       new THREE.PlaneGeometry(HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT),
       this.healthBarFillMaterial
@@ -90,8 +99,8 @@ export class Target implements Damageable {
 
     if (this.hitFlashRemaining > 0) {
       this.hitFlashRemaining = Math.max(0, this.hitFlashRemaining - deltaSeconds)
-      // Beim Treffer kurz weiß aufblitzen, sonst normale Neon-Farbe.
-      this.material.color.set(this.hitFlashRemaining > 0 ? 0xffffff : Palette.accentNeon)
+      // Beim Treffer kurz weiß aufblitzen, sonst normale Team-Farbe.
+      this.material.color.set(this.hitFlashRemaining > 0 ? 0xffffff : TeamColor.red)
     }
 
     this.updateHealthBar(camera)
@@ -105,7 +114,7 @@ export class Target implements Damageable {
 
     const ratio = this.health / MAX_HEALTH
     this.healthBarFill.scale.x = ratio
-    this.healthBarFillMaterial.color.set(ratio <= 0.3 ? Palette.accentWarm : Palette.accentNeon)
+    this.healthBarFillMaterial.color.set(ratio <= 0.3 ? Palette.accentWarm : TeamColor.red)
 
     // Nur sichtbar, solange das Ziel selbst lebt/sichtbar ist.
     this.healthBarGroup.visible = this.mesh.visible

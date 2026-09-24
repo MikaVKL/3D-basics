@@ -1,8 +1,8 @@
 import * as THREE from 'three'
-import { Palette } from './palette'
 import { EYE_HEIGHT, CROUCH_EYE_HEIGHT } from './player'
 import type { Player } from './player'
 import type { Damageable } from './damageable'
+import { TeamColor } from './team'
 
 // Sichtbare Spieler-Hülle: die Kamera allein hat kein Mesh - für einen
 // späteren Multiplayer müssten andere Spieler aber überhaupt etwas sehen
@@ -38,13 +38,18 @@ export class PlayerAvatar implements Damageable {
   constructor(player: Player) {
     this.player = player
 
-    const material = new THREE.MeshStandardMaterial({ color: Palette.accentWarm })
+    // Team-Farbe statt einer neutralen Akzentfarbe - man muss auf den ersten
+    // Blick erkennen können, wer Freund und wer Feind ist (siehe team.ts).
+    const material = new THREE.MeshStandardMaterial({ color: TeamColor[player.team] })
     const geometry = new THREE.CapsuleGeometry(CAPSULE_RADIUS, CAPSULE_LENGTH, 4, 8)
     this.mesh = new THREE.Mesh(geometry, material)
 
     // Schaden an dieser Hülle wird an den echten Spieler weitergeleitet -
     // dieselbe Damageable-Schnittstelle wie bei Target, siehe damageable.ts.
     this.mesh.userData.damageable = this as Damageable
+    // Team-Zugehörigkeit direkt am Mesh - weapon.ts kann so generisch (ohne
+    // den Objekttyp zu kennen) Freundschaftliches Feuer verhindern.
+    this.mesh.userData.team = player.team
   }
 
   get isAlive(): boolean {
