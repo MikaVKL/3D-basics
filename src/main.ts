@@ -9,6 +9,7 @@ import { TouchInput } from './input/TouchInput'
 import { Weapon } from './weapon'
 import { Target } from './target'
 import { PlayerAvatar } from './playerAvatar'
+import { DebugMarkers } from './debugMarkers'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -61,6 +62,23 @@ scene.add(sunLight)
 
 const arena = buildArena()
 scene.add(arena.group)
+
+// ---------------------------------------------------------------------------
+// Entwickler-Debug-Modus: macht normalerweise unsichtbare Dinge sichtbar
+// (aktuell Spawn-Punkte, später z.B. Team-Spawnzonen) - Taste F1 schaltet
+// um. Rein zum Entwickeln gedacht, siehe debugMarkers.ts für Details. Am
+// Ende der Entwicklung kann dieser ganze Block einfach entfernt werden.
+// ---------------------------------------------------------------------------
+
+const debugMarkers = new DebugMarkers(scene)
+arena.spawnPoints.forEach((point, index) => debugMarkers.addSpawnPoint(point, index))
+
+window.addEventListener('keydown', (event) => {
+  if (event.code === 'F1') {
+    event.preventDefault()
+    debugMarkers.toggle()
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Ziele zum Testen von Treffererkennung/Schaden (10 Treffer = "Tod",
