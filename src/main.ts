@@ -189,7 +189,7 @@ function animate() {
   }
   weapon.update(deltaSeconds)
   for (const target of targets) {
-    target.update(deltaSeconds)
+    target.update(deltaSeconds, camera)
   }
   updateAmmoHud()
   updateHealthHud()
