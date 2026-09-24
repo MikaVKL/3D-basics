@@ -81,7 +81,7 @@ for (const target of targets) {
 // bewusst von der Eingabequelle getrennt - siehe DesktopInput/TouchInput.
 // ---------------------------------------------------------------------------
 
-const player = new Player(camera, arena.solids)
+const player = new Player(camera, arena.solids, arena.ramps)
 // Zufälligen Spawn-Punkt wählen: aktuell nur kosmetisch relevant (man spawnt
 // mal hier, mal dort), aber im Multiplayer bräuchte jeder Spieler ohnehin
 // einen zufälligen/zugewiesenen Punkt aus genau dieser Liste.

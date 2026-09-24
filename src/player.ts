@@ -1,5 +1,6 @@
 import * as THREE from 'three'
-import type { Solid } from './arena'
+import type { Solid, Ramp } from './arena'
+import { rampHeightAt } from './arena'
 import type { Damageable } from './damageable'
 
 // Diese Klasse kümmert sich NUR um Bewegung/Physik/Kollision des Spielers.
@@ -46,6 +47,7 @@ export class Player implements Damageable {
   private velocity = new THREE.Vector3()
   private onGround = true
   private solids: Solid[]
+  private ramps: Ramp[]
 
   // Gewünschte Bewegungsrichtung relativ zur Blickrichtung:
   // x = seitwärts (-1 = links, 1 = rechts), z = vorwärts/rückwärts (-1 = zurück, 1 = vor)
@@ -58,9 +60,10 @@ export class Player implements Damageable {
   private respawnRemaining = 0
   private spawnPoint = new THREE.Vector3()
 
-  constructor(camera: THREE.PerspectiveCamera, solids: Solid[]) {
+  constructor(camera: THREE.PerspectiveCamera, solids: Solid[], ramps: Ramp[] = []) {
     this.camera = camera
     this.solids = solids
+    this.ramps = ramps
   }
 
   spawn(position: THREE.Vector3) {
@@ -188,14 +191,21 @@ export class Player implements Damageable {
     }
   }
 
-  // Höchste Solid-Oberkante direkt unter dem Punkt (x, z), oder 0 (Arena-
-  // Boden), falls dort keine Kiste/Wand ist.
+  // Höchste Stand-Höhe direkt unter dem Punkt (x, z): entweder eine
+  // Solid-Oberkante (Kiste/Plattform), ein interpolierter Rampen-Punkt, oder
+  // 0 (Arena-Boden), falls dort keins von beiden liegt.
   private groundHeightAt(x: number, z: number): number {
     let height = 0
     for (const solid of this.solids) {
       const box = solid.box
       if (x >= box.min.x && x <= box.max.x && z >= box.min.z && z <= box.max.z) {
         height = Math.max(height, box.max.y)
+      }
+    }
+    for (const ramp of this.ramps) {
+      const rampHeight = rampHeightAt(ramp, x, z)
+      if (rampHeight !== null) {
+        height = Math.max(height, rampHeight)
       }
     }
     return height

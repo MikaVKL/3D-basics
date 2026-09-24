@@ -14,6 +14,36 @@ export interface Solid {
   box: THREE.Box3
 }
 
+// Eine begehbare Schräge (z.B. Rampe zu einer erhöhten Plattform): anders als
+// ein Solid blockiert sie NICHT seitlich, sondern gibt dem Spieler pro
+// Position eine interpolierte Stand-Höhe zwischen bottomHeight und
+// topHeight - siehe player.ts (groundHeightAt). "axis" ist die Richtung des
+// Anstiegs; "ascending" gibt an, ob die Höhe mit steigender oder fallender
+// Koordinate zunimmt.
+export interface Ramp {
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+  axis: 'x' | 'z'
+  ascending: boolean
+  bottomHeight: number
+  topHeight: number
+}
+
+export function rampHeightAt(ramp: Ramp, x: number, z: number): number | null {
+  if (x < ramp.minX || x > ramp.maxX || z < ramp.minZ || z > ramp.maxZ) return null
+
+  const range = ramp.axis === 'x' ? ramp.maxX - ramp.minX : ramp.maxZ - ramp.minZ
+  const coordinate = ramp.axis === 'x' ? x : z
+  const start = ramp.axis === 'x' ? ramp.minX : ramp.minZ
+
+  let t = (coordinate - start) / range
+  if (!ramp.ascending) t = 1 - t
+
+  return ramp.bottomHeight + t * (ramp.topHeight - ramp.bottomHeight)
+}
+
 export interface ArenaResult {
   group: THREE.Group
   solids: Solid[]
@@ -23,6 +53,9 @@ export interface ArenaResult {
   // eigenen, weit genug entfernten Punkt bekommen könnte, ohne dass sich
   // mehrere Spieler direkt aufeinander spawnen.
   spawnPoints: THREE.Vector3[]
+  // Begehbare Schrägen (siehe Ramp oben) - separat von "solids", weil sie
+  // nicht seitlich blockieren, sondern nur die Stand-Höhe beeinflussen.
+  ramps: Ramp[]
   // Objekte, auf die geschossen werden kann (für den Raycast der Waffe).
   // Bewusst eine explizite Liste statt "einfach die ganze Gruppe" - sonst
   // würde auch das dünne, dekorative Boden-Raster (GridHelper) versehentlich
@@ -35,17 +68,55 @@ export interface ArenaResult {
 // eine Öffnung in der Ost-Wand verbunden). Das gibt zwei unterschiedlich
 // große Kampfzonen statt vier gespiegelten Ecken - interessanter zum Spielen
 // und näher am Krunker.io-Stil als eine reine Box.
-const MAIN_ROOM_WIDTH = 44 // X-Ausdehnung
-const MAIN_ROOM_DEPTH = 30 // Z-Ausdehnung
+// Moderat vergrößert gegenüber der ersten Fassung (+~20%) - bei 2-4
+// Spielern gleichzeitig wirkte die vorherige Größe schnell eng.
+const MAIN_ROOM_WIDTH = 52 // X-Ausdehnung
+const MAIN_ROOM_DEPTH = 36 // Z-Ausdehnung
 const MAIN_HALF_W = MAIN_ROOM_WIDTH / 2
 const MAIN_HALF_D = MAIN_ROOM_DEPTH / 2
 
-const SIDE_ROOM_WIDTH = 12 // X-Ausdehnung (wie weit er nach außen ragt)
-const SIDE_ROOM_DEPTH = 16 // Z-Ausdehnung (= Breite der Öffnung zum Hauptraum)
+const SIDE_ROOM_WIDTH = 16 // X-Ausdehnung (wie weit er nach außen ragt)
+const SIDE_ROOM_DEPTH = 20 // Z-Ausdehnung (= Breite der Öffnung zum Hauptraum)
 const SIDE_HALF_D = SIDE_ROOM_DEPTH / 2
 
 const WALL_HEIGHT = 6
 const WALL_THICKNESS = 1
+
+// Baut ein dreiseitiges Prisma (Keilform) für die Rampen-Optik: die
+// Grundfläche liegt bei y=0, die Schräge steigt entlang +X von y=0 auf
+// y=height an, über die volle Breite (Z-Richtung) hinweg. Bewusst mit
+// duplizierten Vertices pro Fläche (kein Index-Buffer) gebaut, damit
+// computeVertexNormals() pro Fläche eine eigene, flache Normale erzeugt -
+// gibt den "Low-Poly"-Look mit klaren Kanten statt weicher Rundungen.
+function createWedgeGeometry(length: number, width: number, height: number): THREE.BufferGeometry {
+  const halfWidth = width / 2
+
+  const low0 = [0, 0, -halfWidth]
+  const low1 = [0, 0, halfWidth]
+  const bottomFar0 = [length, 0, -halfWidth]
+  const bottomFar1 = [length, 0, halfWidth]
+  const topFar0 = [length, height, -halfWidth]
+  const topFar1 = [length, height, halfWidth]
+
+  const quad = (a: number[], b: number[], c: number[], d: number[]) => [
+    ...a, ...b, ...c,
+    ...a, ...c, ...d,
+  ]
+  const triangle = (a: number[], b: number[], c: number[]) => [...a, ...b, ...c]
+
+  const positions = [
+    ...quad(low0, bottomFar0, bottomFar1, low1), // Boden (Normale nach unten)
+    ...quad(bottomFar0, topFar0, topFar1, bottomFar1), // senkrechte Rückseite
+    ...quad(low0, low1, topFar1, topFar0), // die Schräge selbst (Normale schräg nach oben)
+    ...triangle(low0, topFar0, bottomFar0), // Seitendreieck links
+    ...triangle(low1, bottomFar1, topFar1), // Seitendreieck rechts
+  ]
+
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.computeVertexNormals()
+  return geometry
+}
 
 export function buildArena(): ArenaResult {
   const group = new THREE.Group()
@@ -168,7 +239,7 @@ export function buildArena(): ArenaResult {
     [4, 9, 3.4, 1.4],
     [-2, 0, 4, 1.4],
     // Flankenraum - kleiner Raum, daher nur eine Kiste nahe dem Eingang
-    [24, -4, 2.2, 1.4],
+    [sideRoomMinX + 6, -4, 2.2, 1.4],
   ]
 
   for (const [x, z, size, height] of coverPositions) {
@@ -179,23 +250,71 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }
 
+  // --- Erhöhte Plattform + Rampe (echte Höhenstufe, größer als jede
+  // Deckungskiste) - gibt bei 2-4 Spielern einen "King of the Hill"-Punkt
+  // mit Überblick. Kühle Struktur-Farbe (wie die Wände), nicht die warme
+  // Deckungs-Farbe, damit man Struktur/Deckung optisch unterscheidet.
+  const PLATFORM_HEIGHT = 2.8
+  const PLATFORM_SIZE = 6
+  const PLATFORM_CENTER_X = 15
+  const PLATFORM_CENTER_Z = 0
+  // Bewusst recht lang (flache Steigung von PLATFORM_HEIGHT über RAMP_LENGTH):
+  // ist die Rampe zu steil, "berührt" die Spieler-Kollisionsbox (die einen
+  // Radius von PLAYER_RADIUS hat) die senkrechte Plattform-Seitenwand schon,
+  // bevor die Rampe an dieser Stelle hoch genug ist - der Spieler bleibt dann
+  // exakt am Übergang stecken (in Tests reproduziert und so behoben).
+  const RAMP_LENGTH = 10
+  const RAMP_WIDTH = 4
+
+  const platformGeometry = new THREE.BoxGeometry(PLATFORM_SIZE, PLATFORM_HEIGHT, PLATFORM_SIZE)
+  const platform = new THREE.Mesh(platformGeometry, wallMaterial)
+  platform.position.set(PLATFORM_CENTER_X, PLATFORM_HEIGHT / 2, PLATFORM_CENTER_Z)
+  group.add(platform)
+  solids.push({ mesh: platform, box: new THREE.Box3().setFromObject(platform) })
+
+  const platformMinX = PLATFORM_CENTER_X - PLATFORM_SIZE / 2
+  const rampMinX = platformMinX - RAMP_LENGTH
+
+  // Die Rampe steigt von 0 auf PLATFORM_HEIGHT an, exakt bis an die
+  // Plattform-Kante heran - so geht der Übergang nahtlos, ohne Sprung.
+  const ramp: Ramp = {
+    minX: rampMinX,
+    maxX: platformMinX,
+    minZ: PLATFORM_CENTER_Z - RAMP_WIDTH / 2,
+    maxZ: PLATFORM_CENTER_Z + RAMP_WIDTH / 2,
+    axis: 'x',
+    ascending: true,
+    bottomHeight: 0,
+    topHeight: PLATFORM_HEIGHT,
+  }
+
+  // Sichtbares Rampen-Mesh: ein dreiseitiges Prisma (Keilform), damit die
+  // Schräge auch wirklich schräg AUSSIEHT statt wie eine liegende Box.
+  const rampMesh = new THREE.Mesh(
+    createWedgeGeometry(RAMP_LENGTH, RAMP_WIDTH, PLATFORM_HEIGHT),
+    wallMaterial
+  )
+  rampMesh.position.set(rampMinX, 0, PLATFORM_CENTER_Z)
+  group.add(rampMesh)
+
   // Fünf Punkte, mit Abstand zu Wänden/Kisten und zueinander verteilt -
   // vier in den Ecken des Hauptraums, einer tief im (kleineren) Flankenraum,
   // damit dieser auch als Spawn-Option genutzt wird. So würden sich 2-4
   // Spieler im Multiplayer nicht direkt ins Gesicht spawnen.
   // 1.7 ≈ Augenhöhe eines Menschen.
   const spawnPoints = [
-    new THREE.Vector3(-18, 1.7, -12),
-    new THREE.Vector3(-18, 1.7, 12),
-    new THREE.Vector3(0, 1.7, -12),
-    new THREE.Vector3(0, 1.7, 12),
-    new THREE.Vector3(sideRoomMaxX - 4, 1.7, 4),
+    new THREE.Vector3(-22, 1.7, -14),
+    new THREE.Vector3(-22, 1.7, 14),
+    new THREE.Vector3(0, 1.7, -14),
+    new THREE.Vector3(0, 1.7, 14),
+    new THREE.Vector3(sideRoomMaxX - 4, 1.7, 6),
   ]
 
   return {
     group,
     solids,
     spawnPoints,
-    shootables: [mainGround, sideGround, ...solids.map((s) => s.mesh)],
+    ramps: [ramp],
+    shootables: [mainGround, sideGround, rampMesh, ...solids.map((s) => s.mesh)],
   }
 }
