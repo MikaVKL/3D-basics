@@ -350,7 +350,7 @@ export class Player implements Damageable {
     // (0), aber wenn man über einer Kiste steht, deren Oberkante. Dadurch
     // kann man auf Kisten landen und stehen bleiben, statt durch sie
     // hindurchzufallen oder immer auf y=0 zurückgesetzt zu werden.
-    const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z)
+    const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z, this.bodyY)
 
     if (this.bodyY <= groundHeight) {
       this.bodyY = groundHeight
@@ -366,11 +366,28 @@ export class Player implements Damageable {
   // Höchste Stand-Höhe direkt unter dem Punkt (x, z): entweder eine
   // Solid-Oberkante (Kiste/Plattform), ein interpolierter Rampen-Punkt, oder
   // 0 (Arena-Boden), falls dort keins von beiden liegt.
-  private groundHeightAt(x: number, z: number): number {
+  //
+  // "referenceY" (aktuelle Fuß-Höhe) ist wichtig, wenn zwei Solids dieselbe
+  // X/Z-Grundfläche teilen, aber auf unterschiedlicher Höhe liegen - z.B.
+  // Sockel (unten) + Sturz (oben) an einem Fenster/Durchgang. Ohne den
+  // Vergleich mit referenceY würde hier fälschlich der Sturz (eine Art
+  // Decke, weit über dem Kopf) als "Boden" durchgehen, sobald man durch die
+  // Öffnung darunter läuft - man würde schlagartig auf die Sturz-Oberkante
+  // hochgezogen ("bugt über die Map", genau der gemeldete Bug). Ein Solid
+  // zählt daher nur, wenn seine Unterkante nicht über der aktuellen
+  // Fuß-Höhe liegt (plus etwas Toleranz für den Fall, dass man exakt darauf
+  // steht) - es muss also tatsächlich UNTER einem liegen können.
+  private groundHeightAt(x: number, z: number, referenceY: number = Infinity): number {
     let height = 0
     for (const solid of this.solids) {
       const box = solid.box
-      if (x >= box.min.x && x <= box.max.x && z >= box.min.z && z <= box.max.z) {
+      if (
+        x >= box.min.x &&
+        x <= box.max.x &&
+        z >= box.min.z &&
+        z <= box.max.z &&
+        box.min.y <= referenceY + 0.05
+      ) {
         height = Math.max(height, box.max.y)
       }
     }
@@ -453,7 +470,7 @@ export class Player implements Damageable {
   // Box exakt im Bereich zwischen Duck- und Steh-Augenhöhe (der Teil, der
   // beim Aufstehen zusätzlich beansprucht würde) darf nichts überschneiden.
   private canStandAt(x: number, z: number): boolean {
-    const groundHeight = this.groundHeightAt(x, z)
+    const groundHeight = this.groundHeightAt(x, z, this.bodyY)
     const standBox = new THREE.Box3(
       new THREE.Vector3(x - PLAYER_RADIUS, groundHeight + CROUCH_EYE_HEIGHT, z - PLAYER_RADIUS),
       new THREE.Vector3(x + PLAYER_RADIUS, groundHeight + EYE_HEIGHT + 0.3, z + PLAYER_RADIUS)

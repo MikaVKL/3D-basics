@@ -481,6 +481,33 @@ export function buildArena(): ArenaResult {
     group.add(rampMesh)
     shootableExtras.push(rampMesh)
 
+    // Randborde an beiden Längsseiten der Rampe: verhindern, dass man
+    // SEITLICH in die Rampe hineinläuft. Ohne sie liefert groundHeightAt an
+    // der Seitenkante einen Sprung von 0 auf die (teils schon beträchtliche)
+    // Rampenhöhe, sobald der Kollisionspunkt die Rampen-Grundfläche von der
+    // Seite aus betritt - man "bugt" dann schlagartig nach oben, statt die
+    // Schräge hochzulaufen. Die Borde zwingen dazu, nur von vorne (unten)
+    // einzusteigen. Hoch genug, um auch am oberen Rampen-Ende (nahe
+    // Plattformhöhe) nicht überspringbar zu sein.
+    const curbHeight = platformHeight + 1.5
+    const curbThickness = 0.2
+    const curbMid = (rampMin + rampMax) / 2
+    const curbLength = rampMax - rampMin
+    for (const side of [-1, 1] as const) {
+      const curbGeometry =
+        rampAxis === 'x'
+          ? new THREE.BoxGeometry(curbLength, curbHeight, curbThickness)
+          : new THREE.BoxGeometry(curbThickness, curbHeight, curbLength)
+      const curb = new THREE.Mesh(curbGeometry, wallMaterial)
+      if (rampAxis === 'x') {
+        curb.position.set(curbMid, curbHeight / 2, centerZ + (side * rampWidth) / 2)
+      } else {
+        curb.position.set(centerX + (side * rampWidth) / 2, curbHeight / 2, curbMid)
+      }
+      group.add(curb)
+      solids.push({ mesh: curb, box: new THREE.Box3().setFromObject(curb) })
+    }
+
     return ramp
   }
 
