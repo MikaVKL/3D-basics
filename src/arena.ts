@@ -42,7 +42,6 @@ export function buildArena(): ArenaResult {
   })
   const ground = new THREE.Mesh(groundGeometry, groundMaterial)
   ground.rotation.x = -Math.PI / 2 // liegend statt stehend ausrichten
-  ground.receiveShadow = true
   group.add(ground)
 
   // --- Ein leichtes Raster auf dem Boden als visuelle Orientierungshilfe ---
@@ -73,8 +72,6 @@ export function buildArena(): ArenaResult {
     const wallGeometry = new THREE.BoxGeometry(def.w, WALL_HEIGHT, def.d)
     const wall = new THREE.Mesh(wallGeometry, wallMaterial)
     wall.position.set(def.x, WALL_HEIGHT / 2, def.z)
-    wall.castShadow = true
-    wall.receiveShadow = true
     group.add(wall)
     solids.push({ mesh: wall, box: new THREE.Box3().setFromObject(wall) })
 
@@ -118,8 +115,6 @@ export function buildArena(): ArenaResult {
     const boxGeometry = new THREE.BoxGeometry(size, height, size)
     const box = new THREE.Mesh(boxGeometry, boxMaterial)
     box.position.set(x, height / 2, z)
-    box.castShadow = true
-    box.receiveShadow = true
     group.add(box)
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }

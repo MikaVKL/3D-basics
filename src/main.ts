@@ -27,8 +27,12 @@ scene.add(camera)
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setPixelRatio(window.devicePixelRatio)
-renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFShadowMap // weiche, realistischere Schattenkanten
+// Bewusst KEINE Schlagschatten (shadowMap): Bei einer einzelnen, festen
+// Lichtquelle sahen die geworfenen Schatten seltsam/unpassend aus (keine
+// erkennbare Korrespondenz zur Lichtposition). Die einzelnen Flächen von
+// Wänden/Kisten bleiben trotzdem klar unterscheidbar, weil das
+// direktionale Licht sie je nach Winkel unterschiedlich hell einfärbt -
+// das ist normale Flächen-Schattierung, unabhängig von Schlagschatten.
 
 const appElement = document.querySelector<HTMLDivElement>('#app')!
 appElement.appendChild(renderer.domElement)
@@ -47,19 +51,6 @@ scene.add(ambientLight)
 
 const sunLight = new THREE.DirectionalLight(Palette.sunLight, 2.2)
 sunLight.position.set(-15, 20, 10)
-sunLight.castShadow = true
-sunLight.shadow.mapSize.set(2048, 2048)
-sunLight.shadow.camera.left = -25
-sunLight.shadow.camera.right = 25
-sunLight.shadow.camera.top = 25
-sunLight.shadow.camera.bottom = -25
-sunLight.shadow.camera.near = 1
-sunLight.shadow.camera.far = 60
-// Reduziert Schatten-Artefakte ("Shadow Acne"/abgelöste Schatten), die bei
-// steilem Lichtwinkel sonst als merkwürdige, dreieckige Schattenfetzen statt
-// eines sauberen Kisten-Schattens auftreten können.
-sunLight.shadow.bias = -0.0015
-sunLight.shadow.normalBias = 0.02
 scene.add(sunLight)
 
 // ---------------------------------------------------------------------------
