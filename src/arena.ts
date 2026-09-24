@@ -178,11 +178,33 @@ export function buildArena(): ArenaResult {
   // einem begehbaren Durchgang dazwischen (kein Fenster mehr hier drin -
   // das Fenster ist jetzt ein freistehendes Objekt weiter unten, das
   // funktioniert als Deckungselement besser als eine Lücke in der Außenwand).
+  //
+  // Zusätzlich ein ERHÖHTER Einweg-Durchgang auf Höhe der West-Plattform
+  // (siehe WEST_PLATFORM_* weiter unten - Werte hier schon vorab benötigt,
+  // damit die Wand direkt mit der passenden Öffnung gebaut werden kann):
+  // von der Plattform aus läuft man auf Plattformhöhe direkt durch die Wand
+  // in den Hauptraum - von der Hauptraum-Seite aus (Bodenhöhe) ist die
+  // Öffnung dagegen zu hoch, um hindurchzulaufen, man müsste erst wieder die
+  // Rampe nehmen. Bewusst so gebaut, dass Plattform-Kante und Wand direkt
+  // aneinander anliegen (kein Spalt) - ein winziger Spalt zwischen einer zu
+  // hohen Struktur und einer Wand ist eine Softlock-Falle, in die man
+  // fallen und nicht mehr herauskommen kann (genau das war hier der Fall).
   const DIVIDER_X = -20
   const DIVIDER_SOLID_SOUTH_Z_MAX = -11
   const DIVIDER_GAP_Z_MAX = -3 // Durchgang: von SOLID_SOUTH_Z_MAX bis hier
   const dividerSouthDepth = DIVIDER_SOLID_SOUTH_Z_MAX - -MAIN_HALF_D
-  const dividerNorthDepth = MAIN_HALF_D - DIVIDER_GAP_Z_MAX
+
+  const WEST_PLATFORM_CENTER_X = -23
+  const WEST_PLATFORM_CENTER_Z = 14
+  const WEST_PLATFORM_SIZE = 5
+  const WEST_PLATFORM_HEIGHT = 2.4
+  const DOORWAY_Z_MIN = WEST_PLATFORM_CENTER_Z - WEST_PLATFORM_SIZE / 2
+  const DOORWAY_Z_MAX = WEST_PLATFORM_CENTER_Z + WEST_PLATFORM_SIZE / 2
+  const DOORWAY_HEIGHT = 2.2 // Kopffreiheit im Durchgang
+  const DOORWAY_TOP = WEST_PLATFORM_HEIGHT + DOORWAY_HEIGHT
+
+  const dividerNorthLowerDepth = DOORWAY_Z_MIN - DIVIDER_GAP_Z_MAX
+  const dividerNorthUpperDepth = MAIN_HALF_D - DOORWAY_Z_MAX
 
   const wallDefs = [
     // [breite, tiefe, x, z] - Hauptraum (Süd/Nord/West komplett, Ost mit
@@ -206,9 +228,22 @@ export function buildArena(): ArenaResult {
     { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: SIDE_HALF_D },
     { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: -SIDE_HALF_D },
     { w: WALL_THICKNESS, d: SIDE_ROOM_DEPTH, x: sideRoomMaxX, z: 0 },
-    // Innere Trennwand (Süd- und Nord-Abschnitt, siehe oben)
+    // Innere Trennwand (Süd-Abschnitt + Nord-Abschnitt VOR und NACH dem
+    // erhöhten Durchgang, siehe oben - der Durchgang selbst kommt gleich
+    // danach mit eigener, nicht-voller Höhe)
     { w: WALL_THICKNESS, d: dividerSouthDepth, x: DIVIDER_X, z: -MAIN_HALF_D + dividerSouthDepth / 2 },
-    { w: WALL_THICKNESS, d: dividerNorthDepth, x: DIVIDER_X, z: DIVIDER_GAP_Z_MAX + dividerNorthDepth / 2 },
+    {
+      w: WALL_THICKNESS,
+      d: dividerNorthLowerDepth,
+      x: DIVIDER_X,
+      z: DIVIDER_GAP_Z_MAX + dividerNorthLowerDepth / 2,
+    },
+    {
+      w: WALL_THICKNESS,
+      d: dividerNorthUpperDepth,
+      x: DIVIDER_X,
+      z: DOORWAY_Z_MAX + dividerNorthUpperDepth / 2,
+    },
   ]
 
   for (const def of wallDefs) {
@@ -234,6 +269,28 @@ export function buildArena(): ArenaResult {
     stripe.position.set(def.x, WALL_HEIGHT - 0.1, def.z)
     group.add(stripe)
   }
+
+  // --- Erhöhter Einweg-Durchgang in der Trennwand (siehe Konstanten oben) ---
+  // Unterhalb: blockt auf Bodenhöhe (Hauptraum-Seite kommt hier nicht durch).
+  // Oberhalb: Sturz, damit die Wand über dem Durchgang nicht einfach offen bleibt.
+  // Dazwischen (WEST_PLATFORM_HEIGHT bis DOORWAY_TOP) ist die eigentliche
+  // Öffnung - exakt auf Plattformhöhe, siehe WEST_PLATFORM_HEIGHT unten.
+  const doorwaySillMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(WALL_THICKNESS, WEST_PLATFORM_HEIGHT, DOORWAY_Z_MAX - DOORWAY_Z_MIN),
+    wallMaterial
+  )
+  doorwaySillMesh.position.set(DIVIDER_X, WEST_PLATFORM_HEIGHT / 2, WEST_PLATFORM_CENTER_Z)
+  group.add(doorwaySillMesh)
+  solids.push({ mesh: doorwaySillMesh, box: new THREE.Box3().setFromObject(doorwaySillMesh) })
+
+  const doorwayLintelHeight = WALL_HEIGHT - DOORWAY_TOP
+  const doorwayLintelMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(WALL_THICKNESS, doorwayLintelHeight, DOORWAY_Z_MAX - DOORWAY_Z_MIN),
+    wallMaterial
+  )
+  doorwayLintelMesh.position.set(DIVIDER_X, DOORWAY_TOP + doorwayLintelHeight / 2, WEST_PLATFORM_CENTER_Z)
+  group.add(doorwayLintelMesh)
+  solids.push({ mesh: doorwayLintelMesh, box: new THREE.Box3().setFromObject(doorwayLintelMesh) })
 
   // --- Freistehende Wand mit Fenster (Deckung) ---
   // Eine dünne, freistehende Wand mitten im Raum (nicht an eine Außen-/
@@ -433,7 +490,18 @@ export function buildArena(): ArenaResult {
 
   // Zweite Plattform am Rand der West-Zone (siehe Wunsch nach mehr
   // Rampen/Höhenstufen "am Rand"): etwas kleiner, Rampe steigt entlang Z an.
-  const rampToWestPlatform = buildPlatformWithRamp(-23.5, 14, 5, 2.4, 8, 3, 'z', true)
+  // Liegt direkt an der Trennwand an (kein Spalt, siehe Kommentar oben bei
+  // DIVIDER_X) und mündet oben exakt in den erhöhten Durchgang.
+  const rampToWestPlatform = buildPlatformWithRamp(
+    WEST_PLATFORM_CENTER_X,
+    WEST_PLATFORM_CENTER_Z,
+    WEST_PLATFORM_SIZE,
+    WEST_PLATFORM_HEIGHT,
+    8,
+    3,
+    'z',
+    true
+  )
 
   // Fünf Punkte, mit Abstand zu Wänden/Kisten und zueinander verteilt -
   // vier in den Ecken des Hauptraums, einer tief im (kleineren) Flankenraum,
