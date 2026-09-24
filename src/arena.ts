@@ -173,16 +173,16 @@ export function buildArena(): ArenaResult {
   const sideRoomMaxX = MAIN_HALF_W + SIDE_ROOM_WIDTH
   const sideRoomCenterX = (sideRoomMinX + sideRoomMaxX) / 2
 
-  // Innere Trennwand (siehe unten für das Fenster dazwischen): teilt den
-  // Hauptraum in zwei Zonen statt einer durchgehend offenen Halle. Zwei
-  // durchgehende Abschnitte entlang Z, mit einer Lücke in der Mitte für
-  // Durchgang (begehbar) + Fenster (nur Sicht/Schuss, siehe unten).
+  // Innere Trennwand: teilt den Hauptraum in zwei Zonen statt einer
+  // durchgehend offenen Halle. Zwei durchgehende Abschnitte entlang Z, mit
+  // einem begehbaren Durchgang dazwischen (kein Fenster mehr hier drin -
+  // das Fenster ist jetzt ein freistehendes Objekt weiter unten, das
+  // funktioniert als Deckungselement besser als eine Lücke in der Außenwand).
   const DIVIDER_X = -20
   const DIVIDER_SOLID_SOUTH_Z_MAX = -11
   const DIVIDER_GAP_Z_MAX = -3 // Durchgang: von SOLID_SOUTH_Z_MAX bis hier
-  const WINDOW_Z_MAX = 3 // Fenster: von DIVIDER_GAP_Z_MAX bis hier
   const dividerSouthDepth = DIVIDER_SOLID_SOUTH_Z_MAX - -MAIN_HALF_D
-  const dividerNorthDepth = MAIN_HALF_D - WINDOW_Z_MAX
+  const dividerNorthDepth = MAIN_HALF_D - DIVIDER_GAP_Z_MAX
 
   const wallDefs = [
     // [breite, tiefe, x, z] - Hauptraum (Süd/Nord/West komplett, Ost mit
@@ -208,7 +208,7 @@ export function buildArena(): ArenaResult {
     { w: WALL_THICKNESS, d: SIDE_ROOM_DEPTH, x: sideRoomMaxX, z: 0 },
     // Innere Trennwand (Süd- und Nord-Abschnitt, siehe oben)
     { w: WALL_THICKNESS, d: dividerSouthDepth, x: DIVIDER_X, z: -MAIN_HALF_D + dividerSouthDepth / 2 },
-    { w: WALL_THICKNESS, d: dividerNorthDepth, x: DIVIDER_X, z: WINDOW_Z_MAX + dividerNorthDepth / 2 },
+    { w: WALL_THICKNESS, d: dividerNorthDepth, x: DIVIDER_X, z: DIVIDER_GAP_Z_MAX + dividerNorthDepth / 2 },
   ]
 
   for (const def of wallDefs) {
@@ -235,37 +235,76 @@ export function buildArena(): ArenaResult {
     group.add(stripe)
   }
 
-  // --- Fenster in der inneren Trennwand (Sockel + Sturz, siehe oben) ---
-  // Zwischen den beiden Trennwand-Abschnitten liegt die Lücke von
-  // DIVIDER_SOLID_SOUTH_Z_MAX bis MAIN_HALF_D-dividerNorthDepth (=WINDOW_Z_MAX);
-  // darin liegt zuerst der begehbare Durchgang (bis DIVIDER_GAP_Z_MAX), dann
-  // das Fenster: Sockel (unten) + Sturz (oben) als zwei getrennte Solids mit
-  // Lücke dazwischen - man kann durchsehen und durchschießen, aber NICHT
-  // durchlaufen (anders als der Durchgang direkt daneben).
-  const WINDOW_SILL_HEIGHT = 1.1 // bis hier blockt der Sockel (verhindert Durchlaufen)
-  const WINDOW_OPENING_TOP = 2.6 // ab hier blockt der Sturz wieder
-  const windowDepth = WINDOW_Z_MAX - DIVIDER_GAP_Z_MAX
+  // --- Freistehendes Fenster-Objekt (Deckung) ---
+  // Statt einer Lücke in einer Außen-/Trennwand: eine dünne, freistehende
+  // Doppelwand mitten im Raum. Sockel (unten) + Sturz (oben) sind zwei
+  // getrennte Solids mit Lücke dazwischen - man kann durchsehen und
+  // durchschießen, aber NICHT durchlaufen. Als freistehendes Objekt ist es
+  // vielseitiger als Deckung nutzbar (von beiden Seiten anspringbar) als
+  // eine Wandlücke.
+  function buildFreestandingWindow(centerX: number, centerZ: number, width: number) {
+    const WINDOW_THICKNESS = 0.4
+    const SILL_HEIGHT = 1.1 // bis hier blockt der Sockel (verhindert Durchlaufen)
+    const OPENING_HEIGHT = 1.2 // Sicht-/Schuss-Lücke dazwischen
+    const LINTEL_HEIGHT = 0.7 // Sturz oben drauf
 
-  const windowSill = new THREE.Mesh(
-    new THREE.BoxGeometry(WALL_THICKNESS, WINDOW_SILL_HEIGHT, windowDepth),
-    wallMaterial
-  )
-  windowSill.position.set(DIVIDER_X, WINDOW_SILL_HEIGHT / 2, DIVIDER_GAP_Z_MAX + windowDepth / 2)
-  group.add(windowSill)
-  solids.push({ mesh: windowSill, box: new THREE.Box3().setFromObject(windowSill) })
+    const sill = new THREE.Mesh(
+      new THREE.BoxGeometry(width, SILL_HEIGHT, WINDOW_THICKNESS),
+      wallMaterial
+    )
+    sill.position.set(centerX, SILL_HEIGHT / 2, centerZ)
+    group.add(sill)
+    solids.push({ mesh: sill, box: new THREE.Box3().setFromObject(sill) })
 
-  const windowLintelHeight = WALL_HEIGHT - WINDOW_OPENING_TOP
-  const windowLintel = new THREE.Mesh(
-    new THREE.BoxGeometry(WALL_THICKNESS, windowLintelHeight, windowDepth),
-    wallMaterial
-  )
-  windowLintel.position.set(
-    DIVIDER_X,
-    WINDOW_OPENING_TOP + windowLintelHeight / 2,
-    DIVIDER_GAP_Z_MAX + windowDepth / 2
-  )
-  group.add(windowLintel)
-  solids.push({ mesh: windowLintel, box: new THREE.Box3().setFromObject(windowLintel) })
+    const lintelCenterY = SILL_HEIGHT + OPENING_HEIGHT + LINTEL_HEIGHT / 2
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(width, LINTEL_HEIGHT, WINDOW_THICKNESS),
+      wallMaterial
+    )
+    lintel.position.set(centerX, lintelCenterY, centerZ)
+    group.add(lintel)
+    solids.push({ mesh: lintel, box: new THREE.Box3().setFromObject(lintel) })
+  }
+
+  buildFreestandingWindow(9, -15, 5)
+
+  // --- L-förmige Deckung ---
+  // Zwei Kisten-Arme im rechten Winkel statt einer einzelnen Box - bietet
+  // Deckung aus zwei Richtungen gleichzeitig und eine Ecke zum Anlehnen/
+  // Umschleichen, statt nur einer geraden Kante.
+  function buildLCover(
+    cornerX: number,
+    cornerZ: number,
+    armLength: number,
+    thickness: number,
+    height: number,
+    armXDir: 1 | -1,
+    armZDir: 1 | -1
+  ) {
+    const armAlongX = new THREE.Mesh(
+      new THREE.BoxGeometry(armLength, height, thickness),
+      boxMaterial
+    )
+    armAlongX.position.set(
+      cornerX + (armXDir * armLength) / 2,
+      height / 2,
+      cornerZ + (armZDir * thickness) / 2
+    )
+    group.add(armAlongX)
+    solids.push({ mesh: armAlongX, box: new THREE.Box3().setFromObject(armAlongX) })
+
+    const armAlongZ = new THREE.Mesh(
+      new THREE.BoxGeometry(thickness, height, armLength),
+      boxMaterial
+    )
+    armAlongZ.position.set(
+      cornerX + (armXDir * thickness) / 2,
+      height / 2,
+      cornerZ + (armZDir * armLength) / 2
+    )
+    group.add(armAlongZ)
+    solids.push({ mesh: armAlongZ, box: new THREE.Box3().setFromObject(armAlongZ) })
+  }
 
   // --- Deckungs-Kisten (warme Akzentfarbe) ---
   const boxMaterial = new THREE.MeshStandardMaterial({
@@ -304,6 +343,9 @@ export function buildArena(): ArenaResult {
     group.add(box)
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }
+
+  buildLCover(-6, -16, 4, 0.8, 1.6, 1, 1)
+  buildLCover(sideRoomMinX + 2, -7, 4, 0.8, 1.6, 1, -1)
 
   // --- Erhöhte Plattform + Rampe (echte Höhenstufe, größer als jede
   // Deckungskiste) - gibt bei 2-4 Spielern einen "King of the Hill"-Punkt
