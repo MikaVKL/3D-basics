@@ -266,15 +266,15 @@ body {
 
 #shoot-button {
   position: fixed;
-  right: 116px; /* links neben dem Sprung-Button, mit etwas Abstand */
+  right: 140px; /* etwas weiter links vom Sprung-Button als vorher */
   bottom: 28px;
-  width: 72px;
-  height: 72px;
+  width: 88px; /* größer - Hauptaktion, wird am häufigsten gebraucht */
+  height: 88px;
   border-radius: 50%;
   border: 2px solid rgba(51, 230, 204, 0.6);
   background: rgba(51, 230, 204, 0.18);
   color: #d6fff8;
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   z-index: 6;
   touch-action: none;
 }
@@ -285,8 +285,8 @@ body {
 
 #reload-button {
   position: fixed;
-  right: 116px; /* über dem Schieß-Button - seltener gebraucht, daher kleiner */
-  bottom: 112px;
+  right: 156px; /* über der Mitte des (jetzt größeren) Schieß-Buttons */
+  bottom: 128px;
   width: 56px;
   height: 56px;
   border-radius: 50%;
