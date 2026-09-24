@@ -282,3 +282,22 @@ body {
 #shoot-button:active {
   background: rgba(51, 230, 204, 0.35);
 }
+
+#reload-button {
+  position: fixed;
+  right: 116px; /* über dem Schieß-Button - seltener gebraucht, daher kleiner */
+  bottom: 112px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 236, 241, 0.5);
+  background: rgba(232, 236, 241, 0.12);
+  color: #e8ecf1;
+  font-size: 1.3rem;
+  z-index: 6;
+  touch-action: none;
+}
+
+#reload-button:active {
+  background: rgba(232, 236, 241, 0.3);
+}

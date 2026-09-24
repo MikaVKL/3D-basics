@@ -20,6 +20,7 @@ interface TouchElements {
   joystickThumb: HTMLElement
   jumpButton: HTMLElement
   shootButton: HTMLElement
+  reloadButton: HTMLElement
 }
 
 export class TouchInput {
@@ -40,7 +41,7 @@ export class TouchInput {
     this.lookControl = lookControl
     this.weapon = weapon
 
-    const { moveZone, lookZone, jumpButton, shootButton } = elements
+    const { moveZone, lookZone, jumpButton, shootButton, reloadButton } = elements
 
     moveZone.addEventListener('touchstart', (e) => this.onMoveStart(e), { passive: false })
     moveZone.addEventListener('touchmove', (e) => this.onMoveMove(e), { passive: false })
@@ -63,6 +64,12 @@ export class TouchInput {
       e.stopPropagation()
       if (!this.player.isAlive) return
       this.weapon.tryShoot()
+    })
+
+    reloadButton.addEventListener('touchstart', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.weapon.reload()
     })
   }
 

@@ -101,9 +101,10 @@ export class Weapon {
   }
 
   // Versucht, einen Schuss auszulösen. Schlägt fehl (macht nichts), solange
-  // die Feuerpause noch läuft, während des Nachladens, oder wenn das
-  // Magazin leer ist (in dem Fall wird automatisch nachgeladen, damit man
-  // auf Touch-Geräten keinen extra Nachlade-Button braucht).
+  // die Feuerpause noch läuft oder während des Nachladens. Das Magazin
+  // wird automatisch nachgeladen, sobald es durch einen Schuss leer wird -
+  // der ammo<=0-Fall unten ist nur eine Absicherung für den Fall, dass
+  // tryShoot() trotzdem mit leerem Magazin aufgerufen wird.
   tryShoot() {
     if (this.reloadRemaining > 0) return
     if (this.ammo <= 0) {
@@ -148,6 +149,12 @@ export class Weapon {
         .clone()
         .addScaledVector(this.raycaster.ray.direction, TRACER_MAX_DISTANCE)
       this.spawnTracer(muzzlePosition, missEnd)
+    }
+
+    // Sofort nachladen, sobald das Magazin durch diesen Schuss leer wird -
+    // nicht erst beim nächsten (dann folgenlosen) Schussversuch.
+    if (this.ammo === 0) {
+      this.reload()
     }
   }
 
