@@ -7,5 +7,7 @@
 // ("Mesh trägt userData.damageable") in die Szene stellen.
 export interface Damageable {
   readonly isAlive: boolean
+  // z.B. Spawn-Schutz: Treffer werden wie ein Wand-Treffer behandelt
+  readonly invulnerable?: boolean
   takeDamage(amount: number): void
 }

@@ -31,6 +31,8 @@ interface RemotePlayer {
   // angekommene Paket - langsamere (Jitter) werden durch den
   // Interpolations-Puffer aufgefangen, statt die Zeitachse zu verschieben.
   clockOffset: number | null
+  // Direkt aus dem neuesten Snapshot, nicht interpoliert
+  spawnProtected: boolean
 }
 
 export class RemotePlayers {
@@ -52,6 +54,10 @@ export class RemotePlayers {
     const now = performance.now()
     for (const entry of entries) {
       const player = this.players.get(entry.id) ?? this.add(entry.id, entry.state)
+      if (player.spawnProtected !== entry.spawnProtected) {
+        player.spawnProtected = entry.spawnProtected
+        player.avatar.setProtected(entry.spawnProtected)
+      }
       const last = player.samples[player.samples.length - 1]
       // Server schickt denselben Zustand erneut, wenn seit dem letzten Tick
       // nichts Neues vom Spieler kam - kein neuer Stützpunkt
@@ -67,7 +73,7 @@ export class RemotePlayers {
   }
 
   private add(id: PlayerId, state: PlayerNetworkState): RemotePlayer {
-    const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [], clockOffset: null }
+    const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [], clockOffset: null, spawnProtected: false }
     // Die Waffe behandelt fremde Spieler wie jedes andere Damageable (siehe
     // damageable.ts) - Schaden wird hier aber nicht lokal verrechnet,
     // sondern nur gemeldet. Ob der Treffer zählt, entscheidet der Server.
@@ -75,6 +81,9 @@ export class RemotePlayers {
       get isAlive() {
         const latest = player.samples[player.samples.length - 1]
         return latest ? latest.state.isAlive : true
+      },
+      get invulnerable() {
+        return player.spawnProtected
       },
       takeDamage: () => {
         player.avatar.flash()

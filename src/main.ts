@@ -178,7 +178,8 @@ const network: NetworkClient = new NetworkClient({
     setTargetsActive(false)
   },
   onSnapshot: (entries) => remotePlayers.applySnapshot(entries),
-  onOwnVitals: (health, shield) => player.applyServerVitals(health, shield),
+  onOwnVitals: (health, shield, spawnProtected) =>
+    player.applyServerVitals(health, shield, spawnProtected),
   onKill: (killer, victim, scores) => {
     scoreboard.setScores(scores)
     if (killer === network.localId) hitFeedback.showHit(true)
@@ -196,6 +197,7 @@ const network: NetworkClient = new NetworkClient({
   onHurt: (by) => hitFeedback.showDamageFrom(remotePlayers.getPosition(by), camera),
   onDisconnect: () => {
     player.networkControlled = false
+    player.spawnProtected = false
     setTargetsActive(true)
   },
 })
@@ -287,6 +289,7 @@ const scoreBlue = document.querySelector<HTMLSpanElement>('#score-blue')!
 const shieldBarFill = document.querySelector<HTMLDivElement>('#shield-bar-fill')!
 const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill')!
 const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
+const spawnProtectionHud = document.querySelector<HTMLDivElement>('#spawn-protection')!
 const killFeed = new KillFeed(document.querySelector<HTMLDivElement>('#kill-feed')!)
 
 // Kostenloses Hosting schläft ein - der erste Verbindungsaufbau dauert
@@ -331,6 +334,7 @@ function updateHealthHud() {
   healthBarFill.classList.toggle('low', ratio <= 0.3)
   healthText.textContent = String(health.current)
 
+  spawnProtectionHud.classList.toggle('hidden', !player.spawnProtected || !player.isAlive)
   deathOverlay.classList.toggle('hidden', player.isAlive)
   if (!player.isAlive) {
     respawnCountdown.textContent = String(Math.ceil(player.getRespawnCountdown()))

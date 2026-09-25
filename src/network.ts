@@ -36,7 +36,7 @@ export interface NetworkHandlers {
   // Snapshot ohne den eigenen Eintrag
   onSnapshot: (players: SnapshotEntry[]) => void
   // Eigenes Leben/Schild laut Server
-  onOwnVitals: (health: number, shield: number) => void
+  onOwnVitals: (health: number, shield: number, spawnProtected: boolean) => void
   onKill: (killer: PlayerId, victim: PlayerId, scores: Scores) => void
   onRespawn: (id: PlayerId, spawnIndex: number) => void
   onRemoteShot: (from: Vec3, to: Vec3) => void
@@ -148,7 +148,7 @@ export class NetworkClient {
         break
       case 'snapshot': {
         const own = message.players.find((entry) => entry.id === this.localId)
-        if (own) this.handlers.onOwnVitals(own.state.health, own.state.shield)
+        if (own) this.handlers.onOwnVitals(own.state.health, own.state.shield, own.spawnProtected)
         this.handlers.onSnapshot(message.players.filter((entry) => entry.id !== this.localId))
         break
       }

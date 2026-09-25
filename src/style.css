@@ -256,6 +256,18 @@ body {
   color: #ff6b3d;
 }
 
+#spawn-protection {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #33e6cc;
+  text-shadow: 0 0 8px rgba(51, 230, 204, 0.6);
+}
+
+#spawn-protection.hidden {
+  display: none;
+}
+
 /* Lebensanzeige unten links: Balken + Zahl */
 #health-hud {
   position: fixed;

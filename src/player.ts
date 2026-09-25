@@ -113,6 +113,8 @@ export class Player implements Damageable {
   // Respawn (siehe applyServerVitals) - dann läuft lokal nur noch die
   // Bewegung. Im Singleplayer rechnet der Spieler selbst.
   networkControlled = false
+  // Nur Anzeige - ob Treffer zählen, entscheidet der Server
+  spawnProtected = false
   private respawnRemaining = 0
   private spawnPoint = new THREE.Vector3()
   team: Team
@@ -194,7 +196,8 @@ export class Player implements Damageable {
   // Vom Server gemeldeter Stand (Multiplayer) - überschreibt die lokalen
   // Werte. Den Tod erkennt der Client am Übergang lebendig -> tot; der
   // Respawn kommt als eigene Server-Nachricht (siehe main.ts).
-  applyServerVitals(health: number, shield: number) {
+  applyServerVitals(health: number, shield: number, spawnProtected: boolean) {
+    this.spawnProtected = spawnProtected
     const wasAlive = this.isAlive
     this.vitals.health = health
     this.vitals.shield = shield

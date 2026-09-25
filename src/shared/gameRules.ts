@@ -7,6 +7,9 @@ export const MAX_SHIELD = 25
 export const SHIELD_REGEN_DELAY = 3 // Sekunden ohne Treffer, bevor das Schild wieder auflädt
 export const SHIELD_REGEN_RATE = 10 // pro Sekunde (volles Schild in 2.5s nach der Regen-Verzögerung)
 export const RESPAWN_DELAY = 3 // Sekunden bis ein Spieler nach dem Tod wieder auftaucht
+// Unverwundbar direkt nach dem (Re-)Spawn, damit niemand am Spawn-Punkt
+// abgefangen wird - endet vorzeitig, sobald man selbst schießt
+export const SPAWN_PROTECTION = 2
 
 export const HIT_DAMAGE = 15 // fester Schaden pro Treffer (25 Schild absorbiert zuerst)
 export const FIRE_COOLDOWN = 0.15 // Sekunden zwischen zwei Schüssen (verhindert Spam)

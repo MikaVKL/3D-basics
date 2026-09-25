@@ -17,6 +17,7 @@ import {
   MAX_HEALTH,
   MAX_SHIELD,
   RESPAWN_DELAY,
+  SPAWN_PROTECTION,
   FIRE_COOLDOWN,
   HIT_DAMAGE,
   applyDamage,
@@ -55,6 +56,7 @@ interface Client {
   life: number
   vitals: Vitals
   respawnAt: number | null // performance.now()-Zeitpunkt, solange tot
+  protectedUntil: number // Spawn-Schutz bis zu diesem performance.now()-Zeitpunkt
   lastHitAt: number
   lastShotAt: number
 }
@@ -72,6 +74,10 @@ const MAX_HIT_DISTANCE = 100
 
 function isAlive(client: Client): boolean {
   return client.vitals.health > 0
+}
+
+function isProtected(client: Client, now: number): boolean {
+  return now < client.protectedUntil
 }
 
 function fullVitals(): Vitals {
@@ -264,6 +270,7 @@ wss.on('connection', (socket) => {
         life: 0,
         vitals: fullVitals(),
         respawnAt: null,
+        protectedUntil: performance.now() + SPAWN_PROTECTION * 1000,
         lastHitAt: 0,
         lastShotAt: 0,
       }
@@ -335,6 +342,7 @@ function handleHit(shooter: Client, targetId: unknown) {
   if (!shooter.state || !target.state) return
 
   const now = performance.now()
+  if (isProtected(target, now)) return
   if (now - shooter.lastHitAt < MIN_HIT_INTERVAL_MS) return
   const a = shooter.state.position
   const b = target.state.position
@@ -377,6 +385,8 @@ function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown) {
   if (Math.hypot(from.x - p.x, from.y - p.y, from.z - p.z) > MAX_MUZZLE_OFFSET) return
   if (Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) > MAX_TRACER_LENGTH) return
   shooter.lastShotAt = now
+  // Wer schießt, verzichtet auf den restlichen Spawn-Schutz
+  shooter.protectedUntil = 0
 
   broadcast({ t: 'shot', id: shooter.id, from, to }, shooter.id)
 }
@@ -397,6 +407,7 @@ setInterval(() => {
     if (client.respawnAt !== null && now >= client.respawnAt) {
       client.respawnAt = null
       client.vitals = fullVitals()
+      client.protectedUntil = now + SPAWN_PROTECTION * 1000
       const spawnIndex = pickSpawnIndex(client.team)
       // Sofort am Spawn-Punkt führen, nicht erst wenn der Client seine neue
       // Position schickt - sonst tauchen andere kurz an der Todesstelle auf.
@@ -411,6 +422,7 @@ setInterval(() => {
       players.push({
         id: client.id,
         time: client.stateTime,
+        spawnProtected: isProtected(client, now),
         state: {
           ...client.state,
           health: client.vitals.health,

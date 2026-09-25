@@ -7,7 +7,7 @@ import type { Team } from '../team.ts'
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 7
+export const PROTOCOL_VERSION = 8
 
 export const MAX_PLAYERS = 8
 export const DEFAULT_SERVER_PORT = 8080
@@ -43,6 +43,7 @@ export interface SnapshotEntry {
   // Sendezeitpunkt laut Uhr des jeweiligen Spielers (ms) - Empfänger
   // interpolieren auf dieser Zeitachse, siehe remotePlayers.ts
   time: number
+  spawnProtected: boolean
 }
 
 export type Scores = Record<Team, number>

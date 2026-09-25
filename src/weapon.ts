@@ -159,9 +159,9 @@ export class Weapon {
       const damageable = hits[0].object.userData.damageable as Damageable | undefined
       const targetTeam = hits[0].object.userData.team as Team | undefined
 
-      if (damageable && targetTeam === this.shooterTeam) {
-        // Freundschaftliches Feuer: kein Schaden, verhält sich wie ein
-        // normaler Wand-Treffer (statischer Marker statt Aufblitzen).
+      if (damageable && (targetTeam === this.shooterTeam || damageable.invulnerable)) {
+        // Freundschaftliches Feuer oder Spawn-Schutz: kein Schaden, verhält
+        // sich wie ein normaler Wand-Treffer (Marker statt Aufblitzen).
         this.spawnImpactMarker(hits[0])
       } else if (damageable) {
         // Treffer auf etwas Lebendes: Schaden statt des statischen

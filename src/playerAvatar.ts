@@ -63,6 +63,13 @@ export class PlayerAvatar {
     this.mesh.visible = state.isAlive
   }
 
+  // Spawn-Schutz: halb durchsichtig, damit man sieht "gerade nicht
+  // verwundbar" und keine Munition verschwendet
+  setProtected(isProtected: boolean) {
+    this.material.transparent = isProtected
+    this.material.opacity = isProtected ? 0.4 : 1
+  }
+
   // Treffer-Feedback für den Schützen: kurz weiß aufblitzen
   flash() {
     this.hitFlashRemaining = HIT_FLASH_DURATION
