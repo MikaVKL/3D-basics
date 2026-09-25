@@ -8,6 +8,7 @@ import {
   type PlayerNetworkState,
   type SnapshotEntry,
 } from './shared/protocol'
+import type { Team } from './team'
 
 export type ConnectionStatus = 'offline' | 'connecting' | 'online' | 'full' | 'outdated'
 
@@ -26,6 +27,13 @@ function resolveServerUrl(): string | null {
   return null
 }
 
+export interface NetworkHandlers {
+  getLocalState: () => PlayerNetworkState
+  // Server hat uns aufgenommen und Team + Spawn-Punkt festgelegt
+  onWelcome: (team: Team, spawnIndex: number) => void
+  onSnapshot: (serverTime: number, players: SnapshotEntry[]) => void
+}
+
 const RECONNECT_MIN_MS = 2000
 const RECONNECT_MAX_MS = 15000
 
@@ -41,20 +49,15 @@ export class NetworkClient {
   private readonly url: string | null
   private socket: WebSocket | null = null
   private reconnectDelay = RECONNECT_MIN_MS
-  private readonly getLocalState: () => PlayerNetworkState
-  private readonly onSnapshot: (serverTime: number, players: SnapshotEntry[]) => void
+  private readonly handlers: NetworkHandlers
 
-  constructor(
-    getLocalState: () => PlayerNetworkState,
-    onSnapshot: (serverTime: number, players: SnapshotEntry[]) => void
-  ) {
-    this.getLocalState = getLocalState
-    this.onSnapshot = onSnapshot
+  constructor(handlers: NetworkHandlers) {
+    this.handlers = handlers
     this.url = resolveServerUrl()
     if (!this.url) return
     this.connect()
     setInterval(() => {
-      if (this.status === 'online') this.send({ t: 'state', state: roundState(this.getLocalState()) })
+      if (this.status === 'online') this.send({ t: 'state', state: roundState(this.handlers.getLocalState()) })
     }, 1000 / TICK_RATE)
   }
 
@@ -105,6 +108,7 @@ export class NetworkClient {
         for (const id of message.players) {
           if (id !== message.id) this.remotePlayers.add(id)
         }
+        this.handlers.onWelcome(message.team, message.spawnIndex)
         break
       case 'join':
         this.remotePlayers.add(message.id)
@@ -116,7 +120,7 @@ export class NetworkClient {
         this.status = message.reason === 'full' ? 'full' : 'outdated'
         break
       case 'snapshot':
-        this.onSnapshot(
+        this.handlers.onSnapshot(
           message.time,
           message.players.filter((entry) => entry.id !== this.localId)
         )

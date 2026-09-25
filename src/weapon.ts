@@ -59,7 +59,8 @@ export class Weapon {
   private scene: THREE.Scene
   private shootables: THREE.Object3D[]
   private view: WeaponView
-  private shooterTeam: Team
+  // Im Multiplayer vom Server zugeteilt (siehe main.ts), daher änderbar
+  shooterTeam: Team
   private onKill?: (killerTeam: Team) => void
 
   private ammo = MAGAZINE_SIZE

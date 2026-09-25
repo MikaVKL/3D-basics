@@ -107,7 +107,7 @@ export class Player implements Damageable {
   private health = MAX_HEALTH
   private respawnRemaining = 0
   private spawnPoint = new THREE.Vector3()
-  readonly team: Team
+  team: Team
 
   constructor(camera: THREE.PerspectiveCamera, solids: Solid[], ramps: Ramp[] = [], team: Team = 'blue') {
     this.camera = camera

@@ -1,5 +1,12 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
+import {
+  MAIN_ROOM_WIDTH,
+  MAIN_ROOM_DEPTH,
+  SIDE_ROOM_WIDTH,
+  SIDE_ROOM_DEPTH,
+  SPAWN_POINTS,
+} from './shared/arenaLayout'
 
 // Diese Datei baut die komplette Spiel-Arena: Boden, Wände und ein paar
 // Deckungs-Objekte in der Mitte. Alles ist reine Geometrie mit farbigen
@@ -71,13 +78,9 @@ export interface ArenaResult {
 // Nochmal deutlich vergrößert (52x36 -> 64x42) und mit mehr innerer Struktur
 // versehen (Trennwand mit Durchgang + Fenster, mehr/höhere Deckung) - eine
 // reine leere Halle wird auf Dauer langweilig, gerade bei mehreren Spielern.
-const MAIN_ROOM_WIDTH = 64 // X-Ausdehnung
-const MAIN_ROOM_DEPTH = 42 // Z-Ausdehnung
 const MAIN_HALF_W = MAIN_ROOM_WIDTH / 2
 const MAIN_HALF_D = MAIN_ROOM_DEPTH / 2
 
-const SIDE_ROOM_WIDTH = 20 // X-Ausdehnung (wie weit er nach außen ragt)
-const SIDE_ROOM_DEPTH = 24 // Z-Ausdehnung (= Breite der Öffnung zum Hauptraum)
 const SIDE_HALF_D = SIDE_ROOM_DEPTH / 2
 
 const WALL_HEIGHT = 6
@@ -578,18 +581,7 @@ export function buildArena(): ArenaResult {
     true
   )
 
-  // Fünf Punkte, mit Abstand zu Wänden/Kisten und zueinander verteilt -
-  // vier in den Ecken des Hauptraums, einer tief im (kleineren) Flankenraum,
-  // damit dieser auch als Spawn-Option genutzt wird. So würden sich 2-4
-  // Spieler im Multiplayer nicht direkt ins Gesicht spawnen.
-  // 1.7 ≈ Augenhöhe eines Menschen.
-  const spawnPoints = [
-    new THREE.Vector3(-28, 1.7, -18),
-    new THREE.Vector3(-28, 1.7, 18),
-    new THREE.Vector3(0, 1.7, -18),
-    new THREE.Vector3(0, 1.7, 18),
-    new THREE.Vector3(sideRoomMaxX - 5, 1.7, 8),
-  ]
+  const spawnPoints = SPAWN_POINTS.map((p) => new THREE.Vector3(p.x, p.y, p.z))
 
   return {
     group,

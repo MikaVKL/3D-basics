@@ -14,6 +14,7 @@ import { Scoreboard } from './scoreboard'
 import { NetworkClient } from './network'
 import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
+import { TeamLabel } from './team'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -144,10 +145,16 @@ const weapon = new Weapon(camera, scene, arena.shootables, player.team, (killerT
 )
 
 const remotePlayers = new RemotePlayers(scene)
-const network = new NetworkClient(
-  () => player.getNetworkState(),
-  (serverTime, entries) => remotePlayers.applySnapshot(serverTime, entries)
-)
+const network = new NetworkClient({
+  getLocalState: () => player.getNetworkState(),
+  onWelcome: (team, spawnIndex) => {
+    player.team = team
+    weapon.shooterTeam = team
+    playerAvatar.setTeam(team)
+    player.spawn(arena.spawnPoints[spawnIndex])
+  },
+  onSnapshot: (serverTime, entries) => remotePlayers.applySnapshot(serverTime, entries),
+})
 
 // Nur im Dev-Server: Zugriff für automatisierte Browser-Tests, die sonst
 // keinen Weg an den Spielzustand hätten.
@@ -238,7 +245,7 @@ function updateNetStatusHud() {
   const labels = {
     offline: 'Offline · Singleplayer',
     connecting: 'Verbinde…',
-    online: `Online · ${network.playerCount}/${MAX_PLAYERS} Spieler`,
+    online: `Online · ${network.playerCount}/${MAX_PLAYERS} Spieler · Team ${TeamLabel[player.team]}`,
     full: 'Server voll · Singleplayer',
     outdated: 'Veraltete Version · bitte neu laden',
   }

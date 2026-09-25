@@ -7,7 +7,7 @@ import type { Team } from '../team.ts'
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 2
+export const PROTOCOL_VERSION = 3
 
 export const MAX_PLAYERS = 8
 export const DEFAULT_SERVER_PORT = 8080
@@ -46,7 +46,8 @@ export type ClientMessage =
 export type RejectReason = 'full' | 'version'
 
 export type ServerMessage =
-  | { t: 'welcome'; id: PlayerId; players: PlayerId[] }
+  // spawnIndex = Index in SPAWN_POINTS (shared/arenaLayout.ts)
+  | { t: 'welcome'; id: PlayerId; players: PlayerId[]; team: Team; spawnIndex: number }
   | { t: 'join'; id: PlayerId }
   | { t: 'leave'; id: PlayerId }
   | { t: 'rejected'; reason: RejectReason }
