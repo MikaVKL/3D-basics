@@ -131,6 +131,11 @@ Der kostenlose Tarif schläft nach ca. 15 Minuten ohne Spieler ein. Der erste
 Spieler danach sieht bis zu ~1 Minute "Server wird geweckt…" und spielt
 solange Singleplayer, dann verbindet sich das Spiel von selbst.
 
+Eine Runde gewinnt das erste Team mit 20 Kills (`KILLS_TO_WIN` in
+`src/shared/gameRules.ts`). Über die Umgebungsvariable `KILLS_TO_WIN` im
+Hosting lässt sich das ohne Code-Änderung anpassen, z.B. für kürzere Runden
+bei wenigen Spielern.
+
 `ALLOWED_ORIGINS` (in `render.yaml`) legt fest, von welchen Webseiten aus
 man sich verbinden darf - aktuell nur `https://mikavkl.github.io`.
 

@@ -14,7 +14,7 @@ import { Scoreboard } from './scoreboard'
 import { NetworkClient } from './network'
 import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
-import { TeamLabel } from './team'
+import { TeamLabel, type Team } from './team'
 import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
@@ -161,6 +161,19 @@ function setTargetsActive(active: boolean) {
   }
 }
 
+function setLocalTeam(team: Team) {
+  player.team = team
+  weapon.shooterTeam = team
+  playerAvatar.setTeam(team)
+}
+
+const roundBanner = document.querySelector<HTMLDivElement>('#round-banner')!
+const roundWinner = document.querySelector<HTMLDivElement>('#round-winner')!
+const roundCountdown = document.querySelector<HTMLDivElement>('#round-countdown')!
+const scoreGoal = document.querySelector<HTMLDivElement>('#score-goal')!
+// Zeitpunkt der nächsten Runde (nur während der Sieger-Anzeige)
+let nextRoundAt: number | null = null
+
 const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#hitmarker')!,
   document.querySelector<HTMLDivElement>('#damage-indicators')!,
@@ -193,11 +206,10 @@ nameInput.addEventListener('change', () => {
 const network: NetworkClient = new NetworkClient({
   getLocalState: () => player.getNetworkState(),
   getName: () => nameInput.value,
-  onWelcome: (team, spawnIndex, scores) => {
-    player.team = team
+  onWelcome: (team, spawnIndex, scores, killsToWin) => {
+    scoreGoal.textContent = `Erstes Team mit ${killsToWin} Kills gewinnt`
+    setLocalTeam(team)
     player.networkControlled = true
-    weapon.shooterTeam = team
-    playerAvatar.setTeam(team)
     player.spawn(arena.spawnPoints[spawnIndex])
     scoreboard.setScores(scores)
     setTargetsActive(false)
@@ -210,9 +222,24 @@ const network: NetworkClient = new NetworkClient({
     if (killer === network.localId) hitFeedback.showHit(true)
     killFeed.add(killer, victim, network.localId, (id) => network.nameOf(id))
   },
-  onRespawn: (id, spawnIndex) => {
-    if (id === network.localId) player.spawn(arena.spawnPoints[spawnIndex])
-    else remotePlayers.handleRespawn(id)
+  onRespawn: (id, spawnIndex, team) => {
+    if (id === network.localId) {
+      // Team-Ausgleich: der Server kann uns per Respawn die Seite wechseln lassen
+      if (team !== player.team) setLocalTeam(team)
+      player.spawn(arena.spawnPoints[spawnIndex])
+    } else {
+      remotePlayers.handleRespawn(id)
+    }
+  },
+  onRoundEnd: (winner, nextRoundIn) => {
+    roundBanner.className = winner
+    roundWinner.textContent = `Team ${TeamLabel[winner]} gewinnt!`
+    nextRoundAt = performance.now() + nextRoundIn * 1000
+  },
+  onRoundStart: (scores) => {
+    scoreboard.setScores(scores)
+    nextRoundAt = null
+    roundBanner.classList.add('hidden')
   },
   onRemoteShot: (from, to) =>
     weapon.showRemoteTracer(
@@ -221,6 +248,8 @@ const network: NetworkClient = new NetworkClient({
     ),
   onHurt: (by) => hitFeedback.showDamageFrom(remotePlayers.getPosition(by), camera),
   onDisconnect: () => {
+    nextRoundAt = null
+    roundBanner.classList.add('hidden')
     player.networkControlled = false
     player.spawnProtected = false
     setTargetsActive(true)
@@ -358,6 +387,13 @@ function updateNetStatusHud() {
   netStatus.dataset.status = network.status
 }
 
+function updateRoundHud() {
+  scoreGoal.classList.toggle('hidden', network.status !== 'online')
+  if (nextRoundAt === null) return
+  const seconds = Math.max(0, Math.ceil((nextRoundAt - performance.now()) / 1000))
+  roundCountdown.textContent = `Nächste Runde in ${seconds}s`
+}
+
 function updateScoreboardHud() {
   scoreRed.textContent = String(scoreboard.getScore('red'))
   scoreBlue.textContent = String(scoreboard.getScore('blue'))
@@ -414,6 +450,7 @@ function animate() {
   updateShieldAndStaminaHud()
   updateScoreboardHud()
   updateNetStatusHud()
+  updateRoundHud()
 
   renderer.render(scene, camera)
 }

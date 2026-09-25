@@ -7,7 +7,7 @@ import type { Team } from '../team.ts'
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 9
+export const PROTOCOL_VERSION = 10
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -87,11 +87,16 @@ export type ServerMessage =
       team: Team
       spawnIndex: number
       scores: Scores
+      killsToWin: number
     }
   | { t: 'roster'; players: RosterEntry[] }
   | { t: 'rejected'; reason: RejectReason }
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores }
-  | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number }
+  // team: bei Team-Ausgleich wechselt ein Spieler per Respawn die Seite
+  | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number; team: Team }
+  // Runde vorbei - bis zur nächsten Runde zählen keine Treffer
+  | { t: 'roundEnd'; winner: Team; nextRoundIn: number }
+  | { t: 'roundStart'; scores: Scores }
   | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3 }
   // Nur an den Getroffenen: wer geschossen hat (für den Richtungsanzeiger)
   | { t: 'hurt'; by: PlayerId }

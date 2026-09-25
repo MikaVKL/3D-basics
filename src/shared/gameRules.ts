@@ -11,6 +11,9 @@ export const RESPAWN_DELAY = 3 // Sekunden bis ein Spieler nach dem Tod wieder a
 // abgefangen wird - endet vorzeitig, sobald man selbst schießt
 export const SPAWN_PROTECTION = 2
 
+export const KILLS_TO_WIN = 20 // erstes Team mit so vielen Kills gewinnt die Runde
+export const ROUND_END_PAUSE = 6 // Sekunden Sieger-Anzeige bis zur nächsten Runde
+
 export const HIT_DAMAGE = 15 // fester Schaden pro Treffer (25 Schild absorbiert zuerst)
 export const FIRE_COOLDOWN = 0.15 // Sekunden zwischen zwei Schüssen (verhindert Spam)
 

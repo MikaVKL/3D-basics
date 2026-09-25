@@ -34,13 +34,15 @@ export interface NetworkHandlers {
   getLocalState: () => PlayerNetworkState
   getName: () => string
   // Server hat uns aufgenommen und Team + Spawn-Punkt festgelegt
-  onWelcome: (team: Team, spawnIndex: number, scores: Scores) => void
+  onWelcome: (team: Team, spawnIndex: number, scores: Scores, killsToWin: number) => void
   // Snapshot ohne den eigenen Eintrag
   onSnapshot: (players: SnapshotEntry[]) => void
   // Eigenes Leben/Schild laut Server
   onOwnVitals: (health: number, shield: number, spawnProtected: boolean) => void
   onKill: (killer: PlayerId, victim: PlayerId, scores: Scores) => void
-  onRespawn: (id: PlayerId, spawnIndex: number) => void
+  onRespawn: (id: PlayerId, spawnIndex: number, team: Team) => void
+  onRoundEnd: (winner: Team, nextRoundIn: number) => void
+  onRoundStart: (scores: Scores) => void
   onRemoteShot: (from: Vec3, to: Vec3) => void
   // Wir wurden von Spieler "by" getroffen
   onHurt: (by: PlayerId) => void
@@ -135,7 +137,7 @@ export class NetworkClient {
         this.reconnectDelay = RECONNECT_MIN_MS
         this.localId = message.id
         this.life = 0
-        this.handlers.onWelcome(message.team, message.spawnIndex, message.scores)
+        this.handlers.onWelcome(message.team, message.spawnIndex, message.scores, message.killsToWin)
         break
       case 'roster':
         this.roster.clear()
@@ -160,7 +162,13 @@ export class NetworkClient {
         break
       case 'respawn':
         if (message.id === this.localId) this.life = message.life
-        this.handlers.onRespawn(message.id, message.spawnIndex)
+        this.handlers.onRespawn(message.id, message.spawnIndex, message.team)
+        break
+      case 'roundEnd':
+        this.handlers.onRoundEnd(message.winner, message.nextRoundIn)
+        break
+      case 'roundStart':
+        this.handlers.onRoundStart(message.scores)
         break
       case 'shot':
         this.handlers.onRemoteShot(message.from, message.to)

@@ -20,6 +20,8 @@ import {
   MAX_SHIELD,
   RESPAWN_DELAY,
   SPAWN_PROTECTION,
+  KILLS_TO_WIN,
+  ROUND_END_PAUSE,
   FIRE_COOLDOWN,
   HIT_DAMAGE,
   applyDamage,
@@ -69,6 +71,13 @@ interface Client {
 const clients = new Map<PlayerId, Client>()
 let nextPlayerId = 1
 let scores: Scores = { red: 0, blue: 0 }
+// Standard aus gameRules.ts, per Umgebungsvariable änderbar (z.B. kürzere
+// Runden bei wenigen Spielern, oder zum Testen)
+const KILLS_TO_WIN_ACTIVE = Number(process.env.KILLS_TO_WIN) || KILLS_TO_WIN
+// Zwischen zwei Runden (Sieger-Anzeige): performance.now()-Zeitpunkt, an
+// dem die nächste Runde startet, sonst null
+let nextRoundAt: number | null = null
+let roundWinner: Team | null = null
 
 // Treffer-Meldungen dürfen etwas dichter kommen als die Feuerrate, weil
 // Netzwerk-Schwankungen zwei Pakete zusammenschieben können - aber nicht
@@ -244,6 +253,63 @@ function pickSpawnIndex(team: Team): number {
   return bestIndex
 }
 
+// Setzt einen Spieler mit vollem Leben an einen (neuen) Spawn-Punkt -
+// nach dem Tod, zu Rundenbeginn und beim Team-Wechsel.
+function respawn(client: Client, now: number) {
+  client.respawnAt = null
+  client.vitals = fullVitals()
+  client.protectedUntil = now + SPAWN_PROTECTION * 1000
+  const spawnIndex = pickSpawnIndex(client.team)
+  // Sofort am Spawn-Punkt führen, nicht erst wenn der Client seine neue
+  // Position schickt - sonst tauchen andere kurz an der alten Stelle auf.
+  if (client.state) client.state = { ...client.state, position: { ...SPAWN_POINTS[spawnIndex] } }
+  client.life += 1
+  broadcast({ t: 'respawn', id: client.id, spawnIndex, life: client.life, team: client.team })
+}
+
+function teamSizes(): Scores {
+  const sizes = { red: 0, blue: 0 }
+  for (const client of clients.values()) sizes[client.team] += 1
+  return sizes
+}
+
+// Bei 2+ Spielern Unterschied wechselt der zuletzt beigetretene Spieler
+// des größeren Teams die Seite (er hat am wenigsten "investiert").
+function balanceTeams(now: number): boolean {
+  let changed = false
+  for (;;) {
+    const sizes = teamSizes()
+    if (Math.abs(sizes.red - sizes.blue) < 2) return changed
+    const bigger: Team = sizes.red > sizes.blue ? 'red' : 'blue'
+    const newest = [...clients.values()].filter((c) => c.team === bigger).at(-1)!
+    newest.team = bigger === 'red' ? 'blue' : 'red'
+    respawn(newest, now)
+    console.log(`Team-Ausgleich: Spieler ${newest.id} wechselt zu ${newest.team}`)
+    changed = true
+  }
+}
+
+function endRound(winner: Team, now: number) {
+  roundWinner = winner
+  nextRoundAt = now + ROUND_END_PAUSE * 1000
+  broadcast({ t: 'roundEnd', winner, nextRoundIn: ROUND_END_PAUSE })
+  console.log(`Runde vorbei, Team ${winner} gewinnt (${scores.red}:${scores.blue})`)
+}
+
+function startRound(now: number) {
+  nextRoundAt = null
+  roundWinner = null
+  scores = { red: 0, blue: 0 }
+  for (const client of clients.values()) {
+    client.kills = 0
+    client.deaths = 0
+  }
+  broadcast({ t: 'roundStart', scores })
+  balanceTeams(now)
+  for (const client of clients.values()) respawn(client, now)
+  broadcastRoster()
+}
+
 // Einfacher HTTP-Endpunkt: Hosting-Anbieter prüfen per HTTP, ob der Dienst
 // lebt - außerdem praktisch zum schnellen Testen im Browser.
 const httpServer = createServer((_request, response) => {
@@ -310,8 +376,13 @@ wss.on('connection', (socket) => {
         team,
         spawnIndex,
         scores,
+        killsToWin: KILLS_TO_WIN_ACTIVE,
       })
       broadcastRoster()
+      if (nextRoundAt !== null && roundWinner !== null) {
+        const nextRoundIn = Math.max(0, (nextRoundAt - performance.now()) / 1000)
+        send(socket, { t: 'roundEnd', winner: roundWinner, nextRoundIn })
+      }
       console.log(
         `Spieler ${client.id} "${client.name}" verbunden, Team ${team}, Spawn ${spawnIndex} (${clients.size}/${MAX_PLAYERS})`
       )
@@ -343,9 +414,15 @@ wss.on('connection', (socket) => {
     clearTimeout(helloTimeout)
     if (!client) return
     clients.delete(client.id)
-    broadcastRoster()
     // Neue Runde, sobald niemand mehr da ist
-    if (clients.size === 0) scores = { red: 0, blue: 0 }
+    if (clients.size === 0) {
+      scores = { red: 0, blue: 0 }
+      nextRoundAt = null
+      roundWinner = null
+    } else {
+      balanceTeams(performance.now())
+    }
+    broadcastRoster()
     console.log(`Spieler ${client.id} getrennt (${clients.size}/${MAX_PLAYERS})`)
   })
 })
@@ -373,6 +450,7 @@ function handleHit(shooter: Client, targetId: unknown) {
   if (!shooter.state || !target.state) return
 
   const now = performance.now()
+  if (nextRoundAt !== null) return
   if (isProtected(target, now)) return
   if (now - shooter.lastHitAt < MIN_HIT_INTERVAL_MS) return
   const a = shooter.state.position
@@ -389,6 +467,7 @@ function handleHit(shooter: Client, targetId: unknown) {
     target.deaths += 1
     broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores })
     broadcastRoster()
+    if (scores[shooter.team] >= KILLS_TO_WIN_ACTIVE) endRound(shooter.team, now)
     console.log(`Spieler ${shooter.id} hat Spieler ${target.id} eliminiert (${scores.red}:${scores.blue})`)
   }
 }
@@ -436,18 +515,12 @@ setInterval(() => {
   lastTickAt = now
   if (clients.size === 0) return
 
+  if (nextRoundAt !== null && now >= nextRoundAt) startRound(now)
+
   const players = []
   for (const client of clients.values()) {
     if (client.respawnAt !== null && now >= client.respawnAt) {
-      client.respawnAt = null
-      client.vitals = fullVitals()
-      client.protectedUntil = now + SPAWN_PROTECTION * 1000
-      const spawnIndex = pickSpawnIndex(client.team)
-      // Sofort am Spawn-Punkt führen, nicht erst wenn der Client seine neue
-      // Position schickt - sonst tauchen andere kurz an der Todesstelle auf.
-      if (client.state) client.state = { ...client.state, position: { ...SPAWN_POINTS[spawnIndex] } }
-      client.life += 1
-      broadcast({ t: 'respawn', id: client.id, spawnIndex, life: client.life })
+      respawn(client, now)
     } else if (isAlive(client)) {
       regenerateShield(client.vitals, deltaSeconds)
     }
