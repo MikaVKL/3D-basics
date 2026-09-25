@@ -8,6 +8,7 @@ import {
   type PlayerNetworkState,
   type SnapshotEntry,
   type Scores,
+  type Vec3,
 } from './shared/protocol'
 import type { Team } from './team'
 
@@ -38,6 +39,7 @@ export interface NetworkHandlers {
   onOwnVitals: (health: number, shield: number) => void
   onKill: (killer: PlayerId, victim: PlayerId, scores: Scores) => void
   onRespawn: (id: PlayerId, spawnIndex: number) => void
+  onRemoteShot: (from: Vec3, to: Vec3) => void
   // Verbindung weg (oder nie zustande gekommen) - zurück in den Singleplayer
   onDisconnect: () => void
 }
@@ -143,11 +145,19 @@ export class NetworkClient {
       case 'respawn':
         this.handlers.onRespawn(message.id, message.spawnIndex)
         break
+      case 'shot':
+        this.handlers.onRemoteShot(message.from, message.to)
+        break
     }
   }
 
   sendHit(target: PlayerId) {
     this.send({ t: 'hit', target })
+  }
+
+  sendShot(from: Vec3, to: Vec3) {
+    const r = (v: Vec3) => ({ x: round(v.x), y: round(v.y), z: round(v.z) })
+    this.send({ t: 'shot', from: r(from), to: r(to) })
   }
 
   private send(message: ClientMessage) {
@@ -159,8 +169,12 @@ export class NetworkClient {
 
 // Millimeter bzw. ~0.06° Genauigkeit reichen völlig - spart bei 20 Nachrichten
 // pro Sekunde spürbar JSON-Länge gegenüber vollen Float-Nachkommastellen.
+function round(value: number): number {
+  return Math.round(value * 1000) / 1000
+}
+
 function roundState(state: PlayerNetworkState): PlayerNetworkState {
-  const r = (value: number) => Math.round(value * 1000) / 1000
+  const r = round
   return {
     ...state,
     position: { x: r(state.position.x), y: r(state.position.y), z: r(state.position.z) },

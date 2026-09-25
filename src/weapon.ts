@@ -61,6 +61,9 @@ export class Weapon {
   // Im Multiplayer vom Server zugeteilt (siehe main.ts), daher änderbar
   shooterTeam: Team
   private onKill?: (killerTeam: Team) => void
+  // Jeder abgegebene Schuss (Mündung -> Einschlag), damit andere Spieler
+  // im Multiplayer die Leuchtspur sehen (siehe main.ts)
+  onShot?: (from: THREE.Vector3, to: THREE.Vector3) => void
 
   private ammo = MAGAZINE_SIZE
   private reloadRemaining = 0
@@ -169,6 +172,7 @@ export class Weapon {
         this.spawnImpactMarker(hits[0])
       }
       this.spawnTracer(muzzlePosition, hits[0].point)
+      this.onShot?.(muzzlePosition, hits[0].point)
     } else {
       // Kein Treffer: Tracer trotzdem bis zu einem weit entfernten Punkt in
       // Schussrichtung anzeigen, damit man sieht, dass (und wohin) man
@@ -177,6 +181,7 @@ export class Weapon {
         .clone()
         .addScaledVector(this.raycaster.ray.direction, TRACER_MAX_DISTANCE)
       this.spawnTracer(muzzlePosition, missEnd)
+      this.onShot?.(muzzlePosition, missEnd)
     }
 
     // Sofort nachladen, sobald das Magazin durch diesen Schuss leer wird -
@@ -213,6 +218,11 @@ export class Weapon {
 
     this.scene.add(marker)
     this.impactMarkers.push({ mesh: marker, remainingLifetime: IMPACT_MARKER_LIFETIME })
+  }
+
+  // Leuchtspur eines anderen Spielers (Multiplayer)
+  showRemoteTracer(start: THREE.Vector3, end: THREE.Vector3) {
+    this.spawnTracer(start, end)
   }
 
   private spawnTracer(start: THREE.Vector3, end: THREE.Vector3) {

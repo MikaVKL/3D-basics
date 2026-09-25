@@ -7,7 +7,7 @@ import type { Team } from '../team.ts'
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 4
+export const PROTOCOL_VERSION = 5
 
 export const MAX_PLAYERS = 8
 export const DEFAULT_SERVER_PORT = 8080
@@ -22,7 +22,7 @@ export const TICK_RATE = 20
 // Kamera relevant) und Leben. Absichtlich ein flaches Objekt aus Zahlen
 // (kein THREE.Vector3), damit es 1:1 als JSON verschickt werden kann.
 export interface PlayerNetworkState {
-  position: { x: number; y: number; z: number }
+  position: Vec3
   yaw: number
   health: number
   maxHealth: number
@@ -44,11 +44,19 @@ export interface SnapshotEntry {
 
 export type Scores = Record<Team, number>
 
+export interface Vec3 {
+  x: number
+  y: number
+  z: number
+}
+
 export type ClientMessage =
   | { t: 'hello'; version: number }
   | { t: 'state'; state: PlayerNetworkState }
   // "Ich habe Spieler X getroffen" - der Server prüft und entscheidet
   | { t: 'hit'; target: PlayerId }
+  // Jeder Schuss, nur für die Leuchtspur bei den anderen
+  | { t: 'shot'; from: Vec3; to: Vec3 }
 
 export type RejectReason = 'full' | 'version'
 
@@ -67,5 +75,6 @@ export type ServerMessage =
   | { t: 'rejected'; reason: RejectReason }
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores }
   | { t: 'respawn'; id: PlayerId; spawnIndex: number }
+  | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3 }
   // time = Server-Uhr in ms, nur relativ zu anderen Snapshots aussagekräftig
   | { t: 'snapshot'; time: number; players: SnapshotEntry[] }

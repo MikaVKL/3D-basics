@@ -10,6 +10,7 @@ import {
   type ServerMessage,
   type PlayerId,
   type Scores,
+  type Vec3,
 } from '../src/shared/protocol.ts'
 import { ARENA_BOUNDS, SPAWN_POINTS } from '../src/shared/arenaLayout.ts'
 import {
@@ -43,6 +44,7 @@ interface Client {
   vitals: Vitals
   respawnAt: number | null // performance.now()-Zeitpunkt, solange tot
   lastHitAt: number
+  lastShotAt: number
 }
 
 const clients = new Map<PlayerId, Client>()
@@ -219,6 +221,7 @@ wss.on('connection', (socket) => {
         vitals: fullVitals(),
         respawnAt: null,
         lastHitAt: 0,
+        lastShotAt: 0,
       }
       clients.set(client.id, client)
       send(socket, {
@@ -241,6 +244,8 @@ wss.on('connection', (socket) => {
       if (state) client.state = state
     } else if (message.t === 'hit') {
       handleHit(client, message.target)
+    } else if (message.t === 'shot') {
+      handleShot(client, message.from, message.to)
     }
   })
 
@@ -294,6 +299,36 @@ function handleHit(shooter: Client, targetId: unknown) {
     broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores })
     console.log(`Spieler ${shooter.id} hat Spieler ${target.id} eliminiert (${scores.red}:${scores.blue})`)
   }
+}
+
+function sanitizeVec3(raw: unknown): Vec3 | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const v = raw as Record<string, unknown>
+  if (!isFiniteNumber(v.x) || !isFiniteNumber(v.y) || !isFiniteNumber(v.z)) return null
+  return { x: v.x, y: v.y, z: v.z }
+}
+
+// Die Mündung sitzt knapp vor der Kamera - weiter weg vom zuletzt
+// gemeldeten Standort darf ein Schuss nicht starten (Bewegung zwischen
+// zwei Zustands-Paketen eingerechnet).
+const MAX_MUZZLE_OFFSET = 3
+const MAX_TRACER_LENGTH = 120
+
+// Reine Optik, aber trotzdem gefiltert: sonst könnte ein Client beliebig
+// viele/lange Leuchtspuren überall bei allen anderen erzeugen.
+function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown) {
+  const from = sanitizeVec3(rawFrom)
+  const to = sanitizeVec3(rawTo)
+  if (!from || !to || !shooter.state || !isAlive(shooter)) return
+
+  const now = performance.now()
+  if (now - shooter.lastShotAt < MIN_HIT_INTERVAL_MS) return
+  const p = shooter.state.position
+  if (Math.hypot(from.x - p.x, from.y - p.y, from.z - p.z) > MAX_MUZZLE_OFFSET) return
+  if (Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) > MAX_TRACER_LENGTH) return
+  shooter.lastShotAt = now
+
+  broadcast({ t: 'shot', id: shooter.id, from, to }, shooter.id)
 }
 
 let lastTickAt = performance.now()

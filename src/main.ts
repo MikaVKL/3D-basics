@@ -181,11 +181,18 @@ const network: NetworkClient = new NetworkClient({
     if (id === network.localId) player.spawn(arena.spawnPoints[spawnIndex])
     else remotePlayers.handleRespawn(id)
   },
+  onRemoteShot: (from, to) =>
+    weapon.showRemoteTracer(
+      new THREE.Vector3(from.x, from.y, from.z),
+      new THREE.Vector3(to.x, to.y, to.z)
+    ),
   onDisconnect: () => {
     player.networkControlled = false
     setTargetsActive(true)
   },
 })
+
+weapon.onShot = (from, to) => network.sendShot(from, to)
 
 // Nur im Dev-Server: Zugriff für automatisierte Browser-Tests, die sonst
 // keinen Weg an den Spielzustand hätten.
