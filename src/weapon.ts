@@ -64,6 +64,9 @@ export class Weapon {
   // Jeder abgegebene Schuss (Mündung -> Einschlag), damit andere Spieler
   // im Multiplayer die Leuchtspur sehen (siehe main.ts)
   onShot?: (from: THREE.Vector3, to: THREE.Vector3) => void
+  // Treffer auf einen Gegner (für den Hitmarker); kill = lokal erkannter
+  // Kill (Singleplayer-Dummies) - online meldet den Kill der Server
+  onEnemyHit?: (kill: boolean) => void
 
   private ammo = MAGAZINE_SIZE
   private reloadRemaining = 0
@@ -165,9 +168,11 @@ export class Weapon {
         // Einschuss-Markers - das Aufblitzen des Ziels ist hier das Feedback.
         const wasAlive = damageable.isAlive
         damageable.takeDamage(HIT_DAMAGE)
-        if (wasAlive && !damageable.isAlive) {
+        const killed = wasAlive && !damageable.isAlive
+        if (killed) {
           this.onKill?.(this.shooterTeam)
         }
+        this.onEnemyHit?.(killed)
       } else {
         this.spawnImpactMarker(hits[0])
       }

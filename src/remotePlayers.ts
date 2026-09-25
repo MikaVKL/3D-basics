@@ -119,6 +119,11 @@ export class RemotePlayers {
     }
   }
 
+  // Aktuell dargestellte Position (Körpermitte) eines Spielers
+  getPosition(id: PlayerId): THREE.Vector3 | null {
+    return this.players.get(id)?.avatar.mesh.position.clone() ?? null
+  }
+
   get count(): number {
     return this.players.size
   }

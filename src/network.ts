@@ -40,6 +40,8 @@ export interface NetworkHandlers {
   onKill: (killer: PlayerId, victim: PlayerId, scores: Scores) => void
   onRespawn: (id: PlayerId, spawnIndex: number) => void
   onRemoteShot: (from: Vec3, to: Vec3) => void
+  // Wir wurden von Spieler "by" getroffen
+  onHurt: (by: PlayerId) => void
   // Verbindung weg (oder nie zustande gekommen) - zurück in den Singleplayer
   onDisconnect: () => void
 }
@@ -159,6 +161,9 @@ export class NetworkClient {
         break
       case 'shot':
         this.handlers.onRemoteShot(message.from, message.to)
+        break
+      case 'hurt':
+        this.handlers.onHurt(message.by)
         break
     }
   }

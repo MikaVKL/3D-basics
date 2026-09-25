@@ -7,7 +7,7 @@ import type { Team } from '../team.ts'
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 6
+export const PROTOCOL_VERSION = 7
 
 export const MAX_PLAYERS = 8
 export const DEFAULT_SERVER_PORT = 8080
@@ -81,4 +81,6 @@ export type ServerMessage =
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores }
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number }
   | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3 }
+  // Nur an den Getroffenen: wer geschossen hat (für den Richtungsanzeiger)
+  | { t: 'hurt'; by: PlayerId }
   | { t: 'snapshot'; players: SnapshotEntry[] }

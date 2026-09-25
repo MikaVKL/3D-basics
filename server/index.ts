@@ -341,7 +341,9 @@ function handleHit(shooter: Client, targetId: unknown) {
   if (Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) > MAX_HIT_DISTANCE) return
   shooter.lastHitAt = now
 
-  if (applyDamage(target.vitals, HIT_DAMAGE)) {
+  const killed = applyDamage(target.vitals, HIT_DAMAGE)
+  send(target.socket, { t: 'hurt', by: shooter.id })
+  if (killed) {
     target.respawnAt = now + RESPAWN_DELAY * 1000
     scores[shooter.team] += 1
     broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores })

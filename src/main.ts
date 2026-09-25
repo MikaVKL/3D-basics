@@ -16,6 +16,7 @@ import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
 import { TeamLabel } from './team'
 import { KillFeed } from './killFeed'
+import { HitFeedback } from './hitFeedback'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -159,6 +160,11 @@ function setTargetsActive(active: boolean) {
   }
 }
 
+const hitFeedback = new HitFeedback(
+  document.querySelector<HTMLDivElement>('#hitmarker')!,
+  document.querySelector<HTMLDivElement>('#damage-indicators')!,
+  document.querySelector<HTMLDivElement>('#damage-vignette')!
+)
 const remotePlayers = new RemotePlayers(scene, arena.shootables, (id) => network.sendHit(id))
 const network: NetworkClient = new NetworkClient({
   getLocalState: () => player.getNetworkState(),
@@ -175,6 +181,7 @@ const network: NetworkClient = new NetworkClient({
   onOwnVitals: (health, shield) => player.applyServerVitals(health, shield),
   onKill: (killer, victim, scores) => {
     scoreboard.setScores(scores)
+    if (killer === network.localId) hitFeedback.showHit(true)
     killFeed.add(killer, victim, network.localId)
   },
   onRespawn: (id, spawnIndex) => {
@@ -186,6 +193,7 @@ const network: NetworkClient = new NetworkClient({
       new THREE.Vector3(from.x, from.y, from.z),
       new THREE.Vector3(to.x, to.y, to.z)
     ),
+  onHurt: (by) => hitFeedback.showDamageFrom(remotePlayers.getPosition(by), camera),
   onDisconnect: () => {
     player.networkControlled = false
     setTargetsActive(true)
@@ -193,11 +201,12 @@ const network: NetworkClient = new NetworkClient({
 })
 
 weapon.onShot = (from, to) => network.sendShot(from, to)
+weapon.onEnemyHit = (kill) => hitFeedback.showHit(kill)
 
 // Nur im Dev-Server: Zugriff für automatisierte Browser-Tests, die sonst
 // keinen Weg an den Spielzustand hätten.
 if (import.meta.env.DEV) {
-  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl } })
+  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback } })
 }
 
 // ---------------------------------------------------------------------------
@@ -352,6 +361,7 @@ function animate() {
   playerAvatar.applyState(player.getNetworkState())
   remotePlayers.update(deltaSeconds, network.remotePlayers)
   killFeed.update()
+  hitFeedback.update()
   updateAmmoHud()
   updateHealthHud()
   updateShieldAndStaminaHud()

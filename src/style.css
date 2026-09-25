@@ -51,6 +51,103 @@ body {
   transform: translateY(-50%);
 }
 
+/* Hitmarker: vier kurze diagonale Striche um das Fadenkreuz, als zwei
+   gedrehte Kreuze aus ::before/::after mit Lücke in der Mitte (Maske) */
+#hitmarker {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0;
+  -webkit-mask: radial-gradient(circle, transparent 6px, #000 6.5px);
+  mask: radial-gradient(circle, transparent 6px, #000 6.5px);
+}
+
+#hitmarker.visible {
+  opacity: 1;
+}
+
+#hitmarker::before,
+#hitmarker::after {
+  content: '';
+  position: absolute;
+  background: #ffffff;
+}
+
+#hitmarker::before {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+#hitmarker::after {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+#hitmarker.kill {
+  width: 34px;
+  height: 34px;
+}
+
+#hitmarker.kill::before,
+#hitmarker.kill::after {
+  background: #ff4d5a;
+}
+
+/* Schadens-Richtung: Bogen-Segment auf einem Kreis um die Bildschirmmitte,
+   per rotate() in Richtung des Angreifers gedreht (0 = von vorne) */
+#damage-indicators {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.damage-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 6px solid transparent;
+  border-top-color: rgba(255, 60, 60, 0.85);
+  filter: drop-shadow(0 0 6px rgba(255, 60, 60, 0.6));
+  /* border-top allein wäre ein Viertelkreis - so breit, dass zwei Treffer
+     aus verschiedenen Richtungen zu einem Halbkreis verschmelzen. Die
+     Maske lässt nur ~50° um "oben" (= Richtung des Angreifers) stehen. */
+  -webkit-mask: conic-gradient(from -25deg, #000 0 50deg, transparent 50deg);
+  mask: conic-gradient(from -25deg, #000 0 50deg, transparent 50deg);
+}
+
+#damage-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.2s;
+  box-shadow: inset 0 0 120px rgba(255, 40, 40, 0.55);
+}
+
+#damage-vignette.visible {
+  opacity: 1;
+  transition: none;
+}
+
 /* Munitionsanzeige unten mittig */
 #ammo-hud {
   position: fixed;
