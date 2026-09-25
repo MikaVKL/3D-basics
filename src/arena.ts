@@ -324,7 +324,12 @@ export function buildArena(): ArenaResult {
   function buildWindowWall(centerX: number, centerZ: number, totalWidth: number, windowWidth: number) {
     const THICKNESS = 0.4
     const SILL_HEIGHT = 1.1 // bis hier blockt der Sockel (verhindert Durchlaufen)
-    const OPENING_HEIGHT = 1.2 // Sicht-/Schuss-Lücke
+    // Sicht-/Schuss-Lücke - und per Duck-Sprung durchkletterbar (gewollter
+    // Trick-Weg). Muss dafür etwas höher sein als der geduckte Körper
+    // (1.3m inkl. Kopf, siehe player.ts), der auf dem Sockel steht: bei
+    // 1.2m passte man zwar hinein, steckte dann aber mit dem Kopf im Sturz.
+    // Stehend (2.0m) passt man weiterhin nicht hindurch.
+    const OPENING_HEIGHT = 1.4
     const WALL_TOP = SILL_HEIGHT + OPENING_HEIGHT + 1.1 // Sturz-Oberkante = Gesamthöhe der Wand
     const sidePostWidth = (totalWidth - windowWidth) / 2
 
@@ -466,8 +471,15 @@ export function buildArena(): ArenaResult {
     rampLength: number,
     rampWidth: number,
     rampAxis: 'x' | 'z',
-    rampAscending: boolean
+    rampAscending: boolean,
+    // Rampe quer zur Anstiegsachse verschieben (Standard: mittig vor der
+    // Plattform) und optional ein Seitenbord weglassen, wenn dort ohnehin
+    // eine Wand steht
+    options: { lateralOffset?: number; omitCurbSide?: -1 | 1 } = {}
   ): Ramp {
+    const lateralOffset = options.lateralOffset ?? 0
+    const rampCenterX = rampAxis === 'z' ? centerX + lateralOffset : centerX
+    const rampCenterZ = rampAxis === 'x' ? centerZ + lateralOffset : centerZ
     const platformGeometry = new THREE.BoxGeometry(platformSize, platformHeight, platformSize)
     const platform = new THREE.Mesh(platformGeometry, wallMaterial)
     platform.position.set(centerX, platformHeight / 2, centerZ)
@@ -487,10 +499,10 @@ export function buildArena(): ArenaResult {
     const rampMax = Math.max(edgeAtPlatform, rampStart)
 
     const ramp: Ramp = {
-      minX: rampAxis === 'x' ? rampMin : centerX - rampWidth / 2,
-      maxX: rampAxis === 'x' ? rampMax : centerX + rampWidth / 2,
-      minZ: rampAxis === 'z' ? rampMin : centerZ - rampWidth / 2,
-      maxZ: rampAxis === 'z' ? rampMax : centerZ + rampWidth / 2,
+      minX: rampAxis === 'x' ? rampMin : rampCenterX - rampWidth / 2,
+      maxX: rampAxis === 'x' ? rampMax : rampCenterX + rampWidth / 2,
+      minZ: rampAxis === 'z' ? rampMin : rampCenterZ - rampWidth / 2,
+      maxZ: rampAxis === 'z' ? rampMax : rampCenterZ + rampWidth / 2,
       axis: rampAxis,
       ascending: rampAscending,
       bottomHeight: 0,
@@ -506,11 +518,11 @@ export function buildArena(): ArenaResult {
       wallMaterial
     )
     if (rampAxis === 'x') {
-      rampMesh.position.set(rampAscending ? rampMin : rampMax, 0, centerZ)
+      rampMesh.position.set(rampAscending ? rampMin : rampMax, 0, rampCenterZ)
       if (!rampAscending) rampMesh.rotation.y = Math.PI
     } else {
       rampMesh.rotation.y = rampAscending ? -Math.PI / 2 : Math.PI / 2
-      rampMesh.position.set(centerX, 0, rampAscending ? rampMin : rampMax)
+      rampMesh.position.set(rampCenterX, 0, rampAscending ? rampMin : rampMax)
     }
     addEdgeOutline(rampMesh)
     group.add(rampMesh)
@@ -543,6 +555,7 @@ export function buildArena(): ArenaResult {
     const curbMid = (rampMin + rampMax) / 2
     const curbLength = rampMax - rampMin
     for (const side of [-1, 1] as const) {
+      if (side === options.omitCurbSide) continue
       const curbGeometry =
         rampAxis === 'x'
           ? new THREE.BoxGeometry(curbLength, curbHeight, curbThickness)
@@ -550,9 +563,9 @@ export function buildArena(): ArenaResult {
       const curb = new THREE.Mesh(curbGeometry, wallMaterial)
       const outwardOffset = rampWidth / 2 + curbThickness / 2
       if (rampAxis === 'x') {
-        curb.position.set(curbMid, curbHeight / 2, centerZ + side * outwardOffset)
+        curb.position.set(curbMid, curbHeight / 2, rampCenterZ + side * outwardOffset)
       } else {
-        curb.position.set(centerX + side * outwardOffset, curbHeight / 2, curbMid)
+        curb.position.set(rampCenterX + side * outwardOffset, curbHeight / 2, curbMid)
       }
       addEdgeOutline(curb)
       group.add(curb)
@@ -570,15 +583,27 @@ export function buildArena(): ArenaResult {
   // Rampen/Höhenstufen "am Rand"): etwas kleiner, Rampe steigt entlang Z an.
   // Liegt direkt an der Trennwand an (kein Spalt, siehe Kommentar oben bei
   // DIVIDER_X) und mündet oben exakt in den erhöhten Durchgang.
+  //
+  // Die Rampe liegt ebenfalls bündig an der Trennwand (Wunsch aus dem
+  // Spieltest): mittig vor der Plattform blieb zwischen Rampen-Bord und
+  // Wand ein 0.8m breiter, 2.4m tiefer Spalt - genau körperbreit, man fiel
+  // hinein und kam nicht mehr heraus. Die Wand übernimmt jetzt die Rolle
+  // des Bords auf dieser Seite.
+  const WEST_RAMP_WIDTH = 3
+  const westPlatformEastEdge = WEST_PLATFORM_CENTER_X + WEST_PLATFORM_SIZE / 2
   const rampToWestPlatform = buildPlatformWithRamp(
     WEST_PLATFORM_CENTER_X,
     WEST_PLATFORM_CENTER_Z,
     WEST_PLATFORM_SIZE,
     WEST_PLATFORM_HEIGHT,
     8,
-    3,
+    WEST_RAMP_WIDTH,
     'z',
-    true
+    true,
+    {
+      lateralOffset: westPlatformEastEdge - WEST_RAMP_WIDTH / 2 - WEST_PLATFORM_CENTER_X,
+      omitCurbSide: 1,
+    }
   )
 
   const spawnPoints = SPAWN_POINTS.map((p) => new THREE.Vector3(p.x, p.y, p.z))

@@ -45,12 +45,18 @@ const STAMINA_REGEN_RATE = 15 // pro Sekunde, wenn nicht gesprintet wird
 const MIN_STAMINA_TO_START_SPRINT = 15
 
 
-// Die Seiten-Kollision (collidesAt) lässt die untersten paar Zentimeter des
+// Die Seiten-Kollision (blocksMove) lässt die untersten paar Zentimeter des
 // Spielers "durch" Hindernisse, die knapp unter den eigenen Füßen liegen.
 // Ohne das würde man beim Stehen exakt auf einer Kisten-Oberkante ständig
 // mit genau dieser Kiste seitlich kollidieren (die Fuß-Höhe berührt dann
 // exakt die Kisten-Oberkante) und könnte nicht mehr von ihr herunterlaufen.
 const STEP_CLEARANCE = 0.15
+// Wie weit ein Rampen-Punkt innerhalb der Standfläche über den Füßen
+// liegen darf, um noch als Boden zu zählen: die Standfläche "sieht" bis
+// zu 0.4m voraus (bei Steigung 0.3 also 0.12m höher), plus Anstieg pro
+// Frame beim Sprinten. Verhindert, dass man seitlich auf eine hohe
+// Rampenstelle gezogen wird.
+const MAX_RAMP_STEP = 0.5
 
 
 export interface HealthState {
@@ -259,7 +265,13 @@ export class Player implements Damageable {
     const targetEyeHeight = this.isCrouching ? CROUCH_EYE_HEIGHT : EYE_HEIGHT
     const maxStep = CROUCH_TRANSITION_SPEED * deltaSeconds
     if (this.eyeHeight < targetEyeHeight) {
-      this.eyeHeight = Math.min(targetEyeHeight, this.eyeHeight + maxStep)
+      // Beim Aufstehen wächst der Körper über mehrere Frames - währenddessen
+      // kann man (z.B. im Sprung) unter eine Decke geraten sein, die beim
+      // Start des Aufstehens noch nicht über einem lag
+      const headTop = this.bodyY + this.eyeHeight + 0.3
+      const ceiling = this.ceilingAbove(this.camera.position.x, this.camera.position.z, headTop)
+      const maxEye = ceiling - this.bodyY - 0.3
+      this.eyeHeight = Math.min(targetEyeHeight, this.eyeHeight + maxStep, Math.max(this.eyeHeight, maxEye))
     } else if (this.eyeHeight > targetEyeHeight) {
       this.eyeHeight = Math.max(targetEyeHeight, this.eyeHeight - maxStep)
     }
@@ -325,13 +337,18 @@ export class Player implements Damageable {
 
     // Vertikale Bewegung (Springen/Fallen) - rein auf bodyY, ohne
     // Augenhöhen-Anteil (siehe Kommentar beim Feld weiter oben).
+    // Fuß-Höhe VOR der Vertikalbewegung als Referenz: beim Landen aus
+    // schnellem Fall liegt bodyY danach schon ein Stück unter der Kante,
+    // auf der man eigentlich landen soll.
+    const feetBefore = this.bodyY
     this.bodyY += this.velocity.y * deltaSeconds
+    if (this.velocity.y > 0) this.stopAtCeiling(feetBefore)
 
     // Boden-Höhe unter den Füßen ermitteln: normalerweise der Arena-Boden
     // (0), aber wenn man über einer Kiste steht, deren Oberkante. Dadurch
     // kann man auf Kisten landen und stehen bleiben, statt durch sie
     // hindurchzufallen oder immer auf y=0 zurückgesetzt zu werden.
-    const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z, this.bodyY)
+    const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z, feetBefore)
 
     if (this.bodyY <= groundHeight) {
       this.bodyY = groundHeight
@@ -341,44 +358,100 @@ export class Player implements Damageable {
       this.onGround = false
     }
 
+    // Landung auf einer Kante unter einem Bauteil (z.B. Fenster-Sockel per
+    // Duck-Sprung): die Duck-Animation ist evtl. noch nicht fertig, der Kopf
+    // läge sonst für ein paar Frames im Sturz darüber
+    const headroom =
+      this.ceilingAbove(this.camera.position.x, this.camera.position.z, this.bodyY + STEP_CLEARANCE) -
+      this.bodyY -
+      0.3
+    if (this.eyeHeight > headroom) this.eyeHeight = Math.max(CROUCH_EYE_HEIGHT, headroom)
+
     this.camera.position.y = this.bodyY + this.eyeHeight
   }
 
-  // Höchste Stand-Höhe direkt unter dem Punkt (x, z): entweder eine
-  // Solid-Oberkante (Kiste/Plattform), ein interpolierter Rampen-Punkt, oder
-  // 0 (Arena-Boden), falls dort keins von beiden liegt.
+  // Kopf stößt beim Hochspringen an (z.B. Sturz über einem Durchgang):
+  // vorher fuhr der Kopf einfach in das Bauteil darüber hinein, weil nur die
+  // horizontale Bewegung auf Kollision geprüft wurde.
+  private stopAtCeiling(feetBefore: number) {
+    const headBefore = feetBefore + this.eyeHeight + 0.3
+    const ceiling = this.ceilingAbove(this.camera.position.x, this.camera.position.z, headBefore)
+    if (this.bodyY + this.eyeHeight + 0.3 > ceiling) {
+      this.bodyY = ceiling - this.eyeHeight - 0.3
+      this.velocity.y = 0
+    }
+  }
+
+  // Unterkante des niedrigsten Solids über dem Kopf (Standfläche um x/z),
+  // Infinity wenn frei
+  private ceilingAbove(x: number, z: number, headTop: number): number {
+    let ceiling = Infinity
+    for (const solid of this.solids) {
+      const box = solid.box
+      if (
+        x + PLAYER_RADIUS > box.min.x &&
+        x - PLAYER_RADIUS < box.max.x &&
+        z + PLAYER_RADIUS > box.min.z &&
+        z - PLAYER_RADIUS < box.max.z &&
+        box.min.y >= headTop - 1e-6
+      ) {
+        ceiling = Math.min(ceiling, box.min.y)
+      }
+    }
+    return ceiling
+  }
+
+  // Höchste Stand-Höhe unter der Standfläche des Spielers (Quadrat mit
+  // PLAYER_RADIUS um (x, z)): eine Solid-Oberkante (Kiste/Plattform), ein
+  // Rampen-Punkt, oder 0 (Arena-Boden).
   //
-  // "referenceY" (aktuelle Fuß-Höhe) ist wichtig, wenn zwei Solids dieselbe
-  // X/Z-Grundfläche teilen, aber auf unterschiedlicher Höhe liegen - z.B.
-  // Sockel (unten) + Sturz (oben) an einem Fenster/Durchgang. Ohne den
-  // Vergleich mit referenceY würde hier fälschlich der Sturz (eine Art
-  // Decke, weit über dem Kopf) als "Boden" durchgehen, sobald man durch die
-  // Öffnung darunter läuft - man würde schlagartig auf die Sturz-Oberkante
-  // hochgezogen ("bugt über die Map", genau der gemeldete Bug). Ein Solid
-  // zählt daher nur, wenn seine Unterkante nicht über der aktuellen
-  // Fuß-Höhe liegt (plus etwas Toleranz für den Fall, dass man exakt darauf
-  // steht) - es muss also tatsächlich UNTER einem liegen können.
+  // Bewusst die ganze Standfläche statt nur des Mittelpunkts: vorher konnte
+  // man über eine Kistenkante springen, der Mittelpunkt lag knapp daneben,
+  // man fiel - und der 0.8m breite Körper steckte danach seitlich in der
+  // Kiste fest (senkrechte Bewegung prüft keine Kollision). Im Fuzz-Test
+  // (300 simulierte Spieler) war das die häufigste Stecken-Ursache. Jetzt
+  // steht man auf der Kante, sobald ein Teil der Füße darüber ist.
+  //
+  // "referenceY" (Fuß-Höhe) begrenzt, was als Boden zählt: nur Flächen, die
+  // höchstens eine kleine Stufe über den Füßen liegen. Sonst würde z.B. der
+  // Sturz über einem Durchgang (eine Art Decke) oder eine Wand, an der man
+  // mit der Standfläche entlangstreift, als "Boden" gelten und man würde
+  // schlagartig daraufgezogen.
   private groundHeightAt(x: number, z: number, referenceY: number = Infinity): number {
     let height = 0
     for (const solid of this.solids) {
       const box = solid.box
       if (
-        x >= box.min.x &&
-        x <= box.max.x &&
-        z >= box.min.z &&
-        z <= box.max.z &&
-        box.min.y <= referenceY + 0.05
+        x + PLAYER_RADIUS > box.min.x &&
+        x - PLAYER_RADIUS < box.max.x &&
+        z + PLAYER_RADIUS > box.min.z &&
+        z - PLAYER_RADIUS < box.max.z &&
+        box.max.y <= referenceY + STEP_CLEARANCE
       ) {
         height = Math.max(height, box.max.y)
       }
     }
     for (const ramp of this.ramps) {
-      const rampHeight = rampHeightAt(ramp, x, z)
-      if (rampHeight !== null) {
+      const rampHeight = this.rampHeightUnderFootprint(ramp, x, z)
+      if (rampHeight !== null && rampHeight <= referenceY + MAX_RAMP_STEP) {
         height = Math.max(height, rampHeight)
       }
     }
     return height
+  }
+
+  // Höchster Rampen-Punkt innerhalb der Standfläche (oder null, wenn die
+  // Standfläche die Rampe gar nicht berührt).
+  private rampHeightUnderFootprint(ramp: Ramp, x: number, z: number): number | null {
+    const minX = Math.max(x - PLAYER_RADIUS, ramp.minX)
+    const maxX = Math.min(x + PLAYER_RADIUS, ramp.maxX)
+    const minZ = Math.max(z - PLAYER_RADIUS, ramp.minZ)
+    const maxZ = Math.min(z + PLAYER_RADIUS, ramp.maxZ)
+    if (minX > maxX || minZ > maxZ) return null
+    // Entlang der Anstiegsachse liegt der höchste Punkt am oberen Ende des
+    // überlappenden Bereichs, quer dazu ist die Rampe überall gleich hoch
+    const along = ramp.ascending ? (ramp.axis === 'x' ? maxX : maxZ) : ramp.axis === 'x' ? minX : minZ
+    return rampHeightAt(ramp, ramp.axis === 'x' ? along : minX, ramp.axis === 'z' ? along : minZ)
   }
 
   // Bewegt die Kamera horizontal, aber prüft vorher, ob die Zielposition
@@ -406,7 +479,7 @@ export class Player implements Damageable {
     const target = position.clone()
     target[axis] = current + delta
 
-    if (!this.collidesAt(target)) {
+    if (!this.blocksMove(position, target)) {
       return target[axis]
     }
 
@@ -419,7 +492,7 @@ export class Player implements Damageable {
       const midFraction = (safeFraction + blockedFraction) / 2
       probe[axis] = current + delta * midFraction
 
-      if (this.collidesAt(probe)) {
+      if (this.blocksMove(position, probe)) {
         blockedFraction = midFraction
       } else {
         safeFraction = midFraction
@@ -429,36 +502,57 @@ export class Player implements Damageable {
     return current + delta * safeFraction
   }
 
-  private collidesAt(position: THREE.Vector3): boolean {
-    const playerBox = new THREE.Box3(
-      new THREE.Vector3(
-        position.x - PLAYER_RADIUS,
-        position.y - this.eyeHeight + STEP_CLEARANCE,
-        position.z - PLAYER_RADIUS
-      ),
-      new THREE.Vector3(position.x + PLAYER_RADIUS, position.y + 0.3, position.z + PLAYER_RADIUS)
-    )
-
+  // Blockiert ist eine Bewegung nur, wenn sie TIEFER in ein Hindernis
+  // hineinführt. Vorher galt schon jede Überschneidung - auch eine exakte
+  // Berührung - als Kollision, auch für Bewegungen, die aus dem Hindernis
+  // herausführen würden. Wer einmal (durch Landung, Aufstehen, Netzwerk-
+  // Korrektur, ...) minimal in einer Wand steckte, war dadurch komplett
+  // eingefroren, und in einem exakt körperbreiten Spalt (0.8m, z.B. neben
+  // Rampe B) blockierte schon das Berühren beider Seiten jede Bewegung.
+  private blocksMove(from: THREE.Vector3, to: THREE.Vector3): boolean {
     for (const solid of this.solids) {
-      if (playerBox.intersectsBox(solid.box)) {
+      const overlapAfter = this.bodyOverlapArea(to, solid.box)
+      if (overlapAfter > 0 && overlapAfter > this.bodyOverlapArea(from, solid.box) + 1e-9) {
         return true
       }
     }
     return false
   }
 
+  // Grundfläche (X/Z), mit der der Körper ein Solid überschneidet - 0, wenn
+  // er es nicht oder nur berührt. Die Füße zählen erst ab STEP_CLEARANCE,
+  // siehe Konstante oben.
+  private bodyOverlapArea(position: THREE.Vector3, box: THREE.Box3): number {
+    const bottom = position.y - this.eyeHeight + STEP_CLEARANCE
+    const top = position.y + 0.3
+    if (Math.min(top, box.max.y) - Math.max(bottom, box.min.y) <= 0) return 0
+    const overlapX = Math.min(position.x + PLAYER_RADIUS, box.max.x) - Math.max(position.x - PLAYER_RADIUS, box.min.x)
+    const overlapZ = Math.min(position.z + PLAYER_RADIUS, box.max.z) - Math.max(position.z - PLAYER_RADIUS, box.min.z)
+    if (overlapX <= 0 || overlapZ <= 0) return 0
+    return overlapX * overlapZ
+  }
+
   // Prüft, ob am Punkt (x, z) genug Kopffreiheit zum Aufstehen wäre: eine
   // Box exakt im Bereich zwischen Duck- und Steh-Augenhöhe (der Teil, der
   // beim Aufstehen zusätzlich beansprucht würde) darf nichts überschneiden.
+  // Gemessen ab der aktuellen Fuß-Höhe, nicht ab dem Boden darunter: wer
+  // im Sprung geduckt unter einem Sturz hängt und dort aufsteht, schob den
+  // Kopf sonst in den Sturz (der Boden darunter hatte ja genug Platz).
+  // Reines Berühren zählt nicht als Hindernis.
   private canStandAt(x: number, z: number): boolean {
-    const groundHeight = this.groundHeightAt(x, z, this.bodyY)
-    const standBox = new THREE.Box3(
-      new THREE.Vector3(x - PLAYER_RADIUS, groundHeight + CROUCH_EYE_HEIGHT, z - PLAYER_RADIUS),
-      new THREE.Vector3(x + PLAYER_RADIUS, groundHeight + EYE_HEIGHT + 0.3, z + PLAYER_RADIUS)
-    )
+    const bottom = this.bodyY + CROUCH_EYE_HEIGHT
+    const top = this.bodyY + EYE_HEIGHT + 0.3
 
     for (const solid of this.solids) {
-      if (standBox.intersectsBox(solid.box)) {
+      const box = solid.box
+      if (
+        x + PLAYER_RADIUS > box.min.x &&
+        x - PLAYER_RADIUS < box.max.x &&
+        z + PLAYER_RADIUS > box.min.z &&
+        z - PLAYER_RADIUS < box.max.z &&
+        top > box.min.y &&
+        bottom < box.max.y
+      ) {
         return false
       }
     }
