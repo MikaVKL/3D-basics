@@ -247,6 +247,13 @@ const network: NetworkClient = new NetworkClient({
       new THREE.Vector3(to.x, to.y, to.z)
     ),
   onHurt: (by) => hitFeedback.showDamageFrom(remotePlayers.getPosition(by), camera),
+  onKicked: () => {
+    // Zurück auf den Startbildschirm; erneuter Klick tritt wieder bei
+    if (document.pointerLockElement) document.exitPointerLock()
+    setActive(false)
+    cancelLeave()
+    overlayNotice.textContent = 'Wegen Inaktivität aus dem Spiel genommen - klicken, um wieder beizutreten'
+  },
   onDisconnect: () => {
     nextRoundAt = null
     roundBanner.classList.add('hidden')
@@ -277,14 +284,45 @@ const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
 const overlay = document.querySelector<HTMLDivElement>('#overlay')!
 const overlayInstruction = document.querySelector<HTMLParagraphElement>('#overlay-instruction')!
 const overlayHint = document.querySelector<HTMLParagraphElement>('#overlay-hint')!
+const overlayNotice = document.querySelector<HTMLParagraphElement>('#overlay-notice')!
 const touchControls = document.querySelector<HTMLDivElement>('#touch-controls')!
 
 let isActive = false
 
+// Wer im Menü steht (ESC, Startbildschirm) oder die App/den Tab wechselt,
+// verlässt das Multiplayer-Spiel nach dieser Zeit - kurz ins Menü (z.B.
+// Name ändern) wirft einen also nicht sofort raus
+const LEAVE_AFTER_MENU_MS = 20000
+let leaveTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleLeave() {
+  if (leaveTimer === null) leaveTimer = setTimeout(() => network.leave(), LEAVE_AFTER_MENU_MS)
+}
+
+function cancelLeave() {
+  if (leaveTimer !== null) clearTimeout(leaveTimer)
+  leaveTimer = null
+}
+
 function setActive(active: boolean) {
   isActive = active
   overlay.classList.toggle('hidden', active)
+  if (active) {
+    overlayNotice.textContent = ''
+    cancelLeave()
+    network.join()
+  } else {
+    scheduleLeave()
+  }
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) scheduleLeave()
+  else if (isActive) {
+    cancelLeave()
+    network.join()
+  }
+})
 
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
@@ -372,12 +410,13 @@ const GIVE_UP_HINT_AFTER_MS = 90000
 function updateNetStatusHud() {
   const tryingFor =
     network.connectingSince === null ? null : performance.now() - network.connectingSince
-  let trying = 'Offline · Singleplayer'
+  let trying = network.hasServer ? 'Nicht im Spiel · Singleplayer' : 'Offline · Singleplayer'
   if (tryingFor !== null && tryingFor < WAKE_HINT_AFTER_MS) trying = 'Verbinde…'
   else if (tryingFor !== null && tryingFor < GIVE_UP_HINT_AFTER_MS) trying = 'Server wird geweckt… (bis ~1 Min.)'
 
   const labels = {
     offline: trying,
+    idle: network.hasServer ? 'Nicht im Spiel · „Spielen“ tritt bei' : trying,
     connecting: trying,
     online: `Online · ${network.playerCount}/${MAX_PLAYERS} Spieler · Team ${TeamLabel[player.team]}`,
     full: 'Server voll · Singleplayer',

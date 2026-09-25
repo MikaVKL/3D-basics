@@ -87,6 +87,13 @@ gesehen habe, zählt"), der Server prüft sie (Team, beide lebendig,
 Feuerrate, Distanz) und entscheidet allein über Leben, Schild, Tod, Respawn
 und Punktestand.
 
+**Beitreten und Verlassen:** Man tritt erst mit dem Klick auf „Spielen“ bei
+(der Startbildschirm weckt den Server nur per kurzer Anfrage). Wer länger als
+20 s im Menü steht oder die App wechselt, verlässt das Spiel automatisch.
+Der Server entfernt außerdem eingefrorene Tabs (15 s keine Daten) und
+AFK-Spieler (90 s ohne Bewegung, Umschauen oder Schuss) - so bleibt die
+Punktetabelle frei von Spielern, die gar nicht mehr da sind.
+
 ### Lokal testen
 
 ```bash

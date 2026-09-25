@@ -10,10 +10,13 @@ import {
   type Scores,
   type Vec3,
   type RosterEntry,
+  type KickReason,
 } from './shared/protocol'
 import type { Team } from './team'
 
-export type ConnectionStatus = 'offline' | 'connecting' | 'online' | 'full' | 'outdated'
+// idle = Server vorhanden, aber man ist (noch) nicht beigetreten - z.B. auf
+// dem Startbildschirm oder nach einer Weile im Menü
+export type ConnectionStatus = 'offline' | 'idle' | 'connecting' | 'online' | 'full' | 'outdated'
 
 // Server-Adresse: ?server=... in der URL hat Vorrang (praktisch zum Testen
 // eines Builds gegen einen lokalen Server), dann VITE_SERVER_URL aus dem
@@ -48,6 +51,8 @@ export interface NetworkHandlers {
   onHurt: (by: PlayerId) => void
   // Verbindung weg (oder nie zustande gekommen) - zurück in den Singleplayer
   onDisconnect: () => void
+  // Server hat uns entfernt (z.B. AFK) - kein automatisches Neuverbinden
+  onKicked: (reason: KickReason) => void
 }
 
 const RECONNECT_MIN_MS = 2000
@@ -57,8 +62,13 @@ const RECONNECT_MAX_MS = 15000
 // als Singleplayer weiter - bricht die Verbindung ab, wird im Hintergrund
 // neu verbunden (wichtig bei kostenlosem Hosting, das nach Inaktivität
 // einschläft und beim ersten Aufruf erst hochfahren muss).
+//
+// Beigetreten wird erst mit join() (Klick auf "Spielen"), verlassen mit
+// leave() (länger im Menü) - sonst standen Leute, die nur auf dem
+// Startbildschirm waren oder den Tab im Hintergrund hatten, als Spieler in
+// der Punktetabelle.
 export class NetworkClient {
-  status: ConnectionStatus = 'offline'
+  status: ConnectionStatus
   // Seit wann (performance.now) ohne Erfolg verbunden wird - für den HUD-
   // Hinweis, dass ein eingeschlafener Gratis-Server gerade aufwacht
   connectingSince: number | null = null
@@ -70,14 +80,21 @@ export class NetworkClient {
   private readonly url: string | null
   private socket: WebSocket | null = null
   private reconnectDelay = RECONNECT_MIN_MS
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private readonly handlers: NetworkHandlers
   private life = 0
+  // Soll gerade eine Verbindung bestehen? Steuert das Neuverbinden
+  private wantOnline = false
 
   constructor(handlers: NetworkHandlers) {
     this.handlers = handlers
     this.url = resolveServerUrl()
+    this.status = this.url ? 'idle' : 'offline'
     if (!this.url) return
-    this.connect()
+    // Gratis-Server schon beim Laden der Seite wecken (reine HTTP-Anfrage,
+    // man tritt dadurch nicht bei) - so ist er meist wach, bis man
+    // tatsächlich auf "Spielen" klickt
+    fetch(this.url.replace(/^ws/, 'http'), { mode: 'no-cors' }).catch(() => {})
     setInterval(() => {
       if (this.status !== 'online') return
       this.send({
@@ -93,7 +110,33 @@ export class NetworkClient {
     return this.localId === null ? 0 : this.remotePlayers.size + 1
   }
 
+  get hasServer(): boolean {
+    return this.url !== null
+  }
+
+  join() {
+    if (!this.url || this.wantOnline) return
+    this.wantOnline = true
+    this.reconnectDelay = RECONNECT_MIN_MS
+    this.connectingSince ??= performance.now()
+    // Schließt sich die alte Verbindung gerade noch, verbindet der
+    // close-Handler danach sofort neu (siehe dort)
+    if (!this.socket) this.connect()
+    else this.status = 'connecting'
+  }
+
+  leave() {
+    if (!this.wantOnline) return
+    this.wantOnline = false
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = null
+    this.connectingSince = null
+    if (this.status !== 'outdated') this.status = 'idle'
+    this.socket?.close()
+  }
+
   private connect() {
+    this.reconnectTimer = null
     this.status = 'connecting'
     this.connectingSince ??= performance.now()
     const socket = new WebSocket(this.url!)
@@ -114,6 +157,7 @@ export class NetworkClient {
     })
 
     socket.addEventListener('close', () => {
+      const wasJoining = this.status === 'connecting' && this.localId !== null
       if (this.localId !== null) this.handlers.onDisconnect()
       this.socket = null
       this.localId = null
@@ -123,8 +167,19 @@ export class NetworkClient {
       // nur verzögert - "voll" wird trotzdem langsam weiter probiert, da
       // ja jemand gehen kann.
       if (this.status === 'outdated') return
+      if (!this.wantOnline) {
+        this.status = 'idle'
+        this.connectingSince = null
+        return
+      }
+      // Gerade erst (wieder) beigetreten, während die alte Verbindung noch
+      // zuging: sofort neu verbinden statt Wartezeit
+      if (wasJoining) {
+        this.connect()
+        return
+      }
       if (this.status !== 'full') this.status = 'offline'
-      setTimeout(() => this.connect(), this.reconnectDelay)
+      this.reconnectTimer = setTimeout(() => this.connect(), this.reconnectDelay)
       this.reconnectDelay = Math.min(this.reconnectDelay * 2, RECONNECT_MAX_MS)
     })
   }
@@ -146,6 +201,13 @@ export class NetworkClient {
           this.roster.set(entry.id, entry)
           if (entry.id !== this.localId) this.remotePlayers.add(entry.id)
         }
+        break
+      case 'kicked':
+        this.wantOnline = false
+        // Selbst sofort schließen statt auf den Server zu warten - sonst
+        // hing ein schneller Klick auf "Spielen" noch an der alten Verbindung
+        this.socket?.close()
+        this.handlers.onKicked(message.reason)
         break
       case 'rejected':
         this.status = message.reason === 'full' ? 'full' : 'outdated'

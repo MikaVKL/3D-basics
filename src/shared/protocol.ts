@@ -7,7 +7,7 @@ import type { Team } from '../team.ts'
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 10
+export const PROTOCOL_VERSION = 11
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -79,6 +79,9 @@ export type ClientMessage =
 
 export type RejectReason = 'full' | 'version'
 
+// Server entfernt Spieler, die zu lange nichts tun (AFK)
+export type KickReason = 'afk'
+
 export type ServerMessage =
   // spawnIndex = Index in SPAWN_POINTS (shared/arenaLayout.ts)
   | {
@@ -91,6 +94,7 @@ export type ServerMessage =
     }
   | { t: 'roster'; players: RosterEntry[] }
   | { t: 'rejected'; reason: RejectReason }
+  | { t: 'kicked'; reason: KickReason }
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores }
   // team: bei Team-Ausgleich wechselt ein Spieler per Respawn die Seite
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number; team: Team }

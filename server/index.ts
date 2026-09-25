@@ -45,6 +45,13 @@ const HELLO_TIMEOUT_MS = 5000
 // Tote Verbindungen (Tab ohne sauberes close, WLAN weg) würden sonst ewig
 // einen der 8 Plätze blockieren.
 const HEARTBEAT_INTERVAL_MS = 10000
+// Der Client schickt 20x/s seinen Zustand. Bleibt der aus, obwohl die
+// Verbindung noch steht, ist der Tab eingefroren (z.B. iPad-Safari im
+// Hintergrund beantwortet Pings noch, führt aber kein JavaScript mehr
+// aus) - der Spieler stünde sonst als Geist in der Punktetabelle.
+const STALE_STATE_MS = 15000
+// So lange ohne Bewegung, Umschauen oder Schuss -> zurück zum Startbildschirm
+const AFK_TIMEOUT_MS = 90000
 
 interface Client {
   id: PlayerId
@@ -66,6 +73,9 @@ interface Client {
   protectedUntil: number // Spawn-Schutz bis zu diesem performance.now()-Zeitpunkt
   lastHitAt: number
   lastShotAt: number
+  lastStateAt: number
+  lastActivityAt: number
+  removing: boolean // wird gerade entfernt (Close läuft noch)
 }
 
 const clients = new Map<PlayerId, Client>()
@@ -206,6 +216,19 @@ function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
     // Team bestimmt ausschließlich der Server, egal was der Client meldet
     team,
   }
+}
+
+// Hat sich der Spieler bewegt, umgeschaut oder geduckt? Kleine Schwellen,
+// damit Rundungsrauschen nicht als Aktivität zählt.
+function isActivity(before: PlayerNetworkState | null, after: PlayerNetworkState): boolean {
+  if (!before) return true
+  const a = before.position
+  const b = after.position
+  return (
+    Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) > 0.05 ||
+    Math.abs(before.yaw - after.yaw) > 0.01 ||
+    before.crouching !== after.crouching
+  )
 }
 
 // Neue Spieler kommen ins kleinere Team, bei Gleichstand zufällig.
@@ -368,6 +391,9 @@ wss.on('connection', (socket) => {
         protectedUntil: performance.now() + SPAWN_PROTECTION * 1000,
         lastHitAt: 0,
         lastShotAt: 0,
+        lastStateAt: performance.now(),
+        lastActivityAt: performance.now(),
+        removing: false,
       }
       clients.set(client.id, client)
       send(socket, {
@@ -393,6 +419,9 @@ wss.on('connection', (socket) => {
       if (message.life !== client.life || !isFiniteNumber(message.time)) return
       const state = sanitizeState(message.state, client.team)
       if (state) {
+        const now = performance.now()
+        client.lastStateAt = now
+        if (isActivity(client.state, state)) client.lastActivityAt = now
         client.state = state
         client.stateTime = message.time
       }
@@ -498,6 +527,7 @@ function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown) {
   if (Math.hypot(from.x - p.x, from.y - p.y, from.z - p.z) > MAX_MUZZLE_OFFSET) return
   if (Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) > MAX_TRACER_LENGTH) return
   shooter.lastShotAt = now
+  shooter.lastActivityAt = now
   // Wer schießt, verzichtet auf den restlichen Spawn-Schutz
   shooter.protectedUntil = 0
 
@@ -516,6 +546,22 @@ setInterval(() => {
   if (clients.size === 0) return
 
   if (nextRoundAt !== null && now >= nextRoundAt) startRound(now)
+
+  for (const client of clients.values()) {
+    if (client.removing) continue
+    if (now - client.lastStateAt > STALE_STATE_MS) {
+      console.log(`Spieler ${client.id} sendet nichts mehr (Tab eingefroren?) - entfernt`)
+      client.removing = true
+      client.socket.terminate()
+    } else if (now - client.lastActivityAt > AFK_TIMEOUT_MS) {
+      console.log(`Spieler ${client.id} ist AFK - zurück zum Startbildschirm`)
+      client.removing = true
+      send(client.socket, { t: 'kicked', reason: 'afk' })
+      // Kurz warten, damit die Nachricht vor dem Schließen ankommt (auch
+      // mit simuliertem Ping, der das Senden verzögert)
+      setTimeout(() => client.socket.close(), 500)
+    }
+  }
 
   const players = []
   for (const client of clients.values()) {

@@ -542,6 +542,15 @@ body {
   color: #cfd6e0;
 }
 
+#overlay-content #overlay-notice {
+  color: #ff6b3d;
+  font-size: 0.95rem;
+}
+
+#overlay-content #overlay-notice:empty {
+  display: none;
+}
+
 #overlay-content .hint {
   margin-top: 1rem;
   font-size: 0.9rem;
