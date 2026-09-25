@@ -3,6 +3,7 @@ import type { Solid, Ramp } from './arena'
 import { rampHeightAt } from './arena'
 import type { Damageable } from './damageable'
 import type { Team } from './team'
+import type { PlayerNetworkState } from './shared/protocol'
 
 // Diese Klasse kümmert sich NUR um Bewegung/Physik/Kollision des Spielers.
 // Bewusst getrennt von der Eingabequelle (Tastatur+Maus vs. Touch) - beide
@@ -64,24 +65,8 @@ export interface StaminaState {
   max: number
 }
 
-// Genau das, was ein Multiplayer-Client später pro Frame an andere Spieler
-// schicken müsste, um sie korrekt darzustellen: Position, Blickrichtung
-// (nur Yaw - Pitch ist rein lokal für die eigene Kamera relevant, siehe
-// playerAvatar.ts) und Leben. Absichtlich ein einfaches, flaches Objekt aus
-// Zahlen (kein THREE.Vector3/Quaternion) - das lässt sich 1:1 als JSON über
-// ein Netzwerk schicken, ohne Klassen-Instanzen (de-)serialisieren zu müssen.
-export interface PlayerNetworkState {
-  position: { x: number; y: number; z: number }
-  yaw: number
-  health: number
-  maxHealth: number
-  isAlive: boolean
-  crouching: boolean
-  sprinting: boolean
-  shield: number
-  maxShield: number
-  team: Team
-}
+// Das Format liegt in shared/protocol.ts, weil auch der Server es kennen muss.
+export type { PlayerNetworkState } from './shared/protocol'
 
 export class Player implements Damageable {
   private velocity = new THREE.Vector3()
@@ -169,11 +154,8 @@ export class Player implements Damageable {
     return this.respawnRemaining
   }
 
-  // Bündelt alles, was für einen späteren Multiplayer-Sync relevant wäre
-  // (siehe PlayerNetworkState oben). Wird aktuell noch nirgends "verschickt",
-  // aber playerAvatar.ts könnte damit z.B. auch die Hülle EINES ANDEREN
-  // Spielers positionieren - dieselbe Funktion, nur mit fremden Zustands-
-  // Daten statt der eigenen Kamera.
+  // Wird ~20x pro Sekunde an den Server geschickt (siehe network.ts) und
+  // treibt außerdem die eigene, lokale Hülle (playerAvatar.ts).
   getNetworkState(): PlayerNetworkState {
     const euler = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ')
     return {

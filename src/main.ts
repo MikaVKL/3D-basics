@@ -13,6 +13,7 @@ import { DebugMarkers } from './debugMarkers'
 import { Scoreboard } from './scoreboard'
 import { NetworkClient } from './network'
 import { MAX_PLAYERS } from './shared/protocol'
+import { RemotePlayers } from './remotePlayers'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -117,11 +118,12 @@ const randomSpawnPoint =
   arena.spawnPoints[Math.floor(Math.random() * arena.spawnPoints.length)]
 player.spawn(randomSpawnPoint)
 
-// Sichtbare Spieler-Hülle (Vorbereitung für Multiplayer, siehe playerAvatar.ts).
-// Bewusst NICHT in arena.shootables aufgenommen - man soll sich nicht selbst
-// treffen können. Man sieht sich selbst in der Ego-Perspektive nicht, aber
-// die Hülle existiert schon und reagiert korrekt auf Schaden.
-const playerAvatar = new PlayerAvatar(player)
+// Eigene, sichtbare Spieler-Hülle (siehe playerAvatar.ts). Bewusst NICHT in
+// arena.shootables aufgenommen - man soll sich nicht selbst treffen können.
+// Man sieht sich selbst in der Ego-Perspektive nicht, aber die Hülle
+// existiert und leitet Schaden an den Spieler weiter.
+const playerAvatar = new PlayerAvatar(player.team)
+playerAvatar.mesh.userData.damageable = player
 scene.add(playerAvatar.mesh)
 
 // TEMPORÄR: statische Kopie der Spieler-Hülle in einer Arena-Ecke, nur damit
@@ -141,7 +143,17 @@ const weapon = new Weapon(camera, scene, arena.shootables, player.team, (killerT
   scoreboard.addKill(killerTeam)
 )
 
-const network = new NetworkClient()
+const remotePlayers = new RemotePlayers(scene)
+const network = new NetworkClient(
+  () => player.getNetworkState(),
+  (serverTime, entries) => remotePlayers.applySnapshot(serverTime, entries)
+)
+
+// Nur im Dev-Server: Zugriff für automatisierte Browser-Tests, die sonst
+// keinen Weg an den Spielzustand hätten.
+if (import.meta.env.DEV) {
+  Object.assign(window, { __dusk: { player, network, remotePlayers, camera } })
+}
 
 // ---------------------------------------------------------------------------
 // Eingabe: automatisch zwischen Maus+Tastatur (Desktop) und Touch (Tablet/
@@ -279,7 +291,8 @@ function animate() {
   for (const target of targets) {
     target.update(deltaSeconds, camera)
   }
-  playerAvatar.update()
+  playerAvatar.applyState(player.getNetworkState())
+  remotePlayers.update(network.remotePlayers)
   updateAmmoHud()
   updateHealthHud()
   updateShieldAndStaminaHud()

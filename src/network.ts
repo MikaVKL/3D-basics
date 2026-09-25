@@ -1,9 +1,12 @@
 import {
   PROTOCOL_VERSION,
   DEFAULT_SERVER_PORT,
+  TICK_RATE,
   type ClientMessage,
   type ServerMessage,
   type PlayerId,
+  type PlayerNetworkState,
+  type SnapshotEntry,
 } from './shared/protocol'
 
 export type ConnectionStatus = 'offline' | 'connecting' | 'online' | 'full' | 'outdated'
@@ -38,10 +41,21 @@ export class NetworkClient {
   private readonly url: string | null
   private socket: WebSocket | null = null
   private reconnectDelay = RECONNECT_MIN_MS
+  private readonly getLocalState: () => PlayerNetworkState
+  private readonly onSnapshot: (serverTime: number, players: SnapshotEntry[]) => void
 
-  constructor() {
+  constructor(
+    getLocalState: () => PlayerNetworkState,
+    onSnapshot: (serverTime: number, players: SnapshotEntry[]) => void
+  ) {
+    this.getLocalState = getLocalState
+    this.onSnapshot = onSnapshot
     this.url = resolveServerUrl()
-    if (this.url) this.connect()
+    if (!this.url) return
+    this.connect()
+    setInterval(() => {
+      if (this.status === 'online') this.send({ t: 'state', state: roundState(this.getLocalState()) })
+    }, 1000 / TICK_RATE)
   }
 
   get playerCount(): number {
@@ -101,6 +115,12 @@ export class NetworkClient {
       case 'rejected':
         this.status = message.reason === 'full' ? 'full' : 'outdated'
         break
+      case 'snapshot':
+        this.onSnapshot(
+          message.time,
+          message.players.filter((entry) => entry.id !== this.localId)
+        )
+        break
     }
   }
 
@@ -108,5 +128,16 @@ export class NetworkClient {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message))
     }
+  }
+}
+
+// Millimeter bzw. ~0.06° Genauigkeit reichen völlig - spart bei 20 Nachrichten
+// pro Sekunde spürbar JSON-Länge gegenüber vollen Float-Nachkommastellen.
+function roundState(state: PlayerNetworkState): PlayerNetworkState {
+  const r = (value: number) => Math.round(value * 1000) / 1000
+  return {
+    ...state,
+    position: { x: r(state.position.x), y: r(state.position.y), z: r(state.position.z) },
+    yaw: r(state.yaw),
   }
 }

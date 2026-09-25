@@ -2,17 +2,46 @@
 // Seiten importiert (Client über Vite, Server direkt über Node) - darum
 // keine Imports von Three.js oder DOM-Code hier drin.
 
+import type { Team } from '../team.ts'
+
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 1
+export const PROTOCOL_VERSION = 2
 
 export const MAX_PLAYERS = 8
 export const DEFAULT_SERVER_PORT = 8080
 
 export type PlayerId = number
 
-export type ClientMessage = { t: 'hello'; version: number }
+// Wie oft Client und Server Zustände verschicken (pro Sekunde).
+export const TICK_RATE = 20
+
+// Was jeder Client pro Tick über sich selbst schickt: Position (Kamera/
+// Augenhöhe), Blickrichtung (nur Yaw - Pitch ist rein lokal für die eigene
+// Kamera relevant) und Leben. Absichtlich ein flaches Objekt aus Zahlen
+// (kein THREE.Vector3), damit es 1:1 als JSON verschickt werden kann.
+export interface PlayerNetworkState {
+  position: { x: number; y: number; z: number }
+  yaw: number
+  health: number
+  maxHealth: number
+  isAlive: boolean
+  crouching: boolean
+  sprinting: boolean
+  shield: number
+  maxShield: number
+  team: Team
+}
+
+export interface SnapshotEntry {
+  id: PlayerId
+  state: PlayerNetworkState
+}
+
+export type ClientMessage =
+  | { t: 'hello'; version: number }
+  | { t: 'state'; state: PlayerNetworkState }
 
 export type RejectReason = 'full' | 'version'
 
@@ -21,3 +50,5 @@ export type ServerMessage =
   | { t: 'join'; id: PlayerId }
   | { t: 'leave'; id: PlayerId }
   | { t: 'rejected'; reason: RejectReason }
+  // time = Server-Uhr in ms, nur relativ zu anderen Snapshots aussagekräftig
+  | { t: 'snapshot'; time: number; players: SnapshotEntry[] }
