@@ -4,27 +4,37 @@ import type { PlayerId, PlayerNetworkState, SnapshotEntry } from './shared/proto
 import type { Damageable } from './damageable'
 
 // Fremde Spieler werden absichtlich etwas "in der Vergangenheit" gezeigt:
-// So liegen fast immer zwei Snapshots vor, zwischen denen weich
+// So liegen fast immer zwei Zustände vor, zwischen denen weich
 // interpoliert werden kann - statt dass Figuren bei jedem Paket (20x/s)
 // ruckartig springen oder bei Netz-Schwankungen stehen bleiben.
+//
+// Interpoliert wird auf der Uhr des jeweiligen SENDERS, nicht des Servers:
+// Server- und Client-Takt (beide 20Hz) laufen nicht synchron, dadurch
+// enthielt mal ein Server-Tick keinen neuen Zustand und der nächste zwei -
+// auf der Server-Zeitachse stand die Figur dann kurz und sprang danach
+// doppelt so weit (bei 150ms Ping gemessen: p90 12 statt 6 m/s).
 const INTERPOLATION_DELAY_MS = 100
+// Wie schnell sich die Uhr-Schätzung an einen dauerhaft höheren Ping
+// anpasst (Anteil pro Zustand). Niedrigerer Ping wird sofort übernommen.
+const CLOCK_ADAPT_RATE = 0.02
 const MAX_BUFFERED_SNAPSHOTS = 30
 
 interface Sample {
-  time: number // Server-Zeit
+  time: number // Uhr des Senders
   state: PlayerNetworkState
 }
 
 interface RemotePlayer {
   avatar: PlayerAvatar
   samples: Sample[]
+  // Sender-Uhr minus eigene Uhr, bezogen auf das schnellste bisher
+  // angekommene Paket - langsamere (Jitter) werden durch den
+  // Interpolations-Puffer aufgefangen, statt die Zeitachse zu verschieben.
+  clockOffset: number | null
 }
 
 export class RemotePlayers {
   private readonly players = new Map<PlayerId, RemotePlayer>()
-  // Differenz Server-Uhr minus lokale Uhr. Wird geglättet, damit einzelne
-  // verspätete Pakete die Darstellungszeit nicht hin- und herspringen lassen.
-  private clockOffset: number | null = null
 
   private readonly scene: THREE.Scene
   private readonly shootables: THREE.Object3D[]
@@ -38,23 +48,26 @@ export class RemotePlayers {
     this.onHit = onHit
   }
 
-  applySnapshot(serverTime: number, entries: SnapshotEntry[]) {
-    const offset = serverTime - performance.now()
-    this.clockOffset =
-      this.clockOffset === null ? offset : this.clockOffset + (offset - this.clockOffset) * 0.1
-
+  applySnapshot(entries: SnapshotEntry[]) {
+    const now = performance.now()
     for (const entry of entries) {
-      let player = this.players.get(entry.id)
-      if (!player) {
-        player = this.add(entry.id, entry.state)
-      }
-      player.samples.push({ time: serverTime, state: entry.state })
+      const player = this.players.get(entry.id) ?? this.add(entry.id, entry.state)
+      const last = player.samples[player.samples.length - 1]
+      // Server schickt denselben Zustand erneut, wenn seit dem letzten Tick
+      // nichts Neues vom Spieler kam - kein neuer Stützpunkt
+      if (last && entry.time <= last.time) continue
+
+      const offset = entry.time - now
+      if (player.clockOffset === null || offset > player.clockOffset) player.clockOffset = offset
+      else player.clockOffset += (offset - player.clockOffset) * CLOCK_ADAPT_RATE
+
+      player.samples.push({ time: entry.time, state: entry.state })
       if (player.samples.length > MAX_BUFFERED_SNAPSHOTS) player.samples.shift()
     }
   }
 
   private add(id: PlayerId, state: PlayerNetworkState): RemotePlayer {
-    const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [] }
+    const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [], clockOffset: null }
     // Die Waffe behandelt fremde Spieler wie jedes andere Damageable (siehe
     // damageable.ts) - Schaden wird hier aber nicht lokal verrechnet,
     // sondern nur gemeldet. Ob der Treffer zählt, entscheidet der Server.
@@ -96,11 +109,12 @@ export class RemotePlayers {
     for (const [id, player] of this.players) {
       if (!connectedIds.has(id)) this.remove(id, player)
     }
-    if (this.clockOffset === null) return
-
-    const renderTime = performance.now() + this.clockOffset - INTERPOLATION_DELAY_MS
+    const now = performance.now()
     for (const player of this.players.values()) {
-      if (player.samples.length > 0) player.avatar.applyState(interpolate(player.samples, renderTime))
+      if (player.samples.length > 0 && player.clockOffset !== null) {
+        const renderTime = now + player.clockOffset - INTERPOLATION_DELAY_MS
+        player.avatar.applyState(interpolate(player.samples, renderTime))
+      }
       player.avatar.update(deltaSeconds)
     }
   }

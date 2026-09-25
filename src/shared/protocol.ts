@@ -7,7 +7,7 @@ import type { Team } from '../team.ts'
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 5
+export const PROTOCOL_VERSION = 6
 
 export const MAX_PLAYERS = 8
 export const DEFAULT_SERVER_PORT = 8080
@@ -40,6 +40,9 @@ export interface PlayerNetworkState {
 export interface SnapshotEntry {
   id: PlayerId
   state: PlayerNetworkState
+  // Sendezeitpunkt laut Uhr des jeweiligen Spielers (ms) - Empfänger
+  // interpolieren auf dieser Zeitachse, siehe remotePlayers.ts
+  time: number
 }
 
 export type Scores = Record<Team, number>
@@ -52,7 +55,9 @@ export interface Vec3 {
 
 export type ClientMessage =
   | { t: 'hello'; version: number }
-  | { t: 'state'; state: PlayerNetworkState }
+  // time = eigene Uhr (performance.now), life = Nummer des aktuellen Lebens
+  // (siehe 'respawn') - Zustände aus einem früheren Leben verwirft der Server
+  | { t: 'state'; state: PlayerNetworkState; time: number; life: number }
   // "Ich habe Spieler X getroffen" - der Server prüft und entscheidet
   | { t: 'hit'; target: PlayerId }
   // Jeder Schuss, nur für die Leuchtspur bei den anderen
@@ -74,7 +79,6 @@ export type ServerMessage =
   | { t: 'leave'; id: PlayerId }
   | { t: 'rejected'; reason: RejectReason }
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores }
-  | { t: 'respawn'; id: PlayerId; spawnIndex: number }
+  | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number }
   | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3 }
-  // time = Server-Uhr in ms, nur relativ zu anderen Snapshots aussagekräftig
-  | { t: 'snapshot'; time: number; players: SnapshotEntry[] }
+  | { t: 'snapshot'; players: SnapshotEntry[] }

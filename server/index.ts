@@ -48,6 +48,11 @@ interface Client {
   team: Team
   // null, bis der Client seinen ersten Zustand geschickt hat
   state: PlayerNetworkState | null
+  stateTime: number // Client-Uhr zum Zeitpunkt des letzten Zustands
+  // Zählt die Respawns. Zustände, die der Client noch vor dem Erhalt der
+  // Respawn-Nachricht abgeschickt hat, tragen die alte Nummer und würden
+  // die Figur sonst kurz an die Todesstelle zurücksetzen.
+  life: number
   vitals: Vitals
   respawnAt: number | null // performance.now()-Zeitpunkt, solange tot
   lastHitAt: number
@@ -73,10 +78,34 @@ function fullVitals(): Vitals {
   return { health: MAX_HEALTH, shield: MAX_SHIELD, shieldRegenCooldown: 0 }
 }
 
+// Nur zum Testen: simuliert lokal einen Internet-Ping (Hälfte pro
+// Richtung) plus zufällige Schwankung, z.B.
+//   SIMULATED_LATENCY_MS=120 SIMULATED_JITTER_MS=30 npm run dev:server
+const SIMULATED_LATENCY_MS = Number(process.env.SIMULATED_LATENCY_MS) || 0
+const SIMULATED_JITTER_MS = Number(process.env.SIMULATED_JITTER_MS) || 0
+const lastDelivery = new WeakMap<WebSocket, { in: number; out: number }>()
+
+function withSimulatedLatency(socket: WebSocket, direction: 'in' | 'out', deliver: () => void) {
+  if (SIMULATED_LATENCY_MS === 0 && SIMULATED_JITTER_MS === 0) return deliver()
+  const now = performance.now()
+  const last = lastDelivery.get(socket) ?? { in: 0, out: 0 }
+  // WebSocket (TCP) liefert in Reihenfolge - der Jitter darf Nachrichten
+  // deshalb verzögern, aber nicht vertauschen
+  const at = Math.max(
+    last[direction],
+    now + SIMULATED_LATENCY_MS / 2 + Math.random() * SIMULATED_JITTER_MS
+  )
+  last[direction] = at
+  lastDelivery.set(socket, last)
+  setTimeout(() => {
+    if (socket.readyState === WebSocket.OPEN) deliver()
+  }, at - now)
+}
+
 function send(socket: WebSocket, message: ServerMessage) {
-  if (socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(message))
-  }
+  if (socket.readyState !== WebSocket.OPEN) return
+  const data = JSON.stringify(message)
+  withSimulatedLatency(socket, 'out', () => socket.send(data))
 }
 
 function broadcast(message: ServerMessage, exceptId?: PlayerId) {
@@ -202,7 +231,9 @@ wss.on('connection', (socket) => {
 
   const helloTimeout = setTimeout(() => socket.close(), HELLO_TIMEOUT_MS)
 
-  socket.on('message', (data) => {
+  socket.on('message', (data) => withSimulatedLatency(socket, 'in', () => handleMessage(data)))
+
+  function handleMessage(data: unknown) {
     const message = parseMessage(data)
     if (!message) return
 
@@ -229,6 +260,8 @@ wss.on('connection', (socket) => {
         alive: true,
         team,
         state: null,
+        stateTime: 0,
+        life: 0,
         vitals: fullVitals(),
         respawnAt: null,
         lastHitAt: 0,
@@ -251,14 +284,18 @@ wss.on('connection', (socket) => {
     }
 
     if (message.t === 'state') {
+      if (message.life !== client.life || !isFiniteNumber(message.time)) return
       const state = sanitizeState(message.state, client.team)
-      if (state) client.state = state
+      if (state) {
+        client.state = state
+        client.stateTime = message.time
+      }
     } else if (message.t === 'hit') {
       handleHit(client, message.target)
     } else if (message.t === 'shot') {
       handleShot(client, message.from, message.to)
     }
-  })
+  }
 
   socket.on('pong', () => {
     if (client) client.alive = true
@@ -362,7 +399,8 @@ setInterval(() => {
       // Sofort am Spawn-Punkt führen, nicht erst wenn der Client seine neue
       // Position schickt - sonst tauchen andere kurz an der Todesstelle auf.
       if (client.state) client.state = { ...client.state, position: { ...SPAWN_POINTS[spawnIndex] } }
-      broadcast({ t: 'respawn', id: client.id, spawnIndex })
+      client.life += 1
+      broadcast({ t: 'respawn', id: client.id, spawnIndex, life: client.life })
     } else if (isAlive(client)) {
       regenerateShield(client.vitals, deltaSeconds)
     }
@@ -370,6 +408,7 @@ setInterval(() => {
     if (client.state) {
       players.push({
         id: client.id,
+        time: client.stateTime,
         state: {
           ...client.state,
           health: client.vitals.health,
@@ -379,10 +418,13 @@ setInterval(() => {
       })
     }
   }
-  broadcast({ t: 'snapshot', time: now, players })
+  broadcast({ t: 'snapshot', players })
 }, 1000 / TICK_RATE)
 
 httpServer.listen(PORT, () => {
   console.log(`Dusk Arena Server läuft auf Port ${PORT}`)
+  if (SIMULATED_LATENCY_MS || SIMULATED_JITTER_MS) {
+    console.log(`Simulierter Ping: ${SIMULATED_LATENCY_MS}ms (hin + zurück) + bis ${SIMULATED_JITTER_MS}ms Jitter je Richtung`)
+  }
   if (ALLOWED_ORIGINS.length > 0) console.log(`Erlaubte Origins: ${ALLOWED_ORIGINS.join(', ')}`)
 })

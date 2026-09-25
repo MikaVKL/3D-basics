@@ -81,7 +81,8 @@ src/killFeed.ts          Kill-Anzeige oben rechts
 **Aufgabenteilung:** Jeder Client bewegt sich selbst (keine Eingabeverzögerung)
 und schickt 20x/s seine Position. Der Server prüft Plausibilität und verteilt
 20x/s einen Snapshot aller Spieler; fremde Spieler werden 100 ms verzögert
-zwischen zwei Snapshots interpoliert. Treffer meldet der Schütze ("was ich
+zwischen zwei Zuständen interpoliert (auf der Uhr des jeweiligen Absenders,
+nicht des Servers - sonst ruckelt es, weil beide Takte nicht synchron laufen). Treffer meldet der Schütze ("was ich
 gesehen habe, zählt"), der Server prüft sie (Team, beide lebendig,
 Feuerrate, Distanz) und entscheidet allein über Leben, Schild, Tod, Respawn
 und Punktestand.
@@ -98,6 +99,13 @@ automatisch mit `ws://<gleicher Rechner>:8080`, auch von Tablets im WLAN.
 Ohne laufenden Server spielt man ganz normal Singleplayer gegen die
 Ziel-Dummies. Mit `?server=ws://...` in der URL lässt sich jeder Build auf
 einen beliebigen Server zeigen.
+
+Lokal ist der Ping praktisch 0 - um das Spiel unter Internet-Bedingungen zu
+prüfen, kann der Server eine Verzögerung simulieren:
+
+```bash
+SIMULATED_LATENCY_MS=120 SIMULATED_JITTER_MS=20 npm run dev:server
+```
 
 ### Multiplayer-Server hosten (kostenlos, Render.com)
 

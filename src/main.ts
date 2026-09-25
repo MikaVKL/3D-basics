@@ -171,7 +171,7 @@ const network: NetworkClient = new NetworkClient({
     scoreboard.setScores(scores)
     setTargetsActive(false)
   },
-  onSnapshot: (serverTime, entries) => remotePlayers.applySnapshot(serverTime, entries),
+  onSnapshot: (entries) => remotePlayers.applySnapshot(entries),
   onOwnVitals: (health, shield) => player.applyServerVitals(health, shield),
   onKill: (killer, victim, scores) => {
     scoreboard.setScores(scores)

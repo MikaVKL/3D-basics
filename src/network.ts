@@ -34,7 +34,7 @@ export interface NetworkHandlers {
   // Server hat uns aufgenommen und Team + Spawn-Punkt festgelegt
   onWelcome: (team: Team, spawnIndex: number, scores: Scores) => void
   // Snapshot ohne den eigenen Eintrag
-  onSnapshot: (serverTime: number, players: SnapshotEntry[]) => void
+  onSnapshot: (players: SnapshotEntry[]) => void
   // Eigenes Leben/Schild laut Server
   onOwnVitals: (health: number, shield: number) => void
   onKill: (killer: PlayerId, victim: PlayerId, scores: Scores) => void
@@ -63,6 +63,7 @@ export class NetworkClient {
   private socket: WebSocket | null = null
   private reconnectDelay = RECONNECT_MIN_MS
   private readonly handlers: NetworkHandlers
+  private life = 0
 
   constructor(handlers: NetworkHandlers) {
     this.handlers = handlers
@@ -70,7 +71,13 @@ export class NetworkClient {
     if (!this.url) return
     this.connect()
     setInterval(() => {
-      if (this.status === 'online') this.send({ t: 'state', state: roundState(this.handlers.getLocalState()) })
+      if (this.status !== 'online') return
+      this.send({
+        t: 'state',
+        state: roundState(this.handlers.getLocalState()),
+        time: Math.round(performance.now()),
+        life: this.life,
+      })
     }, 1000 / TICK_RATE)
   }
 
@@ -120,6 +127,7 @@ export class NetworkClient {
         this.connectingSince = null
         this.reconnectDelay = RECONNECT_MIN_MS
         this.localId = message.id
+        this.life = 0
         this.remotePlayers.clear()
         for (const id of message.players) {
           if (id !== message.id) this.remotePlayers.add(id)
@@ -139,16 +147,14 @@ export class NetworkClient {
       case 'snapshot': {
         const own = message.players.find((entry) => entry.id === this.localId)
         if (own) this.handlers.onOwnVitals(own.state.health, own.state.shield)
-        this.handlers.onSnapshot(
-          message.time,
-          message.players.filter((entry) => entry.id !== this.localId)
-        )
+        this.handlers.onSnapshot(message.players.filter((entry) => entry.id !== this.localId))
         break
       }
       case 'kill':
         this.handlers.onKill(message.killer, message.victim, message.scores)
         break
       case 'respawn':
+        if (message.id === this.localId) this.life = message.life
         this.handlers.onRespawn(message.id, message.spawnIndex)
         break
       case 'shot':
