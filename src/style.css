@@ -103,6 +103,32 @@ body {
   opacity: 0.6;
 }
 
+#net-status {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #e8ecf1;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#net-status[data-status='online'] {
+  color: #33e6cc;
+  opacity: 1;
+  text-shadow: 0 0 8px rgba(51, 230, 204, 0.5);
+}
+
+#net-status[data-status='full'],
+#net-status[data-status='outdated'] {
+  color: #ff6b3d;
+  opacity: 1;
+}
+
 /* Lebensanzeige unten links: Balken + Zahl */
 #health-hud {
   position: fixed;

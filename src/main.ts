@@ -11,6 +11,8 @@ import { Target } from './target'
 import { PlayerAvatar } from './playerAvatar'
 import { DebugMarkers } from './debugMarkers'
 import { Scoreboard } from './scoreboard'
+import { NetworkClient } from './network'
+import { MAX_PLAYERS } from './shared/protocol'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -139,6 +141,8 @@ const weapon = new Weapon(camera, scene, arena.shootables, player.team, (killerT
   scoreboard.addKill(killerTeam)
 )
 
+const network = new NetworkClient()
+
 // ---------------------------------------------------------------------------
 // Eingabe: automatisch zwischen Maus+Tastatur (Desktop) und Touch (Tablet/
 // Handy) wählen. `pointer: coarse` erkennt "ungenaue" Zeigegeräte (Finger)
@@ -216,6 +220,19 @@ const scoreRed = document.querySelector<HTMLSpanElement>('#score-red')!
 const scoreBlue = document.querySelector<HTMLSpanElement>('#score-blue')!
 const shieldBarFill = document.querySelector<HTMLDivElement>('#shield-bar-fill')!
 const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill')!
+const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
+
+function updateNetStatusHud() {
+  const labels = {
+    offline: 'Offline · Singleplayer',
+    connecting: 'Verbinde…',
+    online: `Online · ${network.playerCount}/${MAX_PLAYERS} Spieler`,
+    full: 'Server voll · Singleplayer',
+    outdated: 'Veraltete Version · bitte neu laden',
+  }
+  netStatus.textContent = labels[network.status]
+  netStatus.dataset.status = network.status
+}
 
 function updateScoreboardHud() {
   scoreRed.textContent = String(scoreboard.getScore('red'))
@@ -267,6 +284,7 @@ function animate() {
   updateHealthHud()
   updateShieldAndStaminaHud()
   updateScoreboardHud()
+  updateNetStatusHud()
 
   renderer.render(scene, camera)
 }
