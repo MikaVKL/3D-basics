@@ -280,10 +280,22 @@ const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill
 const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
 const killFeed = new KillFeed(document.querySelector<HTMLDivElement>('#kill-feed')!)
 
+// Kostenloses Hosting schläft ein - der erste Verbindungsaufbau dauert
+// dann bis zu ~1 Minute. Solange noch versucht wird, zeigt das HUD das
+// statt eines zwischen den Versuchen kurz aufblitzenden "Offline" an.
+const WAKE_HINT_AFTER_MS = 5000
+const GIVE_UP_HINT_AFTER_MS = 90000
+
 function updateNetStatusHud() {
+  const tryingFor =
+    network.connectingSince === null ? null : performance.now() - network.connectingSince
+  let trying = 'Offline · Singleplayer'
+  if (tryingFor !== null && tryingFor < WAKE_HINT_AFTER_MS) trying = 'Verbinde…'
+  else if (tryingFor !== null && tryingFor < GIVE_UP_HINT_AFTER_MS) trying = 'Server wird geweckt… (bis ~1 Min.)'
+
   const labels = {
-    offline: 'Offline · Singleplayer',
-    connecting: 'Verbinde…',
+    offline: trying,
+    connecting: trying,
     online: `Online · ${network.playerCount}/${MAX_PLAYERS} Spieler · Team ${TeamLabel[player.team]}`,
     full: 'Server voll · Singleplayer',
     outdated: 'Veraltete Version · bitte neu laden',

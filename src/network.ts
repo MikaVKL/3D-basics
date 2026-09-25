@@ -53,6 +53,9 @@ const RECONNECT_MAX_MS = 15000
 // einschläft und beim ersten Aufruf erst hochfahren muss).
 export class NetworkClient {
   status: ConnectionStatus = 'offline'
+  // Seit wann (performance.now) ohne Erfolg verbunden wird - für den HUD-
+  // Hinweis, dass ein eingeschlafener Gratis-Server gerade aufwacht
+  connectingSince: number | null = null
   localId: PlayerId | null = null
   readonly remotePlayers = new Set<PlayerId>()
 
@@ -77,6 +80,7 @@ export class NetworkClient {
 
   private connect() {
     this.status = 'connecting'
+    this.connectingSince ??= performance.now()
     const socket = new WebSocket(this.url!)
     this.socket = socket
 
@@ -113,6 +117,7 @@ export class NetworkClient {
     switch (message.t) {
       case 'welcome':
         this.status = 'online'
+        this.connectingSince = null
         this.reconnectDelay = RECONNECT_MIN_MS
         this.localId = message.id
         this.remotePlayers.clear()
@@ -129,6 +134,7 @@ export class NetworkClient {
         break
       case 'rejected':
         this.status = message.reason === 'full' ? 'full' : 'outdated'
+        this.connectingSince = null
         break
       case 'snapshot': {
         const own = message.players.find((entry) => entry.id === this.localId)

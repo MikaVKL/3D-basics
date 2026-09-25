@@ -40,6 +40,11 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Adresse des Multiplayer-Servers (z.B. wss://dusk-arena-server.onrender.com),
+          # gesetzt als Repository-Variable SERVER_URL. Leer = Spiel läuft als
+          # reiner Singleplayer, genau wie vor dem Multiplayer.
+          VITE_SERVER_URL: ${{ vars.SERVER_URL }}
 
       - name: GitHub Pages konfigurieren
         uses: actions/configure-pages@v5

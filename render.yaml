@@ -1,0 +1,16 @@
+# Render-Blueprint für den Multiplayer-Server (kostenloser Tarif).
+# Einrichtung siehe README, Abschnitt "Multiplayer-Server hosten".
+# Der kostenlose Tarif schläft nach ~15 Minuten ohne Verbindung ein und
+# braucht beim nächsten Aufruf ca. 30-60s zum Aufwachen - der Client
+# verbindet sich währenddessen automatisch immer wieder neu.
+services:
+  - type: web
+    name: dusk-arena-server
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: ALLOWED_ORIGINS
+        value: https://mikavkl.github.io

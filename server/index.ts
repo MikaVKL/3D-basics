@@ -29,6 +29,13 @@ import type { Team } from '../src/team.ts'
 // kein eigener Build-Schritt nötig, weder lokal noch beim Hosting.
 
 const PORT = Number(process.env.PORT) || DEFAULT_SERVER_PORT
+// Kommagetrennte Liste erlaubter Seiten (z.B. https://mikavkl.github.io).
+// Ohne Angabe (lokale Entwicklung) darf sich jeder verbinden. Im Hosting
+// gesetzt, damit fremde Webseiten den Server nicht mitbenutzen können.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
 const HELLO_TIMEOUT_MS = 5000
 // Tote Verbindungen (Tab ohne sauberes close, WLAN weg) würden sonst ewig
 // einen der 8 Plätze blockieren.
@@ -184,7 +191,11 @@ const httpServer = createServer((_request, response) => {
   response.end(`Dusk Arena Server - ${clients.size}/${MAX_PLAYERS} Spieler\n`)
 })
 
-const wss = new WebSocketServer({ server: httpServer })
+const wss = new WebSocketServer({
+  server: httpServer,
+  verifyClient: ({ origin }: { origin: string }) =>
+    ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin),
+})
 
 wss.on('connection', (socket) => {
   let client: Client | null = null
@@ -373,4 +384,5 @@ setInterval(() => {
 
 httpServer.listen(PORT, () => {
   console.log(`Dusk Arena Server läuft auf Port ${PORT}`)
+  if (ALLOWED_ORIGINS.length > 0) console.log(`Erlaubte Origins: ${ALLOWED_ORIGINS.join(', ')}`)
 })

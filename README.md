@@ -63,14 +63,71 @@ zuverlässiger als reines Feature-Sniffing):
 - Rechte Bildschirmhälfte: Wisch-Geste zum Umschauen
 - Button unten rechts: Springen
 
-## Aktueller Stand (Etappe 1)
+## Multiplayer
 
-- Ego-Perspektive, steuerbar per Maus+Tastatur ODER Touch (automatische Erkennung)
-- Bewegung inkl. Schwerkraft und Sprung
-- Kollision mit Wänden und Deckungs-Kisten (per Bisektion bis knapp ans Hindernis heran, kein "Stecken bleiben")
-- Arena mit durchdachtem, texturfreiem Farbschema und Schattenwurf
+Bis zu 8 Spieler in einem gemeinsamen Raum, Team Rot gegen Blau.
 
-## Geplant (spätere Etappen)
+```
+server/index.ts          Spielserver (Node.js + ws), läuft direkt als TypeScript
+src/shared/              Code, den Client UND Server nutzen:
+  protocol.ts              Nachrichtenformat (bei Änderungen PROTOCOL_VERSION erhöhen)
+  gameRules.ts             Schaden/Schild/Respawn-Regeln
+  arenaLayout.ts           Arena-Maße + Spawn-Punkte
+src/network.ts           Verbindung zum Server (mit automatischem Neuverbinden)
+src/remotePlayers.ts     Andere Spieler: Hüllen + Interpolation
+src/killFeed.ts          Kill-Anzeige oben rechts
+```
 
-- Waffen/Schießen, Gegner bzw. Ziele
-- Multiplayer (Node.js + WebSockets/Socket.io) – bewusst noch nicht Teil dieser Phase
+**Aufgabenteilung:** Jeder Client bewegt sich selbst (keine Eingabeverzögerung)
+und schickt 20x/s seine Position. Der Server prüft Plausibilität und verteilt
+20x/s einen Snapshot aller Spieler; fremde Spieler werden 100 ms verzögert
+zwischen zwei Snapshots interpoliert. Treffer meldet der Schütze ("was ich
+gesehen habe, zählt"), der Server prüft sie (Team, beide lebendig,
+Feuerrate, Distanz) und entscheidet allein über Leben, Schild, Tod, Respawn
+und Punktestand.
+
+### Lokal testen
+
+```bash
+npm run dev:server   # Spielserver auf Port 8080 (startet bei Änderungen neu)
+npm run dev          # zweites Terminal: Client
+```
+
+Den Client in zwei Browser-Tabs öffnen - im Dev-Modus verbindet er sich
+automatisch mit `ws://<gleicher Rechner>:8080`, auch von Tablets im WLAN.
+Ohne laufenden Server spielt man ganz normal Singleplayer gegen die
+Ziel-Dummies. Mit `?server=ws://...` in der URL lässt sich jeder Build auf
+einen beliebigen Server zeigen.
+
+### Multiplayer-Server hosten (kostenlos, Render.com)
+
+GitHub Pages kann nur statische Dateien ausliefern, der Spielserver braucht
+ein eigenes Zuhause. Einmalige Einrichtung:
+
+1. Auf [render.com](https://render.com) mit dem GitHub-Konto anmelden
+   (kostenlos, keine Kreditkarte nötig).
+2. **New → Blueprint** wählen, dieses Repository auswählen und als Branch
+   `claude/modest-keller-5dphta` angeben (auf `main` gibt es den Server noch
+   nicht). Render liest `render.yaml` und legt den Dienst
+   `dusk-arena-server` im kostenlosen Tarif an. Jeder Push auf den Branch
+   deployt den Server automatisch neu.
+3. Nach dem ersten Deploy die angezeigte Adresse kopieren, z.B.
+   `https://dusk-arena-server.onrender.com`.
+4. Auf GitHub: **Settings → Secrets and variables → Actions → Variables →
+   New repository variable**, Name `SERVER_URL`, Wert dieselbe Adresse mit
+   `wss://` statt `https://` (z.B. `wss://dusk-arena-server.onrender.com`).
+5. Das Pages-Deployment neu anstoßen (Actions → "Deploy to GitHub Pages" →
+   Run workflow) - ab dann verbindet sich die Live-Seite mit dem Server.
+
+Der kostenlose Tarif schläft nach ca. 15 Minuten ohne Spieler ein. Der erste
+Spieler danach sieht bis zu ~1 Minute "Server wird geweckt…" und spielt
+solange Singleplayer, dann verbindet sich das Spiel von selbst.
+
+`ALLOWED_ORIGINS` (in `render.yaml`) legt fest, von welchen Webseiten aus
+man sich verbinden darf - aktuell nur `https://mikavkl.github.io`.
+
+## Geplant
+
+- Spielernamen, Ping-Anzeige
+- strengere Bewegungsprüfung auf dem Server
+- Optik: Spielermodelle, Assets, Effekte
