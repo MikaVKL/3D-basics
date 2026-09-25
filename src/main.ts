@@ -15,6 +15,7 @@ import { NetworkClient } from './network'
 import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
 import { TeamLabel } from './team'
+import { KillFeed } from './killFeed'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -144,22 +145,52 @@ const weapon = new Weapon(camera, scene, arena.shootables, player.team, (killerT
   scoreboard.addKill(killerTeam)
 )
 
-const remotePlayers = new RemotePlayers(scene)
-const network = new NetworkClient({
+// Ziel-Dummies nur im Singleplayer - online sind echte Gegner da.
+function setTargetsActive(active: boolean) {
+  for (const target of targets) {
+    const index = arena.shootables.indexOf(target.mesh)
+    if (active && index === -1) {
+      scene.add(target.mesh)
+      arena.shootables.push(target.mesh)
+    } else if (!active && index !== -1) {
+      scene.remove(target.mesh)
+      arena.shootables.splice(index, 1)
+    }
+  }
+}
+
+const remotePlayers = new RemotePlayers(scene, arena.shootables, (id) => network.sendHit(id))
+const network: NetworkClient = new NetworkClient({
   getLocalState: () => player.getNetworkState(),
-  onWelcome: (team, spawnIndex) => {
+  onWelcome: (team, spawnIndex, scores) => {
     player.team = team
+    player.networkControlled = true
     weapon.shooterTeam = team
     playerAvatar.setTeam(team)
     player.spawn(arena.spawnPoints[spawnIndex])
+    scoreboard.setScores(scores)
+    setTargetsActive(false)
   },
   onSnapshot: (serverTime, entries) => remotePlayers.applySnapshot(serverTime, entries),
+  onOwnVitals: (health, shield) => player.applyServerVitals(health, shield),
+  onKill: (killer, victim, scores) => {
+    scoreboard.setScores(scores)
+    killFeed.add(killer, victim, network.localId)
+  },
+  onRespawn: (id, spawnIndex) => {
+    if (id === network.localId) player.spawn(arena.spawnPoints[spawnIndex])
+    else remotePlayers.handleRespawn(id)
+  },
+  onDisconnect: () => {
+    player.networkControlled = false
+    setTargetsActive(true)
+  },
 })
 
 // Nur im Dev-Server: Zugriff für automatisierte Browser-Tests, die sonst
 // keinen Weg an den Spielzustand hätten.
 if (import.meta.env.DEV) {
-  Object.assign(window, { __dusk: { player, network, remotePlayers, camera } })
+  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl } })
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +271,7 @@ const scoreBlue = document.querySelector<HTMLSpanElement>('#score-blue')!
 const shieldBarFill = document.querySelector<HTMLDivElement>('#shield-bar-fill')!
 const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill')!
 const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
+const killFeed = new KillFeed(document.querySelector<HTMLDivElement>('#kill-feed')!)
 
 function updateNetStatusHud() {
   const labels = {
@@ -299,7 +331,8 @@ function animate() {
     target.update(deltaSeconds, camera)
   }
   playerAvatar.applyState(player.getNetworkState())
-  remotePlayers.update(network.remotePlayers)
+  remotePlayers.update(deltaSeconds, network.remotePlayers)
+  killFeed.update()
   updateAmmoHud()
   updateHealthHud()
   updateShieldAndStaminaHud()

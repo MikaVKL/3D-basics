@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { PlayerAvatar } from './playerAvatar'
 import type { PlayerId, PlayerNetworkState, SnapshotEntry } from './shared/protocol'
+import type { Damageable } from './damageable'
 
 // Fremde Spieler werden absichtlich etwas "in der Vergangenheit" gezeigt:
 // So liegen fast immer zwei Snapshots vor, zwischen denen weich
@@ -26,9 +27,15 @@ export class RemotePlayers {
   private clockOffset: number | null = null
 
   private readonly scene: THREE.Scene
+  private readonly shootables: THREE.Object3D[]
+  private readonly onHit: (id: PlayerId) => void
 
-  constructor(scene: THREE.Scene) {
+  // shootables: dieselbe Liste, die die Waffe durchsucht - fremde Hüllen
+  // werden dort ein-/ausgetragen. onHit: Treffer an den Server melden.
+  constructor(scene: THREE.Scene, shootables: THREE.Object3D[], onHit: (id: PlayerId) => void) {
     this.scene = scene
+    this.shootables = shootables
+    this.onHit = onHit
   }
 
   applySnapshot(serverTime: number, entries: SnapshotEntry[]) {
@@ -39,30 +46,62 @@ export class RemotePlayers {
     for (const entry of entries) {
       let player = this.players.get(entry.id)
       if (!player) {
-        player = { avatar: new PlayerAvatar(entry.state.team), samples: [] }
-        this.scene.add(player.avatar.mesh)
-        this.players.set(entry.id, player)
+        player = this.add(entry.id, entry.state)
       }
       player.samples.push({ time: serverTime, state: entry.state })
       if (player.samples.length > MAX_BUFFERED_SNAPSHOTS) player.samples.shift()
     }
   }
 
+  private add(id: PlayerId, state: PlayerNetworkState): RemotePlayer {
+    const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [] }
+    // Die Waffe behandelt fremde Spieler wie jedes andere Damageable (siehe
+    // damageable.ts) - Schaden wird hier aber nicht lokal verrechnet,
+    // sondern nur gemeldet. Ob der Treffer zählt, entscheidet der Server.
+    const damageable: Damageable = {
+      get isAlive() {
+        const latest = player.samples[player.samples.length - 1]
+        return latest ? latest.state.isAlive : true
+      },
+      takeDamage: () => {
+        player.avatar.flash()
+        this.onHit(id)
+      },
+    }
+    player.avatar.mesh.userData.damageable = damageable
+    this.scene.add(player.avatar.mesh)
+    this.shootables.push(player.avatar.mesh)
+    this.players.set(id, player)
+    return player
+  }
+
+  private remove(id: PlayerId, player: RemotePlayer) {
+    this.scene.remove(player.avatar.mesh)
+    const index = this.shootables.indexOf(player.avatar.mesh)
+    if (index !== -1) this.shootables.splice(index, 1)
+    player.avatar.dispose()
+    this.players.delete(id)
+  }
+
+  // Nach einem Respawn nicht von der Todes-Stelle zum Spawn-Punkt gleiten:
+  // alte Samples verwerfen, der nächste Snapshot setzt die Hülle direkt.
+  handleRespawn(id: PlayerId) {
+    const player = this.players.get(id)
+    if (player) player.samples.length = 0
+  }
+
   // connectedIds: wer laut Server gerade verbunden ist - alle anderen
   // Hüllen werden entfernt (Spieler gegangen oder eigene Verbindung weg).
-  update(connectedIds: ReadonlySet<PlayerId>) {
+  update(deltaSeconds: number, connectedIds: ReadonlySet<PlayerId>) {
     for (const [id, player] of this.players) {
-      if (!connectedIds.has(id)) {
-        this.scene.remove(player.avatar.mesh)
-        player.avatar.dispose()
-        this.players.delete(id)
-      }
+      if (!connectedIds.has(id)) this.remove(id, player)
     }
     if (this.clockOffset === null) return
 
     const renderTime = performance.now() + this.clockOffset - INTERPOLATION_DELAY_MS
     for (const player of this.players.values()) {
-      player.avatar.applyState(interpolate(player.samples, renderTime))
+      if (player.samples.length > 0) player.avatar.applyState(interpolate(player.samples, renderTime))
+      player.avatar.update(deltaSeconds)
     }
   }
 

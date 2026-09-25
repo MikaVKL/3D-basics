@@ -7,6 +7,7 @@ import {
   type PlayerId,
   type PlayerNetworkState,
   type SnapshotEntry,
+  type Scores,
 } from './shared/protocol'
 import type { Team } from './team'
 
@@ -30,8 +31,15 @@ function resolveServerUrl(): string | null {
 export interface NetworkHandlers {
   getLocalState: () => PlayerNetworkState
   // Server hat uns aufgenommen und Team + Spawn-Punkt festgelegt
-  onWelcome: (team: Team, spawnIndex: number) => void
+  onWelcome: (team: Team, spawnIndex: number, scores: Scores) => void
+  // Snapshot ohne den eigenen Eintrag
   onSnapshot: (serverTime: number, players: SnapshotEntry[]) => void
+  // Eigenes Leben/Schild laut Server
+  onOwnVitals: (health: number, shield: number) => void
+  onKill: (killer: PlayerId, victim: PlayerId, scores: Scores) => void
+  onRespawn: (id: PlayerId, spawnIndex: number) => void
+  // Verbindung weg (oder nie zustande gekommen) - zurück in den Singleplayer
+  onDisconnect: () => void
 }
 
 const RECONNECT_MIN_MS = 2000
@@ -85,6 +93,7 @@ export class NetworkClient {
     })
 
     socket.addEventListener('close', () => {
+      if (this.localId !== null) this.handlers.onDisconnect()
       this.socket = null
       this.localId = null
       this.remotePlayers.clear()
@@ -108,7 +117,7 @@ export class NetworkClient {
         for (const id of message.players) {
           if (id !== message.id) this.remotePlayers.add(id)
         }
-        this.handlers.onWelcome(message.team, message.spawnIndex)
+        this.handlers.onWelcome(message.team, message.spawnIndex, message.scores)
         break
       case 'join':
         this.remotePlayers.add(message.id)
@@ -119,13 +128,26 @@ export class NetworkClient {
       case 'rejected':
         this.status = message.reason === 'full' ? 'full' : 'outdated'
         break
-      case 'snapshot':
+      case 'snapshot': {
+        const own = message.players.find((entry) => entry.id === this.localId)
+        if (own) this.handlers.onOwnVitals(own.state.health, own.state.shield)
         this.handlers.onSnapshot(
           message.time,
           message.players.filter((entry) => entry.id !== this.localId)
         )
         break
+      }
+      case 'kill':
+        this.handlers.onKill(message.killer, message.victim, message.scores)
+        break
+      case 'respawn':
+        this.handlers.onRespawn(message.id, message.spawnIndex)
+        break
     }
+  }
+
+  sendHit(target: PlayerId) {
+    this.send({ t: 'hit', target })
   }
 
   private send(message: ClientMessage) {

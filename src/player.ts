@@ -4,6 +4,14 @@ import { rampHeightAt } from './arena'
 import type { Damageable } from './damageable'
 import type { Team } from './team'
 import type { PlayerNetworkState } from './shared/protocol'
+import {
+  MAX_HEALTH,
+  MAX_SHIELD,
+  RESPAWN_DELAY,
+  applyDamage,
+  regenerateShield,
+  type Vitals,
+} from './shared/gameRules'
 
 // Diese Klasse kümmert sich NUR um Bewegung/Physik/Kollision des Spielers.
 // Bewusst getrennt von der Eingabequelle (Tastatur+Maus vs. Touch) - beide
@@ -36,9 +44,6 @@ const STAMINA_REGEN_RATE = 15 // pro Sekunde, wenn nicht gesprintet wird
 // liegt. Einmal gestartet, läuft der Sprint aber bis auf 0 weiter.
 const MIN_STAMINA_TO_START_SPRINT = 15
 
-const MAX_SHIELD = 25
-const SHIELD_REGEN_DELAY = 3 // Sekunden ohne Treffer, bevor das Schild wieder auflädt
-const SHIELD_REGEN_RATE = 10 // pro Sekunde (volles Schild in 2.5s nach der Regen-Verzögerung)
 
 // Die Seiten-Kollision (collidesAt) lässt die untersten paar Zentimeter des
 // Spielers "durch" Hindernisse, die knapp unter den eigenen Füßen liegen.
@@ -47,8 +52,6 @@ const SHIELD_REGEN_RATE = 10 // pro Sekunde (volles Schild in 2.5s nach der Rege
 // exakt die Kisten-Oberkante) und könnte nicht mehr von ihr herunterlaufen.
 const STEP_CLEARANCE = 0.15
 
-const MAX_HEALTH = 100
-const RESPAWN_DELAY = 3 // Sekunden bis der Spieler nach dem Tod wieder auftaucht
 
 export interface HealthState {
   current: number
@@ -92,8 +95,6 @@ export class Player implements Damageable {
   private isSprinting = false
   private stamina = MAX_STAMINA
 
-  private shield = MAX_SHIELD
-  private shieldRegenCooldown = 0
 
   // Boden-/Fallhöhe OHNE Augenhöhen-Anteil (also z.B. 0 auf Arena-Boden,
   // unabhängig davon ob man steht oder duckt). Schwerkraft/Sprung wirken
@@ -104,7 +105,14 @@ export class Player implements Damageable {
   // Hochspringen der Kamera) - genau der gemeldete Bug.
   private bodyY = 0
 
-  private health = MAX_HEALTH
+  // Leben + Schild in einem Objekt, damit applyDamage()/regenerateShield()
+  // aus shared/gameRules.ts direkt darauf arbeiten können
+  private vitals: Vitals = { health: MAX_HEALTH, shield: MAX_SHIELD, shieldRegenCooldown: 0 }
+
+  // Im Multiplayer entscheidet der Server über Schaden, Schild und
+  // Respawn (siehe applyServerVitals) - dann läuft lokal nur noch die
+  // Bewegung. Im Singleplayer rechnet der Spieler selbst.
+  networkControlled = false
   private respawnRemaining = 0
   private spawnPoint = new THREE.Vector3()
   team: Team
@@ -120,7 +128,7 @@ export class Player implements Damageable {
     this.spawnPoint.copy(position)
     this.camera.position.copy(position)
     this.velocity.set(0, 0, 0)
-    this.health = MAX_HEALTH
+    this.vitals.health = MAX_HEALTH
     this.respawnRemaining = 0
     this.wantsToCrouch = false
     this.isCrouching = false
@@ -129,20 +137,20 @@ export class Player implements Damageable {
     this.wantsToSprint = false
     this.isSprinting = false
     this.stamina = MAX_STAMINA
-    this.shield = MAX_SHIELD
-    this.shieldRegenCooldown = 0
+    this.vitals.shield = MAX_SHIELD
+    this.vitals.shieldRegenCooldown = 0
   }
 
   get isAlive(): boolean {
-    return this.health > 0
+    return this.vitals.health > 0
   }
 
   getHealthState(): HealthState {
-    return { current: this.health, max: MAX_HEALTH }
+    return { current: this.vitals.health, max: MAX_HEALTH }
   }
 
   getShieldState(): ShieldState {
-    return { current: this.shield, max: MAX_SHIELD }
+    return { current: this.vitals.shield, max: MAX_SHIELD }
   }
 
   getStaminaState(): StaminaState {
@@ -165,45 +173,37 @@ export class Player implements Damageable {
         z: this.camera.position.z,
       },
       yaw: euler.y,
-      health: this.health,
+      health: this.vitals.health,
       maxHealth: MAX_HEALTH,
       isAlive: this.isAlive,
       crouching: this.isCrouching,
       sprinting: this.isSprinting,
-      shield: this.shield,
+      shield: this.vitals.shield,
       maxShield: MAX_SHIELD,
       team: this.team,
     }
   }
 
-  // Es gibt aktuell noch keine Gegner, die das hier tatsächlich aufrufen -
-  // die Infrastruktur (Schaden, Tod, Respawn) steht aber schon, damit
-  // spätere Gegner/Multiplayer nur noch takeDamage() aufrufen müssen.
-  //
-  // Schild absorbiert Schaden zuerst, komplett bis es leer ist, erst der
-  // Rest geht auf die Lebenspunkte (klassisches Shield-vor-Health-Modell).
-  // Jeder Treffer setzt außerdem die Regenerations-Verzögerung zurück - das
-  // Schild lädt erst wieder auf, wenn man eine Zeit lang keinen Treffer
-  // kassiert hat, siehe update().
+  // Nur Singleplayer - im Multiplayer kommt Schaden über applyServerVitals().
+  // Schild vor Leben, siehe applyDamage() in shared/gameRules.ts.
   takeDamage(amount: number) {
-    if (!this.isAlive) return
+    if (this.networkControlled) return
+    if (applyDamage(this.vitals, amount)) this.die()
+  }
 
-    this.shieldRegenCooldown = SHIELD_REGEN_DELAY
+  // Vom Server gemeldeter Stand (Multiplayer) - überschreibt die lokalen
+  // Werte. Den Tod erkennt der Client am Übergang lebendig -> tot; der
+  // Respawn kommt als eigene Server-Nachricht (siehe main.ts).
+  applyServerVitals(health: number, shield: number) {
+    const wasAlive = this.isAlive
+    this.vitals.health = health
+    this.vitals.shield = shield
+    if (wasAlive && !this.isAlive) this.die()
+  }
 
-    let remaining = amount
-    if (this.shield > 0) {
-      const absorbed = Math.min(this.shield, remaining)
-      this.shield -= absorbed
-      remaining -= absorbed
-    }
-
-    if (remaining <= 0) return
-
-    this.health = Math.max(0, this.health - remaining)
-    if (this.health === 0) {
-      this.respawnRemaining = RESPAWN_DELAY
-      this.velocity.set(0, 0, 0)
-    }
+  private die() {
+    this.respawnRemaining = RESPAWN_DELAY
+    this.velocity.set(0, 0, 0)
   }
 
   setMoveInput(x: number, z: number) {
@@ -229,7 +229,7 @@ export class Player implements Damageable {
   update(deltaSeconds: number) {
     if (!this.isAlive) {
       this.respawnRemaining = Math.max(0, this.respawnRemaining - deltaSeconds)
-      if (this.respawnRemaining === 0) {
+      if (this.respawnRemaining === 0 && !this.networkControlled) {
         this.spawn(this.spawnPoint)
       }
       return
@@ -264,11 +264,7 @@ export class Player implements Damageable {
 
     // Schild-Regeneration: erst nach einer Verzögerung ohne Treffer, siehe
     // takeDamage(). Läuft unabhängig davon, ob gerade gesprintet wird.
-    if (this.shieldRegenCooldown > 0) {
-      this.shieldRegenCooldown = Math.max(0, this.shieldRegenCooldown - deltaSeconds)
-    } else if (this.shield < MAX_SHIELD) {
-      this.shield = Math.min(MAX_SHIELD, this.shield + SHIELD_REGEN_RATE * deltaSeconds)
-    }
+    if (!this.networkControlled) regenerateShield(this.vitals, deltaSeconds)
 
     // Sprinten auflösen: nicht im Ducken, nur bei aktiver Bewegungseingabe,
     // und nur mit genug Stamina. Einmal gestartet läuft der Sprint bis auf

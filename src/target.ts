@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { Palette } from './palette'
 import type { Damageable } from './damageable'
 import { TeamColor, type Team } from './team'
+import { MAX_HEALTH, MAX_SHIELD, applyDamage, regenerateShield, type Vitals } from './shared/gameRules'
 
 // Schießziel mit denselben Werten wie der echte Spieler (100 HP + 25
 // Schild, siehe player.ts) - vorher hatte es nur 10 HP und starb bei 15
@@ -16,10 +17,6 @@ import { TeamColor, type Team } from './team'
 // playerAvatar.ts), damit sich das Team-System/Kill-Counter schon jetzt
 // im Singleplayer sinnvoll testen lässt.
 
-const MAX_HEALTH = 100
-const MAX_SHIELD = 25
-const SHIELD_REGEN_DELAY = 3 // wie bei player.ts - Sekunden ohne Treffer, bis das Schild wieder auflädt
-const SHIELD_REGEN_RATE = 10
 const RESPAWN_DELAY = 2.5 // Sekunden bis das Ziel nach dem Tod wieder erscheint
 const HIT_FLASH_DURATION = 0.08 // Sekunden, wie lange das Ziel bei einem Treffer aufleuchtet
 
@@ -31,9 +28,7 @@ const SHIELD_BAR_Y_OFFSET = HEALTH_BAR_Y_OFFSET + HEALTH_BAR_HEIGHT + 0.03 // d�
 export class Target implements Damageable {
   readonly mesh: THREE.Mesh
   readonly team: Team = 'red'
-  private health = MAX_HEALTH
-  private shield = MAX_SHIELD
-  private shieldRegenCooldown = 0
+  private vitals: Vitals = { health: MAX_HEALTH, shield: MAX_SHIELD, shieldRegenCooldown: 0 }
   private respawnRemaining = 0
   private hitFlashRemaining = 0
   private material: THREE.MeshStandardMaterial
@@ -104,29 +99,14 @@ export class Target implements Damageable {
   }
 
   get isAlive(): boolean {
-    return this.health > 0
+    return this.vitals.health > 0
   }
 
-  // Schild absorbiert Schaden zuerst, komplett bis es leer ist - identisches
-  // Modell wie beim Spieler (siehe player.ts).
+  // Identisches Schadensmodell wie beim Spieler (shared/gameRules.ts).
   takeDamage(amount: number) {
     if (!this.isAlive) return
-
-    this.shieldRegenCooldown = SHIELD_REGEN_DELAY
-
-    let remaining = amount
-    if (this.shield > 0) {
-      const absorbed = Math.min(this.shield, remaining)
-      this.shield -= absorbed
-      remaining -= absorbed
-    }
-
     this.hitFlashRemaining = HIT_FLASH_DURATION
-    if (remaining <= 0) return
-
-    this.health = Math.max(0, this.health - remaining)
-
-    if (this.health === 0) {
+    if (applyDamage(this.vitals, amount)) {
       this.mesh.visible = false
       this.respawnRemaining = RESPAWN_DELAY
     }
@@ -136,18 +116,12 @@ export class Target implements Damageable {
     if (this.respawnRemaining > 0) {
       this.respawnRemaining = Math.max(0, this.respawnRemaining - deltaSeconds)
       if (this.respawnRemaining === 0) {
-        this.health = MAX_HEALTH
-        this.shield = MAX_SHIELD
-        this.shieldRegenCooldown = 0
+        this.vitals = { health: MAX_HEALTH, shield: MAX_SHIELD, shieldRegenCooldown: 0 }
         this.mesh.visible = true
       }
     }
 
-    if (this.shieldRegenCooldown > 0) {
-      this.shieldRegenCooldown = Math.max(0, this.shieldRegenCooldown - deltaSeconds)
-    } else if (this.shield < MAX_SHIELD) {
-      this.shield = Math.min(MAX_SHIELD, this.shield + SHIELD_REGEN_RATE * deltaSeconds)
-    }
+    regenerateShield(this.vitals, deltaSeconds)
 
     if (this.hitFlashRemaining > 0) {
       this.hitFlashRemaining = Math.max(0, this.hitFlashRemaining - deltaSeconds)
@@ -164,7 +138,7 @@ export class Target implements Damageable {
     // ohne Rotation des Eltern-Meshes müsste man sonst umrechnen.
     this.healthBarGroup.quaternion.copy(camera.quaternion)
 
-    const ratio = this.health / MAX_HEALTH
+    const ratio = this.vitals.health / MAX_HEALTH
     this.healthBarFill.scale.x = ratio
     this.healthBarFillMaterial.color.set(ratio <= 0.3 ? Palette.accentWarm : TeamColor.red)
 
@@ -172,7 +146,7 @@ export class Target implements Damageable {
     this.healthBarGroup.visible = this.mesh.visible
 
     this.shieldBarGroup.quaternion.copy(camera.quaternion)
-    this.shieldBarFill.scale.x = this.shield / MAX_SHIELD
+    this.shieldBarFill.scale.x = this.vitals.shield / MAX_SHIELD
     this.shieldBarGroup.visible = this.mesh.visible
   }
 }

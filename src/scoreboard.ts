@@ -6,6 +6,11 @@ import type { Team } from './team'
 export class Scoreboard {
   private scores: Record<Team, number> = { red: 0, blue: 0 }
 
+  // Im Multiplayer zählt der Server, der Client übernimmt nur den Stand
+  setScores(scores: Record<Team, number>) {
+    this.scores = { ...scores }
+  }
+
   addKill(killerTeam: Team) {
     this.scores[killerTeam] += 1
   }

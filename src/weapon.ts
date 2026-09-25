@@ -3,6 +3,7 @@ import { Palette } from './palette'
 import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
 import type { Team } from './team'
+import { FIRE_COOLDOWN, HIT_DAMAGE } from './shared/gameRules'
 
 // Hitscan-Raycast genau aus der Bildschirmmitte (dahin zeigt das Fadenkreuz),
 // plus sichtbares Waffenmodell mit Rückstoß (siehe weaponView.ts), Munition
@@ -10,14 +11,12 @@ import type { Team } from './team'
 // Schnittstelle behandelt (siehe damageable.ts) - das ist absichtlich so
 // entkoppelt, damit später Multiplayer-Gegner ohne Änderungen hier andocken.
 
-const FIRE_COOLDOWN = 0.15 // Sekunden zwischen zwei Schüssen (verhindert Spam)
 const IMPACT_MARKER_LIFETIME = 2 // Sekunden, bis ein Einschussloch wieder verschwindet
 const TRACER_LIFETIME = 0.06 // Sekunden, wie lange die Leuchtspur sichtbar bleibt
 const TRACER_MAX_DISTANCE = 60 // Länge des Tracers, falls der Schuss nichts trifft (fliegt "ins Leere")
 
 const MAGAZINE_SIZE = 12
 const RELOAD_DURATION = 1.2 // Sekunden für einen Nachlade-Vorgang
-const HIT_DAMAGE = 15 // fester Schaden pro Treffer (25 Schild absorbiert zuerst, siehe player.ts)
 
 export interface AmmoState {
   current: number
@@ -142,7 +141,11 @@ export class Weapon {
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
 
     const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
-    const hits = this.raycaster.intersectObjects(this.shootables, false)
+    // Unsichtbare Objekte (tote Spieler/Ziele) würden sonst Kugeln abfangen -
+    // der Raycaster selbst ignoriert "visible" nicht.
+    const hits = this.raycaster
+      .intersectObjects(this.shootables, false)
+      .filter((hit) => hit.object.visible)
 
     if (hits.length > 0) {
       // Generisch: könnte ein Ziel-Dummy oder (später) ein anderer Spieler
