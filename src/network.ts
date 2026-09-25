@@ -9,6 +9,7 @@ import {
   type SnapshotEntry,
   type Scores,
   type Vec3,
+  type RosterEntry,
 } from './shared/protocol'
 import type { Team } from './team'
 
@@ -31,6 +32,7 @@ function resolveServerUrl(): string | null {
 
 export interface NetworkHandlers {
   getLocalState: () => PlayerNetworkState
+  getName: () => string
   // Server hat uns aufgenommen und Team + Spawn-Punkt festgelegt
   onWelcome: (team: Team, spawnIndex: number, scores: Scores) => void
   // Snapshot ohne den eigenen Eintrag
@@ -60,6 +62,8 @@ export class NetworkClient {
   connectingSince: number | null = null
   localId: PlayerId | null = null
   readonly remotePlayers = new Set<PlayerId>()
+  // Alle verbundenen Spieler inkl. uns selbst (Namen, Team, Kills/Tode)
+  readonly roster = new Map<PlayerId, RosterEntry>()
 
   private readonly url: string | null
   private socket: WebSocket | null = null
@@ -94,7 +98,7 @@ export class NetworkClient {
     this.socket = socket
 
     socket.addEventListener('open', () => {
-      this.send({ t: 'hello', version: PROTOCOL_VERSION })
+      this.send({ t: 'hello', version: PROTOCOL_VERSION, name: this.handlers.getName() })
     })
 
     socket.addEventListener('message', (event) => {
@@ -112,6 +116,7 @@ export class NetworkClient {
       this.socket = null
       this.localId = null
       this.remotePlayers.clear()
+      this.roster.clear()
       // Bei "voll" oder "veraltet" hilft stumpfes Neuverbinden nicht bzw.
       // nur verzögert - "voll" wird trotzdem langsam weiter probiert, da
       // ja jemand gehen kann.
@@ -130,17 +135,15 @@ export class NetworkClient {
         this.reconnectDelay = RECONNECT_MIN_MS
         this.localId = message.id
         this.life = 0
-        this.remotePlayers.clear()
-        for (const id of message.players) {
-          if (id !== message.id) this.remotePlayers.add(id)
-        }
         this.handlers.onWelcome(message.team, message.spawnIndex, message.scores)
         break
-      case 'join':
-        this.remotePlayers.add(message.id)
-        break
-      case 'leave':
-        this.remotePlayers.delete(message.id)
+      case 'roster':
+        this.roster.clear()
+        this.remotePlayers.clear()
+        for (const entry of message.players) {
+          this.roster.set(entry.id, entry)
+          if (entry.id !== this.localId) this.remotePlayers.add(entry.id)
+        }
         break
       case 'rejected':
         this.status = message.reason === 'full' ? 'full' : 'outdated'
@@ -166,6 +169,14 @@ export class NetworkClient {
         this.handlers.onHurt(message.by)
         break
     }
+  }
+
+  nameOf(id: PlayerId): string {
+    return this.roster.get(id)?.name ?? `Spieler ${id}`
+  }
+
+  sendName(name: string) {
+    this.send({ t: 'setName', name })
   }
 
   sendHit(target: PlayerId) {

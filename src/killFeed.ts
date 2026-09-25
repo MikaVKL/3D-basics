@@ -3,9 +3,8 @@ import type { PlayerId } from './shared/protocol'
 const ENTRY_LIFETIME_MS = 4000
 const MAX_ENTRIES = 5
 
-// Kill-Anzeige oben rechts ("Spieler 3 ✕ Spieler 5"). Solange es keine
-// Spielernamen gibt, werden die Server-IDs angezeigt; die eigenen Kills
-// bzw. der eigene Tod sind farblich hervorgehoben.
+// Kill-Anzeige oben rechts ("Mika ✕ Tom"); die eigenen Kills bzw. der
+// eigene Tod sind farblich hervorgehoben.
 export class KillFeed {
   private readonly container: HTMLElement
   private readonly entries: { element: HTMLElement; expiresAt: number }[] = []
@@ -14,8 +13,13 @@ export class KillFeed {
     this.container = container
   }
 
-  add(killer: PlayerId, victim: PlayerId, localId: PlayerId | null) {
-    const name = (id: PlayerId) => (id === localId ? 'Du' : `Spieler ${id}`)
+  add(
+    killer: PlayerId,
+    victim: PlayerId,
+    localId: PlayerId | null,
+    nameOf: (id: PlayerId) => string
+  ) {
+    const name = (id: PlayerId) => (id === localId ? 'Du' : nameOf(id))
     const element = document.createElement('div')
     element.className = 'kill-entry'
     if (killer === localId) element.classList.add('own-kill')

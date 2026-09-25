@@ -29,6 +29,9 @@
     <div id="net-status" data-status="offline"></div>
     <div id="kill-feed"></div>
 
+    <!-- Punktetabelle: Tab gedrückt halten (Touch: auf den Punktestand tippen) -->
+    <div id="score-table" class="hidden"></div>
+
     <!-- Lebensanzeige (unten links): Stamina + Schild + Leben gestapelt -->
     <div id="health-hud">
       <div id="spawn-protection" class="hidden">Spawn-Schutz</div>
@@ -70,10 +73,11 @@
     <div id="overlay">
       <div id="overlay-content">
         <h1>Dusk Arena</h1>
+        <input id="name-input" type="text" maxlength="16" placeholder="Dein Name" autocomplete="off" spellcheck="false" />
         <p id="overlay-instruction">Klicken, um zu spielen</p>
         <p class="hint" id="overlay-hint">
           WASD: Bewegen &nbsp;·&nbsp; Maus: Umschauen &nbsp;·&nbsp; Klick: Schießen &nbsp;·&nbsp; R: Nachladen &nbsp;·&nbsp;
-          Leertaste: Springen &nbsp;·&nbsp; Strg/C: Ducken &nbsp;·&nbsp; Shift: Sprinten &nbsp;·&nbsp; ESC: Menü
+          Leertaste: Springen &nbsp;·&nbsp; Strg/C: Ducken &nbsp;·&nbsp; Shift: Sprinten &nbsp;·&nbsp; Tab: Punkte &nbsp;·&nbsp; ESC: Menü
         </p>
       </div>
     </div>

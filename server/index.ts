@@ -3,6 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws'
 import {
   PROTOCOL_VERSION,
   MAX_PLAYERS,
+  MAX_NAME_LENGTH,
   DEFAULT_SERVER_PORT,
   TICK_RATE,
   type ClientMessage,
@@ -11,6 +12,7 @@ import {
   type PlayerId,
   type Scores,
   type Vec3,
+  type RosterEntry,
 } from '../src/shared/protocol.ts'
 import { ARENA_BOUNDS, SPAWN_POINTS } from '../src/shared/arenaLayout.ts'
 import {
@@ -44,6 +46,9 @@ const HEARTBEAT_INTERVAL_MS = 10000
 
 interface Client {
   id: PlayerId
+  name: string
+  kills: number
+  deaths: number
   socket: WebSocket
   alive: boolean
   team: Team
@@ -74,6 +79,26 @@ const MAX_HIT_DISTANCE = 100
 
 function isAlive(client: Client): boolean {
   return client.vitals.health > 0
+}
+
+// Steuerzeichen raus, Leerraum zusammenfassen, Länge begrenzen. Leer ->
+// "Spieler <id>", damit im Kill-Feed nie ein leerer Name steht.
+function sanitizeName(raw: unknown, id: PlayerId): string {
+  const name = typeof raw === 'string'
+    ? raw.replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, MAX_NAME_LENGTH)
+    : ''
+  return name || `Spieler ${id}`
+}
+
+function broadcastRoster() {
+  const players: RosterEntry[] = [...clients.values()].map((c) => ({
+    id: c.id,
+    name: c.name,
+    team: c.team,
+    kills: c.kills,
+    deaths: c.deaths,
+  }))
+  broadcast({ t: 'roster', players })
 }
 
 function isProtected(client: Client, now: number): boolean {
@@ -260,8 +285,12 @@ wss.on('connection', (socket) => {
 
       const team = pickTeam()
       const spawnIndex = pickSpawnIndex(team)
+      const id = nextPlayerId++
       client = {
-        id: nextPlayerId++,
+        id,
+        name: sanitizeName(message.name, id),
+        kills: 0,
+        deaths: 0,
         socket,
         alive: true,
         team,
@@ -278,14 +307,13 @@ wss.on('connection', (socket) => {
       send(socket, {
         t: 'welcome',
         id: client.id,
-        players: [...clients.keys()],
         team,
         spawnIndex,
         scores,
       })
-      broadcast({ t: 'join', id: client.id }, client.id)
+      broadcastRoster()
       console.log(
-        `Spieler ${client.id} verbunden, Team ${team}, Spawn ${spawnIndex} (${clients.size}/${MAX_PLAYERS})`
+        `Spieler ${client.id} "${client.name}" verbunden, Team ${team}, Spawn ${spawnIndex} (${clients.size}/${MAX_PLAYERS})`
       )
       return
     }
@@ -301,6 +329,9 @@ wss.on('connection', (socket) => {
       handleHit(client, message.target)
     } else if (message.t === 'shot') {
       handleShot(client, message.from, message.to)
+    } else if (message.t === 'setName') {
+      client.name = sanitizeName(message.name, client.id)
+      broadcastRoster()
     }
   }
 
@@ -312,7 +343,7 @@ wss.on('connection', (socket) => {
     clearTimeout(helloTimeout)
     if (!client) return
     clients.delete(client.id)
-    broadcast({ t: 'leave', id: client.id })
+    broadcastRoster()
     // Neue Runde, sobald niemand mehr da ist
     if (clients.size === 0) scores = { red: 0, blue: 0 }
     console.log(`Spieler ${client.id} getrennt (${clients.size}/${MAX_PLAYERS})`)
@@ -354,7 +385,10 @@ function handleHit(shooter: Client, targetId: unknown) {
   if (killed) {
     target.respawnAt = now + RESPAWN_DELAY * 1000
     scores[shooter.team] += 1
+    shooter.kills += 1
+    target.deaths += 1
     broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores })
+    broadcastRoster()
     console.log(`Spieler ${shooter.id} hat Spieler ${target.id} eliminiert (${scores.red}:${scores.blue})`)
   }
 }

@@ -17,6 +17,7 @@ import { RemotePlayers } from './remotePlayers'
 import { TeamLabel } from './team'
 import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
+import { ScoreTable } from './scoreTable'
 
 // ---------------------------------------------------------------------------
 // Grundgerüst: Szene, Kamera, Renderer
@@ -166,8 +167,32 @@ const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#damage-vignette')!
 )
 const remotePlayers = new RemotePlayers(scene, arena.shootables, (id) => network.sendHit(id))
+// Name wird im Browser gemerkt. localStorage kann in manchen Umgebungen
+// (privater Modus, blockierte Website-Daten) werfen - dann eben ohne.
+const NAME_STORAGE_KEY = 'duskArena.name'
+const nameInput = document.querySelector<HTMLInputElement>('#name-input')!
+try {
+  nameInput.value = localStorage.getItem(NAME_STORAGE_KEY) ?? ''
+} catch {
+  // ignorieren
+}
+// Klick ins Feld soll nicht das Spiel starten (Overlay-Klick)
+nameInput.addEventListener('click', (event) => event.stopPropagation())
+nameInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') nameInput.blur()
+})
+nameInput.addEventListener('change', () => {
+  try {
+    localStorage.setItem(NAME_STORAGE_KEY, nameInput.value.trim())
+  } catch {
+    // ignorieren
+  }
+  network.sendName(nameInput.value)
+})
+
 const network: NetworkClient = new NetworkClient({
   getLocalState: () => player.getNetworkState(),
+  getName: () => nameInput.value,
   onWelcome: (team, spawnIndex, scores) => {
     player.team = team
     player.networkControlled = true
@@ -183,7 +208,7 @@ const network: NetworkClient = new NetworkClient({
   onKill: (killer, victim, scores) => {
     scoreboard.setScores(scores)
     if (killer === network.localId) hitFeedback.showHit(true)
-    killFeed.add(killer, victim, network.localId)
+    killFeed.add(killer, victim, network.localId, (id) => network.nameOf(id))
   },
   onRespawn: (id, spawnIndex) => {
     if (id === network.localId) player.spawn(arena.spawnPoints[spawnIndex])
@@ -235,7 +260,7 @@ function setActive(active: boolean) {
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
   overlayHint.textContent =
-    'Links: Joystick zum Bewegen (voll ausgelenkt = Sprinten) · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen/Ducken'
+    'Links: Joystick zum Bewegen (voll ausgelenkt = Sprinten) · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen/Ducken · Punktestand oben antippen: Tabelle'
   touchControls.classList.remove('hidden')
 
   const touchInput = new TouchInput(
@@ -290,6 +315,23 @@ const shieldBarFill = document.querySelector<HTMLDivElement>('#shield-bar-fill')
 const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill')!
 const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
 const spawnProtectionHud = document.querySelector<HTMLDivElement>('#spawn-protection')!
+const scoreTable = new ScoreTable(document.querySelector<HTMLDivElement>('#score-table')!)
+
+// Tab gedrückt halten zeigt die Tabelle (Standardverhalten "Fokus
+// weiterschalten" unterdrücken). Touch: Tippen auf den Punktestand.
+window.addEventListener('keydown', (event) => {
+  if (event.code !== 'Tab') return
+  event.preventDefault()
+  scoreTable.setVisible(true)
+})
+window.addEventListener('keyup', (event) => {
+  if (event.code === 'Tab') scoreTable.setVisible(false)
+})
+if (isTouchDevice) {
+  const scoreboardElement = document.querySelector<HTMLDivElement>('#scoreboard')!
+  scoreboardElement.style.pointerEvents = 'auto'
+  scoreboardElement.addEventListener('click', () => scoreTable.setVisible(!scoreTable.visible))
+}
 const killFeed = new KillFeed(document.querySelector<HTMLDivElement>('#kill-feed')!)
 
 // Kostenloses Hosting schläft ein - der erste Verbindungsaufbau dauert
@@ -366,6 +408,7 @@ function animate() {
   remotePlayers.update(deltaSeconds, network.remotePlayers)
   killFeed.update()
   hitFeedback.update()
+  scoreTable.render(network.roster, network.localId)
   updateAmmoHud()
   updateHealthHud()
   updateShieldAndStaminaHud()

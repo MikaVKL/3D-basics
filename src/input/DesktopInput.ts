@@ -29,7 +29,11 @@ export class DesktopInput {
     this.weapon = weapon
     this.onLockChange = onLockChange
 
-    window.addEventListener('keydown', (e) => this.setKey(e.code, true))
+    window.addEventListener('keydown', (e) => {
+      // Tippen im Namensfeld (Startbildschirm) soll nicht springen/laufen
+      if (e.target instanceof HTMLInputElement) return
+      this.setKey(e.code, true)
+    })
     window.addEventListener('keyup', (e) => this.setKey(e.code, false))
 
     document.addEventListener('mousemove', (e) => this.handleMouseMove(e))
@@ -76,7 +80,9 @@ export class DesktopInput {
         this.keysPressed.right = pressed
         break
       case 'Space':
-        this.player.jump()
+        // Nur beim Drücken - vorher sprang auch das Loslassen, bei länger
+        // gehaltener Taste also ein zweites Mal nach der Landung
+        if (pressed) this.player.jump()
         break
       case 'KeyR':
         if (pressed) this.weapon.reload()

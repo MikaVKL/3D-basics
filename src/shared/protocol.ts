@@ -7,9 +7,10 @@ import type { Team } from '../team.ts'
 // Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
 // Browser mit gecachtem, altem Client-Code einen neueren Server mit
 // Nachrichten füttern, die dieser falsch versteht.
-export const PROTOCOL_VERSION = 8
+export const PROTOCOL_VERSION = 9
 
 export const MAX_PLAYERS = 8
+export const MAX_NAME_LENGTH = 16
 export const DEFAULT_SERVER_PORT = 8080
 
 export type PlayerId = number
@@ -54,8 +55,20 @@ export interface Vec3 {
   z: number
 }
 
+// Spielerliste mit Namen und Statistik - kommt bei jeder Änderung
+// (Beitritt, Verlassen, Name, Kill) komplett neu, bei max. 8 Spielern
+// einfacher und robuster als einzelne Änderungsnachrichten
+export interface RosterEntry {
+  id: PlayerId
+  name: string
+  team: Team
+  kills: number
+  deaths: number
+}
+
 export type ClientMessage =
-  | { t: 'hello'; version: number }
+  | { t: 'hello'; version: number; name: string }
+  | { t: 'setName'; name: string }
   // time = eigene Uhr (performance.now), life = Nummer des aktuellen Lebens
   // (siehe 'respawn') - Zustände aus einem früheren Leben verwirft der Server
   | { t: 'state'; state: PlayerNetworkState; time: number; life: number }
@@ -71,13 +84,11 @@ export type ServerMessage =
   | {
       t: 'welcome'
       id: PlayerId
-      players: PlayerId[]
       team: Team
       spawnIndex: number
       scores: Scores
     }
-  | { t: 'join'; id: PlayerId }
-  | { t: 'leave'; id: PlayerId }
+  | { t: 'roster'; players: RosterEntry[] }
   | { t: 'rejected'; reason: RejectReason }
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores }
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number }
