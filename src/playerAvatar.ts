@@ -3,25 +3,16 @@ import { EYE_HEIGHT, CROUCH_EYE_HEIGHT } from './player'
 import type { PlayerNetworkState } from './shared/protocol'
 import { TeamColor, type Team } from './team'
 
-// Sichtbare Spieler-Hülle - Platzhalter-Modell, nutzt bewusst dieselbe
-// Kapsel-Form wie die Ziele (target.ts). Wird ausschließlich über
-// applyState() mit einem PlayerNetworkState gesteuert: für die eigene Hülle
-// kommt der aus der lokalen Kamera, für andere Spieler interpoliert aus den
-// Server-Snapshots (remotePlayers.ts) - die Hülle selbst kennt keinen
-// Unterschied.
-//
-// Die eigene Hülle wird NICHT in die "shootables"-Liste aufgenommen (siehe
-// main.ts) - man soll sich nicht selbst treffen können.
+// Spieler-Hülle (Platzhalter-Kapsel), gesteuert nur über applyState() -
+// eigene und fremde Hülle nutzen denselben Code
 
 const CAPSULE_RADIUS = 0.35
 const CAPSULE_LENGTH = 1.0 // Zylinderteil; Gesamthöhe = LENGTH + 2*RADIUS
 const STANDING_HEIGHT = CAPSULE_LENGTH + 2 * CAPSULE_RADIUS
-// Beim Ducken wird die Hülle vertikal gestaucht (per scale.y), damit sie
-// nicht durch den Boden clippt oder in der Luft hängt - sichtbares Pendant
-// zur reduzierten Augenhöhe in player.ts.
+// Beim Ducken per scale.y gestaucht
 const CROUCH_HEIGHT = 1.1
 const CROUCH_SCALE_Y = CROUCH_HEIGHT / STANDING_HEIGHT
-const HIT_FLASH_DURATION = 0.08 // wie bei target.ts
+const HIT_FLASH_DURATION = 0.08
 
 export class PlayerAvatar {
   readonly mesh: THREE.Mesh
@@ -30,8 +21,6 @@ export class PlayerAvatar {
   private hitFlashRemaining = 0
 
   constructor(team: Team) {
-    // Team-Farbe statt einer neutralen Akzentfarbe - man muss auf den ersten
-    // Blick erkennen können, wer Freund und wer Feind ist (siehe team.ts).
     this.material = new THREE.MeshStandardMaterial()
     const geometry = new THREE.CapsuleGeometry(CAPSULE_RADIUS, CAPSULE_LENGTH, 4, 8)
     this.mesh = new THREE.Mesh(geometry, this.material)
@@ -42,13 +31,11 @@ export class PlayerAvatar {
   setTeam(team: Team) {
     this.team = team
     this.material.color.set(TeamColor[team])
-    // Team-Zugehörigkeit direkt am Mesh - weapon.ts kann so generisch (ohne
-    // den Objekttyp zu kennen) Freundschaftliches Feuer verhindern.
+    // weapon.ts liest das Team am Mesh (Friendly-Fire)
     this.mesh.userData.team = team
   }
 
-  // Yaw, nicht Pitch - sonst würde sich die Figur beim Umschauen nach
-  // oben/unten seltsam nach vorne/hinten neigen.
+  // Nur Yaw - sonst kippt die Figur beim Hoch-/Runterschauen
   applyState(state: PlayerNetworkState) {
     if (this.team !== state.team) this.setTeam(state.team)
 
@@ -63,14 +50,12 @@ export class PlayerAvatar {
     this.mesh.visible = state.isAlive
   }
 
-  // Spawn-Schutz: halb durchsichtig, damit man sieht "gerade nicht
-  // verwundbar" und keine Munition verschwendet
+  // Spawn-Schutz: halb durchsichtig
   setProtected(isProtected: boolean) {
     this.material.transparent = isProtected
     this.material.opacity = isProtected ? 0.4 : 1
   }
 
-  // Treffer-Feedback für den Schützen: kurz weiß aufblitzen
   flash() {
     this.hitFlashRemaining = HIT_FLASH_DURATION
     this.material.color.set(0xffffff)

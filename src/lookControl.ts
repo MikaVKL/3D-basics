@@ -1,15 +1,9 @@
 import * as THREE from 'three'
 
-// Dreht die Kamera anhand von Look-Deltas (z.B. Mausbewegung oder Touch-Wisch-Geste).
-// Bewusst von der Eingabequelle getrennt: Maus- UND Touch-Steuerung rufen am Ende
-// beide nur `rotate(deltaX, deltaY)` auf, damit die Dreh-Logik nicht doppelt
-// geschrieben werden muss.
-//
-// 'YXZ'-Euler-Reihenfolge ist der Standard für Ego-Shooter-Kameras: erst Yaw
-// (links/rechts, Y-Achse), dann Pitch (hoch/runter, X-Achse). So bleibt der
-// Horizont beim Umschauen immer gerade (kein "Rollen" der Kamera).
+// Kamera-Drehung für Maus und Touch. 'YXZ' (erst Yaw, dann Pitch) hält den
+// Horizont gerade.
 
-const PITCH_LIMIT = Math.PI / 2 - 0.05 // knapp unter 90°, damit man nicht "durchdreht"
+const PITCH_LIMIT = Math.PI / 2 - 0.05
 
 export class LookControl {
   private euler = new THREE.Euler(0, 0, 0, 'YXZ')

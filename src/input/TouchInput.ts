@@ -2,19 +2,12 @@ import type { Player } from '../player'
 import type { LookControl } from '../lookControl'
 import type { Weapon } from '../weapon'
 
-// Touch-Steuerung fürs Tablet/Handy (z.B. iPad ohne Maus/Tastatur):
-// - Linke Bildschirmhälfte: virtueller Joystick zum Bewegen (erscheint dort,
-//   wo man hintippt - "floating joystick", wie in den meisten Mobile-Shootern)
-// - Rechte Bildschirmhälfte: Wisch-Geste zum Umschauen (wie ein Kamera-Drag)
-// - Extra Buttons: Springen, Ducken (Ducken ist ein Umschalter/Toggle statt
-//   "gedrückt halten" - auf einem Touchscreen ist ein Dauerhalten während man
-//   gleichzeitig den Joystick bedient unpraktisch)
-//
-// Beide Zonen tracken ihren eigenen Finger über die Touch-ID, damit man
-// gleichzeitig laufen UND umschauen kann (Multi-Touch).
+// Touch: links schwebender Joystick, rechts Wischen zum Umschauen, Buttons.
+// Ducken ist ein Umschalter (Halten + Joystick ist unpraktisch). Jede Zone
+// verfolgt ihren eigenen Finger (Laufen und Umschauen gleichzeitig).
 
-const JOYSTICK_RADIUS = 45 // maximaler Ausschlag des Joystick-Daumens in Pixel
-const SPRINT_JOYSTICK_THRESHOLD = 0.9 // ab dieser Auslenkung (Anteil von JOYSTICK_RADIUS) wird gesprintet
+const JOYSTICK_RADIUS = 45 // Pixel
+const SPRINT_JOYSTICK_THRESHOLD = 0.9 // Auslenkung, ab der gesprintet wird
 
 interface TouchElements {
   moveZone: HTMLElement
@@ -117,13 +110,10 @@ export class TouchInput {
 
     this.elements.joystickThumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`
 
-    // Nach oben ziehen = vorwärts, daher das Minus bei y.
+    // Nach oben = vorwärts
     this.player.setMoveInput(dx / JOYSTICK_RADIUS, -dy / JOYSTICK_RADIUS)
 
-    // Kein extra Sprint-Button auf Touch (der Bildschirm ist schon voll
-    // genug) - stattdessen läuft man automatisch, wenn der Joystick fast
-    // bis zum Anschlag ausgelenkt wird. Fühlt sich intuitiv an: "voll
-    // drücken" = "voll rennen", wie in vielen Mobile-Shootern.
+    // Sprint per voller Auslenkung statt eigenem Button
     this.player.setSprinting(distance >= JOYSTICK_RADIUS * SPRINT_JOYSTICK_THRESHOLD)
   }
 

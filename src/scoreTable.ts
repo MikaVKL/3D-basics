@@ -1,8 +1,7 @@
 import type { PlayerId, RosterEntry } from './shared/protocol'
 import { TeamLabel, type Team } from './team'
 
-// Punktetabelle (Tab gedrückt halten): pro Team die Spieler mit Kills und
-// Toden, beste zuerst. Wird nur neu gebaut, wenn sie sichtbar ist.
+// Punktetabelle pro Team (nur neu gebaut, wenn sichtbar)
 export class ScoreTable {
   private readonly container: HTMLElement
 

@@ -1,12 +1,7 @@
-// Stecken-Fuzz-Test: viele simulierte Spieler laufen/springen/ducken
-// zufällig durch die Arena (reine Physik, ohne Rendern, im Browser über
-// window.__dusk). Gemeldet wird jede Stelle, an der der Körper in einem
-// Hindernis steckt, man sich nicht mehr wegbewegen kann oder ohne Sprung
-// ruckartig nach oben gezogen wird.
+// Simulierte Spieler laufen/springen/ducken zufällig; gemeldet wird Stecken
+// im Hindernis, Festsitzen und Hochziehen ohne Sprung. Deterministisch pro Seed.
 //
 //   node tests/stuck-fuzz.mjs [spieler=1000] [sekunden=30] [seed=1] [duckanteil=0.15]
-//
-// Deterministisch pro Seed - gut für Vorher/Nachher-Vergleiche.
 import { startServers, launchBrowser, openGame } from './lib.mjs'
 
 const [AGENTS = 1000, SECONDS = 30, SEED = 1, CROUCH = 0.15] = process.argv.slice(2).map(Number)

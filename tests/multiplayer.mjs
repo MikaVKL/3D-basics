@@ -20,8 +20,7 @@ import {
 } from './lib.mjs'
 
 const LONG = process.argv.includes('--long')
-// Aus dem Quelltext gelesen, damit der Roh-Client (eingefrorener Tab) nicht
-// bei jeder Protokolländerung angepasst werden muss
+// Aus dem Quelltext, damit der Roh-Client nicht nachgepflegt werden muss
 const PROTOCOL_VERSION = Number(
   readFileSync(new URL('../src/shared/protocol.ts', import.meta.url), 'utf8').match(/PROTOCOL_VERSION = (\d+)/)[1]
 )

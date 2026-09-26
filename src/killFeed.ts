@@ -3,8 +3,7 @@ import type { PlayerId } from './shared/protocol'
 const ENTRY_LIFETIME_MS = 4000
 const MAX_ENTRIES = 5
 
-// Kill-Anzeige oben rechts ("Mika ✕ Tom"); die eigenen Kills bzw. der
-// eigene Tod sind farblich hervorgehoben.
+// Kill-Anzeige oben rechts, eigene Kills/Tode hervorgehoben
 export class KillFeed {
   private readonly container: HTMLElement
   private readonly entries: { element: HTMLElement; expiresAt: number }[] = []

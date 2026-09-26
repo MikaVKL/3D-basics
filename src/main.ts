@@ -19,16 +19,14 @@ import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
 
-// ---------------------------------------------------------------------------
-// Grundgerüst: Szene, Kamera, Renderer
-// ---------------------------------------------------------------------------
+// --- Grundgerüst: Szene, Kamera, Renderer ---
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color(Palette.sky)
-scene.fog = new THREE.Fog(Palette.fog, 15, 45) // sorgt für einen weichen Horizont
+scene.fog = new THREE.Fog(Palette.fog, 15, 45)
 
 const camera = new THREE.PerspectiveCamera(
-  75, // Sichtfeld (FOV) - 75° ist ein typischer Wert für Ego-Shooter
+  75, // FOV
   window.innerWidth / window.innerHeight,
   0.1,
   100
@@ -38,29 +36,15 @@ scene.add(camera)
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setPixelRatio(window.devicePixelRatio)
-// Bewusst KEINE Schlagschatten (shadowMap): Bei einer einzelnen, festen
-// Lichtquelle sahen die geworfenen Schatten seltsam/unpassend aus (keine
-// erkennbare Korrespondenz zur Lichtposition). Die einzelnen Flächen von
-// Wänden/Kisten bleiben trotzdem klar unterscheidbar, weil das
-// direktionale Licht sie je nach Winkel unterschiedlich hell einfärbt -
-// das ist normale Flächen-Schattierung, unabhängig von Schlagschatten.
+// Bewusst ohne Schlagschatten (wirkten unpassend); Flächen bleiben durch
+// die Schattierung des gerichteten Lichts unterscheidbar
 
 const appElement = document.querySelector<HTMLDivElement>('#app')!
 appElement.appendChild(renderer.domElement)
 
-// ---------------------------------------------------------------------------
-// Beleuchtung
-// ---------------------------------------------------------------------------
-// Zwei Lichtquellen reichen für einen stimmungsvollen Look:
-// - AmbientLight: gleichmäßige Grundhelligkeit, damit Schattenseiten nicht
-//   komplett schwarz sind
-// - DirectionalLight: simuliert Mond-/Abendlicht, wirft die eigentlichen
-//   (weichen) Schatten und gibt den Objekten Tiefe
-
-// Intensitäten erhöht (1.2 -> 1.8 / 2.2 -> 2.8): Nutzerfeedback, dass Kanten
-// im Dämmerungslicht schwer zu erkennen waren. Zusammen mit den neuen
-// Kanten-Outlines (siehe arena.ts, addEdgeOutline) sollte das die Lesbarkeit
-// deutlich verbessern, ohne die Dusk-Stimmung komplett zu verlieren.
+// --- Beleuchtung ---
+// Grundhelligkeit + gerichtetes Abendlicht; so hell, dass Kanten im
+// Dämmerlicht noch gut erkennbar sind
 const ambientLight = new THREE.AmbientLight(Palette.ambientLight, 1.8)
 scene.add(ambientLight)
 
@@ -68,19 +52,12 @@ const sunLight = new THREE.DirectionalLight(Palette.sunLight, 2.8)
 sunLight.position.set(-15, 20, 10)
 scene.add(sunLight)
 
-// ---------------------------------------------------------------------------
-// Arena aufbauen
-// ---------------------------------------------------------------------------
+// --- Arena aufbauen ---
 
 const arena = buildArena()
 scene.add(arena.group)
 
-// ---------------------------------------------------------------------------
-// Entwickler-Debug-Modus: macht normalerweise unsichtbare Dinge sichtbar
-// (aktuell Spawn-Punkte, später z.B. Team-Spawnzonen) - Taste F1 schaltet
-// um. Rein zum Entwickeln gedacht, siehe debugMarkers.ts für Details. Am
-// Ende der Entwicklung kann dieser ganze Block einfach entfernt werden.
-// ---------------------------------------------------------------------------
+// --- Debug-Modus (F1): zeigt Spawn-Punkte, nur zum Entwickeln ---
 
 const debugMarkers = new DebugMarkers(scene)
 arena.spawnPoints.forEach((point, index) => debugMarkers.addSpawnPoint(point, index))
@@ -92,10 +69,7 @@ window.addEventListener('keydown', (event) => {
   }
 })
 
-// ---------------------------------------------------------------------------
-// Ziele zum Testen von Treffererkennung/Schaden (10 Treffer = "Tod",
-// respawnen nach ein paar Sekunden automatisch wieder).
-// ---------------------------------------------------------------------------
+// --- Ziel-Dummies (nur Singleplayer, respawnen automatisch) ---
 
 const targets = [
   new Target(new THREE.Vector3(3, 0.8, -6)),
@@ -106,39 +80,25 @@ for (const target of targets) {
   arena.shootables.push(target.mesh)
 }
 
-// ---------------------------------------------------------------------------
-// Spieler: Bewegung/Kollision (player) und Blickrichtung (lookControl) sind
-// bewusst von der Eingabequelle getrennt - siehe DesktopInput/TouchInput.
-// ---------------------------------------------------------------------------
+// --- Spieler (unabhängig von der Eingabequelle, siehe input/) ---
 
-// Im Singleplayer immer Team Blau (siehe team.ts) - die Ziel-Dummies stehen
-// als Platzhalter für "das gegnerische Team" (Rot), damit sich der
-// Kill-Counter schon jetzt sinnvoll testen lässt.
+// Singleplayer: Team Blau gegen die roten Dummies; online teilt der Server zu
 const player = new Player(camera, arena.solids, arena.ramps, 'blue')
-// Zufälligen Spawn-Punkt wählen: aktuell nur kosmetisch relevant (man spawnt
-// mal hier, mal dort), aber im Multiplayer bräuchte jeder Spieler ohnehin
-// einen zufälligen/zugewiesenen Punkt aus genau dieser Liste.
 const randomSpawnPoint =
   arena.spawnPoints[Math.floor(Math.random() * arena.spawnPoints.length)]
 player.spawn(randomSpawnPoint)
 
-// Eigene, sichtbare Spieler-Hülle (siehe playerAvatar.ts). Bewusst NICHT in
-// arena.shootables aufgenommen - man soll sich nicht selbst treffen können.
-// Man sieht sich selbst in der Ego-Perspektive nicht, aber die Hülle
-// existiert und leitet Schaden an den Spieler weiter.
+// Eigene Hülle - nicht in shootables, man soll sich nicht selbst treffen
 const playerAvatar = new PlayerAvatar(player.team)
 playerAvatar.mesh.userData.damageable = player
 scene.add(playerAvatar.mesh)
 
-// TEMPORÄR: statische Kopie der Spieler-Hülle in einer Arena-Ecke, nur damit
-// das Modell direkt begutachtet werden kann (man sieht sich selbst sonst nie,
-// da man immer aus der Ego-Perspektive schaut). Kann wieder entfernt werden,
-// sobald das Modell überprüft wurde.
+// TEMPORÄR: Kopie der Spieler-Hülle zum Begutachten des Modells
 const inspectionAvatarMesh = new THREE.Mesh(
   new THREE.CapsuleGeometry(0.35, 1.0, 4, 8),
   new THREE.MeshStandardMaterial({ color: Palette.accentWarm })
 )
-inspectionAvatarMesh.position.set(16, 0.85, 16) // Ecke der Arena (halbe Kantenlänge = 20)
+inspectionAvatarMesh.position.set(16, 0.85, 16)
 scene.add(inspectionAvatarMesh)
 
 const lookControl = new LookControl(camera)
@@ -147,7 +107,6 @@ const weapon = new Weapon(camera, scene, arena.shootables, player.team, (killerT
   scoreboard.addKill(killerTeam)
 )
 
-// Ziel-Dummies nur im Singleplayer - online sind echte Gegner da.
 function setTargetsActive(active: boolean) {
   for (const target of targets) {
     const index = arena.shootables.indexOf(target.mesh)
@@ -180,8 +139,7 @@ const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#damage-vignette')!
 )
 const remotePlayers = new RemotePlayers(scene, arena.shootables, (id) => network.sendHit(id))
-// Name wird im Browser gemerkt. localStorage kann in manchen Umgebungen
-// (privater Modus, blockierte Website-Daten) werfen - dann eben ohne.
+// localStorage kann werfen (privater Modus) - dann ohne gemerkten Namen
 const NAME_STORAGE_KEY = 'duskArena.name'
 const nameInput = document.querySelector<HTMLInputElement>('#name-input')!
 try {
@@ -266,18 +224,14 @@ const network: NetworkClient = new NetworkClient({
 weapon.onShot = (from, to) => network.sendShot(from, to)
 weapon.onEnemyHit = (kill) => hitFeedback.showHit(kill)
 
-// Nur im Dev-Server: Zugriff für automatisierte Browser-Tests, die sonst
-// keinen Weg an den Spielzustand hätten.
+// Nur im Dev-Build: Zugriff für die Browser-Tests (tests/)
 if (import.meta.env.DEV) {
   Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback } })
 }
 
-// ---------------------------------------------------------------------------
-// Eingabe: automatisch zwischen Maus+Tastatur (Desktop) und Touch (Tablet/
-// Handy) wählen. `pointer: coarse` erkennt "ungenaue" Zeigegeräte (Finger)
-// und ist zuverlässiger als reines Feature-Sniffing auf Touch-Events, da
-// z.B. manche Laptops auch einen Touchscreen UND eine Maus haben.
-// ---------------------------------------------------------------------------
+// --- Eingabe ---
+// `pointer: coarse` erkennt Finger-Geräte zuverlässiger als Touch-Events
+// (manche Laptops haben Touchscreen UND Maus)
 
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
 
@@ -289,9 +243,7 @@ const touchControls = document.querySelector<HTMLDivElement>('#touch-controls')!
 
 let isActive = false
 
-// Wer im Menü steht (ESC, Startbildschirm) oder die App/den Tab wechselt,
-// verlässt das Multiplayer-Spiel nach dieser Zeit - kurz ins Menü (z.B.
-// Name ändern) wirft einen also nicht sofort raus
+// Im Menü oder bei App-/Tab-Wechsel verlässt man das Spiel nach dieser Zeit
 const LEAVE_AFTER_MENU_MS = 20000
 let leaveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -345,7 +297,7 @@ if (isTouchDevice) {
     lookControl,
     weapon
   )
-  void touchInput // wird nur über die registrierten Event-Listener genutzt
+  void touchInput // arbeitet über seine Event-Listener
 
   overlay.addEventListener('click', () => setActive(true))
 } else {
@@ -356,9 +308,7 @@ if (isTouchDevice) {
   overlay.addEventListener('click', () => desktopInput.requestActivation())
 }
 
-// ---------------------------------------------------------------------------
-// Fenstergröße ändern
-// ---------------------------------------------------------------------------
+// --- Fenstergröße ändern ---
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
@@ -366,9 +316,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight)
 })
 
-// ---------------------------------------------------------------------------
-// Game Loop
-// ---------------------------------------------------------------------------
+// --- Game Loop ---
 
 const timer = new THREE.Timer()
 const ammoHud = document.querySelector<HTMLDivElement>('#ammo-hud')!
@@ -384,8 +332,7 @@ const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
 const spawnProtectionHud = document.querySelector<HTMLDivElement>('#spawn-protection')!
 const scoreTable = new ScoreTable(document.querySelector<HTMLDivElement>('#score-table')!)
 
-// Tab gedrückt halten zeigt die Tabelle (Standardverhalten "Fokus
-// weiterschalten" unterdrücken). Touch: Tippen auf den Punktestand.
+// Tab halten zeigt die Tabelle (Fokuswechsel unterdrücken); Touch: Punktestand antippen
 window.addEventListener('keydown', (event) => {
   if (event.code !== 'Tab') return
   event.preventDefault()
@@ -401,9 +348,8 @@ if (isTouchDevice) {
 }
 const killFeed = new KillFeed(document.querySelector<HTMLDivElement>('#kill-feed')!)
 
-// Kostenloses Hosting schläft ein - der erste Verbindungsaufbau dauert
-// dann bis zu ~1 Minute. Solange noch versucht wird, zeigt das HUD das
-// statt eines zwischen den Versuchen kurz aufblitzenden "Offline" an.
+// Gratis-Server braucht nach dem Einschlafen bis ~1 Min.; die Anzeige
+// hängt an der Versuchsdauer, damit sie zwischen Versuchen nicht flackert
 const WAKE_HINT_AFTER_MS = 5000
 const GIVE_UP_HINT_AFTER_MS = 90000
 
@@ -470,7 +416,7 @@ function animate() {
   requestAnimationFrame(animate)
 
   timer.update()
-  const deltaSeconds = Math.min(timer.getDelta(), 0.1) // Cap gegen Ausreißer bei Tab-Wechsel
+  const deltaSeconds = Math.min(timer.getDelta(), 0.1) // Deckel gegen Sprünge nach Tab-Wechsel
 
   if (isActive) {
     player.update(deltaSeconds)

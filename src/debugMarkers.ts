@@ -1,14 +1,8 @@
 import * as THREE from 'three'
 
-// Entwickler-Debug-Modus: macht normalerweise unsichtbare Dinge (aktuell nur
-// Spawn-Punkte, aber gedacht als Sammelstelle für alles, was später dazukommt
-// und sonst unsichtbar wäre - z.B. Team-Spawnzonen) sichtbar. Komplett
-// optional und mit einer Taste umschaltbar (siehe main.ts, Taste F1) - rein
-// zum Entwickeln/Testen gedacht, nicht Teil des eigentlichen Spiels. Kann am
-// Ende der Entwicklung einfach durch Entfernen des DebugMarkers-Aufrufs in
-// main.ts wieder komplett verschwinden.
+// Debug-Marker (F1) für sonst Unsichtbares, z.B. Spawn-Punkte - nur zum Entwickeln
 
-const MARKER_COLOR = 0xff00ff // knalliges Magenta - kommt sonst nirgends in der Palette vor, damit Debug-Marker immer klar als solche erkennbar sind
+const MARKER_COLOR = 0xff00ff // kommt sonst nirgends vor
 const MARKER_HEIGHT = 2.2
 
 export class DebugMarkers {
@@ -31,8 +25,6 @@ export class DebugMarkers {
     this.group.visible = !this.group.visible
   }
 
-  // Spawn-Punkt: vertikaler Leucht-Balken (gut aus der Ferne sichtbar) +
-  // Text-Label mit dem Index, damit man einzelne Spawns unterscheiden kann.
   addSpawnPoint(position: THREE.Vector3, index: number) {
     const beamGeometry = new THREE.CylinderGeometry(0.08, 0.08, MARKER_HEIGHT, 8)
     const beamMaterial = new THREE.MeshBasicMaterial({
@@ -59,9 +51,6 @@ export class DebugMarkers {
     this.group.add(label)
   }
 
-  // Generischer Punkt-Marker für alles, was später noch dazukommt (z.B.
-  // Team-Spawnzonen, Flaggen-Positionen o.ä.) - dieselbe Balken+Label-Optik,
-  // aber mit frei wählbarer Farbe/Beschriftung.
   addPoint(position: THREE.Vector3, label: string, color: number = MARKER_COLOR) {
     const beamGeometry = new THREE.CylinderGeometry(0.08, 0.08, MARKER_HEIGHT, 8)
     const beamMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6 })
@@ -75,8 +64,7 @@ export class DebugMarkers {
   }
 }
 
-// Baut ein Text-Sprite über ein 2D-Canvas (keine externe Font-/Texturdatei
-// nötig) - Sprites richten sich automatisch immer zur Kamera aus.
+// Text-Sprite über ein 2D-Canvas
 function createTextSprite(text: string, color: number = MARKER_COLOR): THREE.Sprite {
   const canvas = document.createElement('canvas')
   canvas.width = 256

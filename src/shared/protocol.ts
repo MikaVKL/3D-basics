@@ -1,12 +1,8 @@
-// Nachrichtenformat zwischen Client und Server. Diese Datei wird von BEIDEN
-// Seiten importiert (Client über Vite, Server direkt über Node) - darum
-// keine Imports von Three.js oder DOM-Code hier drin.
+// Nachrichten Client <-> Server (von beiden importiert: kein Three.js/DOM)
 
 import type { Team } from '../team.ts'
 
-// Wird bei jeder inkompatiblen Protokolländerung erhöht. Sonst könnte ein
-// Browser mit gecachtem, altem Client-Code einen neueren Server mit
-// Nachrichten füttern, die dieser falsch versteht.
+// Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
 export const PROTOCOL_VERSION = 11
 
 export const MAX_PLAYERS = 8
@@ -15,13 +11,10 @@ export const DEFAULT_SERVER_PORT = 8080
 
 export type PlayerId = number
 
-// Wie oft Client und Server Zustände verschicken (pro Sekunde).
+// Zustände pro Sekunde
 export const TICK_RATE = 20
 
-// Was jeder Client pro Tick über sich selbst schickt: Position (Kamera/
-// Augenhöhe), Blickrichtung (nur Yaw - Pitch ist rein lokal für die eigene
-// Kamera relevant) und Leben. Absichtlich ein flaches Objekt aus Zahlen
-// (kein THREE.Vector3), damit es 1:1 als JSON verschickt werden kann.
+// Zustand eines Spielers (Position = Augenhöhe, nur Yaw); flach, damit 1:1 JSON
 export interface PlayerNetworkState {
   position: Vec3
   yaw: number
@@ -35,14 +28,11 @@ export interface PlayerNetworkState {
   team: Team
 }
 
-// health/shield/isAlive im Snapshot stammen immer vom Server, nicht vom
-// jeweiligen Client - auch der eigene Eintrag wird so zur Quelle für das
-// eigene Leben-HUD.
+// health/shield/isAlive kommen immer vom Server (auch fürs eigene HUD)
 export interface SnapshotEntry {
   id: PlayerId
   state: PlayerNetworkState
-  // Sendezeitpunkt laut Uhr des jeweiligen Spielers (ms) - Empfänger
-  // interpolieren auf dieser Zeitachse, siehe remotePlayers.ts
+  // Sendezeit laut Uhr des Spielers (Interpolations-Zeitachse)
   time: number
   spawnProtected: boolean
 }
@@ -55,9 +45,7 @@ export interface Vec3 {
   z: number
 }
 
-// Spielerliste mit Namen und Statistik - kommt bei jeder Änderung
-// (Beitritt, Verlassen, Name, Kill) komplett neu, bei max. 8 Spielern
-// einfacher und robuster als einzelne Änderungsnachrichten
+// Wird bei jeder Änderung komplett neu geschickt (max. 8 Spieler)
 export interface RosterEntry {
   id: PlayerId
   name: string
@@ -69,21 +57,18 @@ export interface RosterEntry {
 export type ClientMessage =
   | { t: 'hello'; version: number; name: string }
   | { t: 'setName'; name: string }
-  // time = eigene Uhr (performance.now), life = Nummer des aktuellen Lebens
-  // (siehe 'respawn') - Zustände aus einem früheren Leben verwirft der Server
+  // life = Nummer des Lebens; Zustände aus früheren Leben verwirft der Server
   | { t: 'state'; state: PlayerNetworkState; time: number; life: number }
-  // "Ich habe Spieler X getroffen" - der Server prüft und entscheidet
   | { t: 'hit'; target: PlayerId }
-  // Jeder Schuss, nur für die Leuchtspur bei den anderen
+  // Nur für die Leuchtspur bei den anderen
   | { t: 'shot'; from: Vec3; to: Vec3 }
 
 export type RejectReason = 'full' | 'version'
 
-// Server entfernt Spieler, die zu lange nichts tun (AFK)
 export type KickReason = 'afk'
 
 export type ServerMessage =
-  // spawnIndex = Index in SPAWN_POINTS (shared/arenaLayout.ts)
+  // spawnIndex -> SPAWN_POINTS
   | {
       t: 'welcome'
       id: PlayerId
@@ -96,12 +81,11 @@ export type ServerMessage =
   | { t: 'rejected'; reason: RejectReason }
   | { t: 'kicked'; reason: KickReason }
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores }
-  // team: bei Team-Ausgleich wechselt ein Spieler per Respawn die Seite
+  // team ändert sich beim Team-Ausgleich
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number; team: Team }
-  // Runde vorbei - bis zur nächsten Runde zählen keine Treffer
   | { t: 'roundEnd'; winner: Team; nextRoundIn: number }
   | { t: 'roundStart'; scores: Scores }
   | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3 }
-  // Nur an den Getroffenen: wer geschossen hat (für den Richtungsanzeiger)
+  // Nur an den Getroffenen (Richtungsanzeiger)
   | { t: 'hurt'; by: PlayerId }
   | { t: 'snapshot'; players: SnapshotEntry[] }

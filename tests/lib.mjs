@@ -1,7 +1,5 @@
-// Gemeinsame Helfer für die Browser-Tests: startet Vite + Spielserver auf
-// eigenen Ports (stört also keinen laufenden "npm run dev"), öffnet
-// Chromium-Seiten und greift über window.__dusk (nur im Dev-Build, siehe
-// main.ts) auf den Spielzustand zu.
+// Helfer für die Browser-Tests: startet Vite + Spielserver auf eigenen Ports,
+// Spielzustand über window.__dusk (nur im Dev-Build).
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -56,8 +54,7 @@ export async function startServers({ gameServer = true, serverEnv = {} } = {}) {
   }
 }
 
-// Nutzt den Playwright-Browser; fehlt der (z.B. vorinstallierter Browser in
-// anderer Version), wird auf einen vorhandenen Chromium ausgewichen.
+// Weicht auf einen vorhandenen Chromium aus, falls der Playwright-Browser fehlt
 export async function launchBrowser() {
   const args = ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist']
   try {
@@ -88,17 +85,14 @@ export async function openGame(browser, { online = true, name, errors = [] } = {
   return page
 }
 
-// Klick auf "Spielen" (tritt online bei). Klick in eine Ecke, damit er
-// nicht im Namensfeld landet.
+// Klick auf "Spielen" (in eine Ecke, nicht ins Namensfeld)
 export async function play(page) {
   await page.click('#overlay', { position: { x: 5, y: 5 } })
 }
 
-// Zielen + Schuss im selben JS-Aufruf. Wichtig: LookControl führt einen
-// eigenen Winkel und überschreibt die Kamera bei jedem Mausereignis -
-// Headless-Chromium schickt unter Pointer Lock bei jedem Klick eines mit.
-// Deshalb beides setzen und direkt danach schießen. Feuerpause/Magazin
-// werden zurückgesetzt, damit Tests nicht von der Bildrate abhängen.
+// Zielen + Schuss im selben Aufruf: LookControl setzt die Kamera bei jedem
+// (headless auch synthetischen) Mausereignis zurück. Feuerpause/Magazin
+// zurückgesetzt, damit Tests nicht von der Bildrate abhängen.
 export async function shootAt(page, target) {
   await page.evaluate(([x, y, z]) => {
     __dusk.camera.lookAt(x, y, z)
@@ -117,7 +111,7 @@ export async function teleport(page, x, y, z) {
   )
 }
 
-// Kleines Prüf-Protokoll: sammelt Ergebnisse, Exit-Code 1 bei Fehlschlag
+// Exit-Code 1 bei Fehlschlag
 export function createChecks() {
   let failed = 0
   return {

@@ -5,12 +5,7 @@ const KILLMARKER_DURATION_MS = 400
 const DAMAGE_INDICATOR_DURATION_MS = 1000
 const DAMAGE_VIGNETTE_DURATION_MS = 250
 
-// Rückmeldung rund ums Fadenkreuz:
-// - Hitmarker (weiß, bei Kill rot und größer): "mein Schuss hat gesessen"
-// - Schadens-Richtungsanzeiger: roter Bogen zeigt, aus welcher Richtung man
-//   getroffen wurde - sonst sinkt nur der Lebensbalken und man weiß nicht,
-//   wohin man sich drehen soll
-// - kurzer roter Bildschirmrand beim eigenen Treffer
+// Hitmarker (bei Kill rot), Richtungsbogen zum Angreifer, roter Bildrand bei Schaden
 export class HitFeedback {
   private readonly hitmarker: HTMLElement
   private readonly indicatorContainer: HTMLElement
@@ -32,16 +27,13 @@ export class HitFeedback {
       performance.now() + (kill ? KILLMARKER_DURATION_MS : HITMARKER_DURATION_MS)
   }
 
-  // sourcePosition = wo der Angreifer (laut eigener Darstellung) steht
   showDamageFrom(sourcePosition: THREE.Vector3 | null, camera: THREE.Camera) {
     const now = performance.now()
     this.vignette.classList.add('visible')
     this.vignetteHideAt = now + DAMAGE_VIGNETTE_DURATION_MS
     if (!sourcePosition) return
 
-    // In Kamera-Koordinaten umrechnen: -z ist "vor mir", +x ist "rechts".
-    // Der Winkel wird fest beim Treffer berechnet, wie in den meisten
-    // Shootern - der Bogen zeigt auf die Stelle, von der geschossen wurde.
+    // Kamera-Koordinaten: -z = vorne, +x = rechts. Winkel fest beim Treffer.
     const local = camera.worldToLocal(sourcePosition.clone())
     const angle = Math.atan2(local.x, -local.z)
 

@@ -2,11 +2,8 @@ import type { Player } from '../player'
 import type { LookControl } from '../lookControl'
 import type { Weapon } from '../weapon'
 
-// Steuerung für Maus + Tastatur (Desktop/Laptop).
-// Nutzt die rohe Pointer-Lock-API des Browsers direkt (statt des
-// Three.js-Addons), damit Maus-Look genau wie Touch-Look am Ende nur
-// `lookControl.rotate(deltaX, deltaY)` aufruft - eine einzige Dreh-Logik
-// für beide Eingabearten.
+// Maus + Tastatur über die rohe Pointer-Lock-API; Umschauen läuft wie bei
+// Touch über lookControl.rotate()
 
 export class DesktopInput {
   private keysPressed = { forward: false, back: false, left: false, right: false }
@@ -30,7 +27,7 @@ export class DesktopInput {
     this.onLockChange = onLockChange
 
     window.addEventListener('keydown', (e) => {
-      // Tippen im Namensfeld (Startbildschirm) soll nicht springen/laufen
+      // Tippen im Namensfeld soll nicht steuern
       if (e.target instanceof HTMLInputElement) return
       this.setKey(e.code, true)
     })
@@ -43,8 +40,7 @@ export class DesktopInput {
     })
   }
 
-  // Wird vom Klick auf den Startbildschirm aufgerufen (Pointer Lock
-  // funktioniert nur nach einer echten Nutzerinteraktion).
+  // Pointer Lock geht nur nach echter Nutzerinteraktion (Klick)
   requestActivation() {
     this.domElement.requestPointerLock()
   }
@@ -56,7 +52,7 @@ export class DesktopInput {
 
   private handleMouseDown(e: MouseEvent) {
     if (document.pointerLockElement !== this.domElement) return
-    if (e.button !== 0) return // nur linke Maustaste schießt
+    if (e.button !== 0) return
     if (!this.player.isAlive) return
     this.weapon.tryShoot()
   }
@@ -80,8 +76,7 @@ export class DesktopInput {
         this.keysPressed.right = pressed
         break
       case 'Space':
-        // Nur beim Drücken - vorher sprang auch das Loslassen, bei länger
-        // gehaltener Taste also ein zweites Mal nach der Landung
+        // Nur beim Drücken (sonst zweiter Sprung beim Loslassen)
         if (pressed) this.player.jump()
         break
       case 'KeyR':
@@ -97,7 +92,7 @@ export class DesktopInput {
         this.player.setSprinting(pressed)
         break
       default:
-        return // bei irrelevanten Tasten gar nicht erst updateMoveInput aufrufen
+        return
     }
 
     this.updateMoveInput()

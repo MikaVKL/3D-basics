@@ -5,18 +5,15 @@ import type { Damageable } from './damageable'
 import type { Team } from './team'
 import { FIRE_COOLDOWN, HIT_DAMAGE } from './shared/gameRules'
 
-// Hitscan-Raycast genau aus der Bildschirmmitte (dahin zeigt das Fadenkreuz),
-// plus sichtbares Waffenmodell mit Rückstoß (siehe weaponView.ts), Munition
-// und Nachladen. Getroffene Objekte werden generisch über die Damageable-
-// Schnittstelle behandelt (siehe damageable.ts) - das ist absichtlich so
-// entkoppelt, damit später Multiplayer-Gegner ohne Änderungen hier andocken.
+// Hitscan aus der Bildschirmmitte, Munition, Nachladen. Treffer laufen
+// generisch über Damageable (Dummy oder fremder Spieler).
 
-const IMPACT_MARKER_LIFETIME = 2 // Sekunden, bis ein Einschussloch wieder verschwindet
-const TRACER_LIFETIME = 0.06 // Sekunden, wie lange die Leuchtspur sichtbar bleibt
-const TRACER_MAX_DISTANCE = 60 // Länge des Tracers, falls der Schuss nichts trifft (fliegt "ins Leere")
+const IMPACT_MARKER_LIFETIME = 2 // Sekunden
+const TRACER_LIFETIME = 0.06 // Sekunden
+const TRACER_MAX_DISTANCE = 60 // bei Schuss ins Leere
 
 const MAGAZINE_SIZE = 12
-const RELOAD_DURATION = 1.2 // Sekunden für einen Nachlade-Vorgang
+const RELOAD_DURATION = 1.2 // Sekunden
 
 export interface AmmoState {
   current: number
@@ -44,10 +41,7 @@ export class Weapon {
     color: Palette.accentNeon,
   })
 
-  // Leuchtspur: ein dünner, langgezogener Zylinder von der Mündung bis zum
-  // Einschlagpunkt. Die Basis-Geometrie ist 1 Einheit lang und wird pro
-  // Schuss per scale.y auf die tatsächliche Distanz gestreckt - günstiger,
-  // als für jeden Schuss eine neue Geometrie mit der passenden Länge zu bauen.
+  // Leuchtspur: 1 Einheit langer Zylinder, pro Schuss per scale.y gestreckt
   private tracers: Tracer[] = []
   private tracerGeometry = new THREE.CylinderGeometry(0.015, 0.015, 1, 6)
   private tracerMaterial = new THREE.MeshBasicMaterial({
@@ -58,14 +52,12 @@ export class Weapon {
   private scene: THREE.Scene
   private shootables: THREE.Object3D[]
   private view: WeaponView
-  // Im Multiplayer vom Server zugeteilt (siehe main.ts), daher änderbar
+  // Online vom Server zugeteilt
   shooterTeam: Team
   private onKill?: (killerTeam: Team) => void
-  // Jeder abgegebene Schuss (Mündung -> Einschlag), damit andere Spieler
-  // im Multiplayer die Leuchtspur sehen (siehe main.ts)
+  // Jeder Schuss (Mündung -> Einschlag), für die Leuchtspur bei anderen
   onShot?: (from: THREE.Vector3, to: THREE.Vector3) => void
-  // Treffer auf einen Gegner (für den Hitmarker); kill = lokal erkannter
-  // Kill (Singleplayer-Dummies) - online meldet den Kill der Server
+  // Für den Hitmarker; kill nur lokal erkannt (Dummies), online meldet der Server
   onEnemyHit?: (kill: boolean) => void
 
   private ammo = MAGAZINE_SIZE
@@ -86,8 +78,6 @@ export class Weapon {
     this.onKill = onKill
   }
 
-  // Muss jeden Frame aufgerufen werden, damit Feuerpause und die
-  // Einschuss-Marker (die nach einer Weile wieder verschwinden) funktionieren.
   update(deltaSeconds: number) {
     this.cooldownRemaining = Math.max(0, this.cooldownRemaining - deltaSeconds)
     this.view.update(deltaSeconds)
@@ -118,11 +108,6 @@ export class Weapon {
     }
   }
 
-  // Versucht, einen Schuss auszulösen. Schlägt fehl (macht nichts), solange
-  // die Feuerpause noch läuft oder während des Nachladens. Das Magazin
-  // wird automatisch nachgeladen, sobald es durch einen Schuss leer wird -
-  // der ammo<=0-Fall unten ist nur eine Absicherung für den Fall, dass
-  // tryShoot() trotzdem mit leerem Magazin aufgerufen wird.
   tryShoot() {
     if (this.reloadRemaining > 0) return
     if (this.ammo <= 0) {
@@ -135,37 +120,26 @@ export class Weapon {
     this.ammo -= 1
     this.view.playShootEffect()
 
-    // Kamera-Matrix sicherstellen: Mausbewegung aktualisiert die Blickrichtung
-    // sofort bei jedem 'mousemove', aber die matrixWorld der Kamera wird
-    // normalerweise erst beim nächsten renderer.render() neu berechnet. Ohne
-    // dieses explizite Update könnte ein Schuss direkt nach einer schnellen
-    // Mausbewegung noch mit der (minimal) veralteten Blickrichtung zielen.
+    // matrixWorld wird sonst erst beim Rendern aktualisiert - ein Schuss
+    // direkt nach einer Mausbewegung zielte noch in die alte Richtung
     this.camera.updateMatrixWorld()
 
-    // (0, 0) in normalisierten Bildschirmkoordinaten ist die Bildschirmmitte -
-    // exakt dort, wo das Fadenkreuz sitzt.
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
 
     const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
-    // Unsichtbare Objekte (tote Spieler/Ziele) würden sonst Kugeln abfangen -
-    // der Raycaster selbst ignoriert "visible" nicht.
+    // Raycaster ignoriert "visible" nicht - tote Spieler fingen sonst Kugeln ab
     const hits = this.raycaster
       .intersectObjects(this.shootables, false)
       .filter((hit) => hit.object.visible)
 
     if (hits.length > 0) {
-      // Generisch: könnte ein Ziel-Dummy oder (später) ein anderer Spieler
-      // sein - weapon.ts muss den Unterschied nicht kennen, siehe damageable.ts.
       const damageable = hits[0].object.userData.damageable as Damageable | undefined
       const targetTeam = hits[0].object.userData.team as Team | undefined
 
       if (damageable && (targetTeam === this.shooterTeam || damageable.invulnerable)) {
-        // Freundschaftliches Feuer oder Spawn-Schutz: kein Schaden, verhält
-        // sich wie ein normaler Wand-Treffer (Marker statt Aufblitzen).
+        // Teamkamerad oder Spawn-Schutz: wie ein Wand-Treffer
         this.spawnImpactMarker(hits[0])
       } else if (damageable) {
-        // Treffer auf etwas Lebendes: Schaden statt des statischen
-        // Einschuss-Markers - das Aufblitzen des Ziels ist hier das Feedback.
         const wasAlive = damageable.isAlive
         damageable.takeDamage(HIT_DAMAGE)
         const killed = wasAlive && !damageable.isAlive
@@ -179,9 +153,6 @@ export class Weapon {
       this.spawnTracer(muzzlePosition, hits[0].point)
       this.onShot?.(muzzlePosition, hits[0].point)
     } else {
-      // Kein Treffer: Tracer trotzdem bis zu einem weit entfernten Punkt in
-      // Schussrichtung anzeigen, damit man sieht, dass (und wohin) man
-      // "ins Leere" geschossen hat.
       const missEnd = this.raycaster.ray.origin
         .clone()
         .addScaledVector(this.raycaster.ray.direction, TRACER_MAX_DISTANCE)
@@ -189,21 +160,16 @@ export class Weapon {
       this.onShot?.(muzzlePosition, missEnd)
     }
 
-    // Sofort nachladen, sobald das Magazin durch diesen Schuss leer wird -
-    // nicht erst beim nächsten (dann folgenlosen) Schussversuch.
     if (this.ammo === 0) {
       this.reload()
     }
   }
 
-  // Startet das Nachladen manuell (z.B. per Taste), falls das Magazin nicht
-  // schon voll ist und nicht schon nachgeladen wird.
   reload() {
     if (this.reloadRemaining > 0 || this.ammo === MAGAZINE_SIZE) return
     this.reloadRemaining = RELOAD_DURATION
   }
 
-  // Für die HUD-Anzeige (Munition/Nachladen).
   getAmmoState(): AmmoState {
     return { current: this.ammo, max: MAGAZINE_SIZE, reloading: this.reloadRemaining > 0 }
   }
@@ -212,10 +178,7 @@ export class Weapon {
     const marker = new THREE.Mesh(this.markerGeometry, this.markerMaterial)
     marker.position.copy(hit.point)
 
-    // Ein winziges Stück entlang der Flächen-Normale nach außen versetzen,
-    // sonst "flackert" die Kugel mit der getroffenen Wand/Kiste (Z-Fighting).
-    // Die Normale muss dafür von lokalen Objekt- in Weltkoordinaten
-    // umgerechnet werden (z.B. der Boden ist um 90° gedreht).
+    // Minimal entlang der (Welt-)Normale versetzen, gegen Z-Fighting
     if (hit.face) {
       const worldNormal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
       marker.position.addScaledVector(worldNormal, 0.01)
@@ -225,7 +188,6 @@ export class Weapon {
     this.impactMarkers.push({ mesh: marker, remainingLifetime: IMPACT_MARKER_LIFETIME })
   }
 
-  // Leuchtspur eines anderen Spielers (Multiplayer)
   showRemoteTracer(start: THREE.Vector3, end: THREE.Vector3) {
     this.spawnTracer(start, end)
   }
@@ -239,8 +201,7 @@ export class Weapon {
     mesh.scale.set(1, length, 1)
     mesh.position.copy(start).addScaledVector(direction, 0.5)
 
-    // Der Zylinder zeigt standardmäßig entlang der Y-Achse - auf die
-    // tatsächliche Schussrichtung drehen.
+    // Zylinder zeigt entlang +Y -> in Schussrichtung drehen
     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize())
 
     this.scene.add(mesh)

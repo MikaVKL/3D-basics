@@ -3,19 +3,12 @@ import { PlayerAvatar } from './playerAvatar'
 import type { PlayerId, PlayerNetworkState, SnapshotEntry } from './shared/protocol'
 import type { Damageable } from './damageable'
 
-// Fremde Spieler werden absichtlich etwas "in der Vergangenheit" gezeigt:
-// So liegen fast immer zwei Zustände vor, zwischen denen weich
-// interpoliert werden kann - statt dass Figuren bei jedem Paket (20x/s)
-// ruckartig springen oder bei Netz-Schwankungen stehen bleiben.
-//
-// Interpoliert wird auf der Uhr des jeweiligen SENDERS, nicht des Servers:
-// Server- und Client-Takt (beide 20Hz) laufen nicht synchron, dadurch
-// enthielt mal ein Server-Tick keinen neuen Zustand und der nächste zwei -
-// auf der Server-Zeitachse stand die Figur dann kurz und sprang danach
-// doppelt so weit (bei 150ms Ping gemessen: p90 12 statt 6 m/s).
+// Fremde Spieler werden leicht verzögert gezeigt, damit fast immer zwei
+// Zustände zum Interpolieren vorliegen. Interpoliert wird auf der Uhr des
+// SENDERS: Client- und Server-Takt laufen nicht synchron, auf der
+// Server-Zeitachse ruckelte es (Stillstand, dann doppelter Sprung).
 const INTERPOLATION_DELAY_MS = 100
-// Wie schnell sich die Uhr-Schätzung an einen dauerhaft höheren Ping
-// anpasst (Anteil pro Zustand). Niedrigerer Ping wird sofort übernommen.
+// Anpassung an dauerhaft höheren Ping pro Zustand (niedrigerer: sofort)
 const CLOCK_ADAPT_RATE = 0.02
 const MAX_BUFFERED_SNAPSHOTS = 30
 
@@ -27,11 +20,9 @@ interface Sample {
 interface RemotePlayer {
   avatar: PlayerAvatar
   samples: Sample[]
-  // Sender-Uhr minus eigene Uhr, bezogen auf das schnellste bisher
-  // angekommene Paket - langsamere (Jitter) werden durch den
-  // Interpolations-Puffer aufgefangen, statt die Zeitachse zu verschieben.
+  // Sender-Uhr minus eigene Uhr, am schnellsten Paket ausgerichtet
+  // (Jitter fängt der Interpolations-Puffer auf)
   clockOffset: number | null
-  // Direkt aus dem neuesten Snapshot, nicht interpoliert
   spawnProtected: boolean
 }
 
@@ -42,8 +33,7 @@ export class RemotePlayers {
   private readonly shootables: THREE.Object3D[]
   private readonly onHit: (id: PlayerId) => void
 
-  // shootables: dieselbe Liste, die die Waffe durchsucht - fremde Hüllen
-  // werden dort ein-/ausgetragen. onHit: Treffer an den Server melden.
+  // shootables: Liste der Waffe (Hüllen werden ein-/ausgetragen)
   constructor(scene: THREE.Scene, shootables: THREE.Object3D[], onHit: (id: PlayerId) => void) {
     this.scene = scene
     this.shootables = shootables
@@ -59,8 +49,7 @@ export class RemotePlayers {
         player.avatar.setProtected(entry.spawnProtected)
       }
       const last = player.samples[player.samples.length - 1]
-      // Server schickt denselben Zustand erneut, wenn seit dem letzten Tick
-      // nichts Neues vom Spieler kam - kein neuer Stützpunkt
+      // Wiederholter Zustand (nichts Neues seit dem letzten Tick)
       if (last && entry.time <= last.time) continue
 
       const offset = entry.time - now
@@ -74,9 +63,7 @@ export class RemotePlayers {
 
   private add(id: PlayerId, state: PlayerNetworkState): RemotePlayer {
     const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [], clockOffset: null, spawnProtected: false }
-    // Die Waffe behandelt fremde Spieler wie jedes andere Damageable (siehe
-    // damageable.ts) - Schaden wird hier aber nicht lokal verrechnet,
-    // sondern nur gemeldet. Ob der Treffer zählt, entscheidet der Server.
+    // Schaden wird nur gemeldet - ob er zählt, entscheidet der Server
     const damageable: Damageable = {
       get isAlive() {
         const latest = player.samples[player.samples.length - 1]
@@ -105,15 +92,13 @@ export class RemotePlayers {
     this.players.delete(id)
   }
 
-  // Nach einem Respawn nicht von der Todes-Stelle zum Spawn-Punkt gleiten:
-  // alte Samples verwerfen, der nächste Snapshot setzt die Hülle direkt.
+  // Alte Samples verwerfen, sonst gleitet die Figur von der Todesstelle zum Spawn
   handleRespawn(id: PlayerId) {
     const player = this.players.get(id)
     if (player) player.samples.length = 0
   }
 
-  // connectedIds: wer laut Server gerade verbunden ist - alle anderen
-  // Hüllen werden entfernt (Spieler gegangen oder eigene Verbindung weg).
+  // Hüllen von nicht (mehr) verbundenen Spielern werden entfernt
   update(deltaSeconds: number, connectedIds: ReadonlySet<PlayerId>) {
     for (const [id, player] of this.players) {
       if (!connectedIds.has(id)) this.remove(id, player)
@@ -128,7 +113,6 @@ export class RemotePlayers {
     }
   }
 
-  // Aktuell dargestellte Position (Körpermitte) eines Spielers
   getPosition(id: PlayerId): THREE.Vector3 | null {
     return this.players.get(id)?.avatar.mesh.position.clone() ?? null
   }
@@ -139,12 +123,10 @@ export class RemotePlayers {
 }
 
 function interpolate(samples: Sample[], renderTime: number): PlayerNetworkState {
-  // Ältere Samples, die nicht mehr gebraucht werden, verwerfen
   while (samples.length > 2 && samples[1].time <= renderTime) samples.shift()
 
   const [from, to] = samples
-  // Kein zweiter Wert (noch zu wenig Daten oder Pakete bleiben aus): letzten
-  // bekannten Zustand halten statt zu raten.
+  // Zu wenig Daten: letzten Zustand halten statt raten
   if (!to || renderTime <= from.time) return from.state
   if (renderTime >= to.time) return to.state
 
@@ -152,7 +134,7 @@ function interpolate(samples: Sample[], renderTime: number): PlayerNetworkState 
   const a = from.state
   const b = to.state
   return {
-    // Zustände wie Ducken/Team/Leben springen, nur Bewegung wird geglättet
+    // Nur Bewegung wird geglättet
     ...b,
     position: {
       x: THREE.MathUtils.lerp(a.position.x, b.position.x, t),
@@ -163,8 +145,7 @@ function interpolate(samples: Sample[], renderTime: number): PlayerNetworkState 
   }
 }
 
-// Über den kürzeren Weg drehen - sonst dreht sich eine Figur beim Übergang
-// von +179° auf -179° einmal fast komplett um sich selbst.
+// Über den kürzeren Weg drehen (sonst volle Drehung bei ±180°)
 function lerpAngle(a: number, b: number, t: number): number {
   let diff = (b - a) % (Math.PI * 2)
   if (diff > Math.PI) diff -= Math.PI * 2

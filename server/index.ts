@@ -30,25 +30,19 @@ import {
 } from '../src/shared/gameRules.ts'
 import type { Team } from '../src/team.ts'
 
-// Läuft direkt als TypeScript über Node (Type-Stripping ab Node 22.18) -
-// kein eigener Build-Schritt nötig, weder lokal noch beim Hosting.
+// Läuft direkt als TypeScript (Node-Type-Stripping, kein Build-Schritt)
 
 const PORT = Number(process.env.PORT) || DEFAULT_SERVER_PORT
-// Kommagetrennte Liste erlaubter Seiten (z.B. https://mikavkl.github.io).
-// Ohne Angabe (lokale Entwicklung) darf sich jeder verbinden. Im Hosting
-// gesetzt, damit fremde Webseiten den Server nicht mitbenutzen können.
+// Kommagetrennte erlaubte Origins; leer (lokal) = alle erlaubt
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
 const HELLO_TIMEOUT_MS = 5000
-// Tote Verbindungen (Tab ohne sauberes close, WLAN weg) würden sonst ewig
-// einen der 8 Plätze blockieren.
+// Erkennt tote Verbindungen (WLAN weg o.ä.)
 const HEARTBEAT_INTERVAL_MS = 10000
-// Der Client schickt 20x/s seinen Zustand. Bleibt der aus, obwohl die
-// Verbindung noch steht, ist der Tab eingefroren (z.B. iPad-Safari im
-// Hintergrund beantwortet Pings noch, führt aber kein JavaScript mehr
-// aus) - der Spieler stünde sonst als Geist in der Punktetabelle.
+// Keine Zustände trotz offener Verbindung = eingefrorener Tab (z.B. iPad
+// im Hintergrund beantwortet noch Pings) -> entfernen
 const STALE_STATE_MS = 15000
 // So lange ohne Bewegung, Umschauen oder Schuss -> zurück zum Startbildschirm
 const AFK_TIMEOUT_MS = 90000
@@ -64,9 +58,7 @@ interface Client {
   // null, bis der Client seinen ersten Zustand geschickt hat
   state: PlayerNetworkState | null
   stateTime: number // Client-Uhr zum Zeitpunkt des letzten Zustands
-  // Zählt die Respawns. Zustände, die der Client noch vor dem Erhalt der
-  // Respawn-Nachricht abgeschickt hat, tragen die alte Nummer und würden
-  // die Figur sonst kurz an die Todesstelle zurücksetzen.
+  // Zählt Respawns; Zustände aus einem früheren Leben werden verworfen
   life: number
   vitals: Vitals
   respawnAt: number | null // performance.now()-Zeitpunkt, solange tot
@@ -81,27 +73,23 @@ interface Client {
 const clients = new Map<PlayerId, Client>()
 let nextPlayerId = 1
 let scores: Scores = { red: 0, blue: 0 }
-// Standard aus gameRules.ts, per Umgebungsvariable änderbar (z.B. kürzere
-// Runden bei wenigen Spielern, oder zum Testen)
+// Per Umgebungsvariable änderbar (kürzere Runden, Tests)
 const KILLS_TO_WIN_ACTIVE = Number(process.env.KILLS_TO_WIN) || KILLS_TO_WIN
-// Zwischen zwei Runden (Sieger-Anzeige): performance.now()-Zeitpunkt, an
-// dem die nächste Runde startet, sonst null
+// Start der nächsten Runde während der Sieger-Anzeige, sonst null
 let nextRoundAt: number | null = null
 let roundWinner: Team | null = null
 
-// Treffer-Meldungen dürfen etwas dichter kommen als die Feuerrate, weil
-// Netzwerk-Schwankungen zwei Pakete zusammenschieben können - aber nicht
-// beliebig dicht (sonst wäre Dauerfeuer per Skript möglich).
+// Etwas dichter als die Feuerrate erlaubt (Netzwerk-Schwankungen), aber
+// kein Skript-Dauerfeuer
 const MIN_HIT_INTERVAL_MS = FIRE_COOLDOWN * 1000 * 0.6
-// Weiter kann man in der Arena ohnehin nicht schießen (Diagonale ~90m)
+// Arena-Diagonale ~90m
 const MAX_HIT_DISTANCE = 100
 
 function isAlive(client: Client): boolean {
   return client.vitals.health > 0
 }
 
-// Steuerzeichen raus, Leerraum zusammenfassen, Länge begrenzen. Leer ->
-// "Spieler <id>", damit im Kill-Feed nie ein leerer Name steht.
+// Leer -> "Spieler <id>"
 function sanitizeName(raw: unknown, id: PlayerId): string {
   const name = typeof raw === 'string'
     ? raw.replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, MAX_NAME_LENGTH)
@@ -128,9 +116,7 @@ function fullVitals(): Vitals {
   return { health: MAX_HEALTH, shield: MAX_SHIELD, shieldRegenCooldown: 0 }
 }
 
-// Nur zum Testen: simuliert lokal einen Internet-Ping (Hälfte pro
-// Richtung) plus zufällige Schwankung, z.B.
-//   SIMULATED_LATENCY_MS=120 SIMULATED_JITTER_MS=30 npm run dev:server
+// Nur zum Testen: simulierter Ping (Hälfte pro Richtung) + Jitter
 const SIMULATED_LATENCY_MS = Number(process.env.SIMULATED_LATENCY_MS) || 0
 const SIMULATED_JITTER_MS = Number(process.env.SIMULATED_JITTER_MS) || 0
 const lastDelivery = new WeakMap<WebSocket, { in: number; out: number }>()
@@ -139,8 +125,7 @@ function withSimulatedLatency(socket: WebSocket, direction: 'in' | 'out', delive
   if (SIMULATED_LATENCY_MS === 0 && SIMULATED_JITTER_MS === 0) return deliver()
   const now = performance.now()
   const last = lastDelivery.get(socket) ?? { in: 0, out: 0 }
-  // WebSocket (TCP) liefert in Reihenfolge - der Jitter darf Nachrichten
-  // deshalb verzögern, aber nicht vertauschen
+  // Reihenfolge erhalten wie bei TCP
   const at = Math.max(
     last[direction],
     now + SIMULATED_LATENCY_MS / 2 + Math.random() * SIMULATED_JITTER_MS
@@ -175,8 +160,7 @@ function parseMessage(data: unknown): ClientMessage | null {
   }
 }
 
-// Etwas Spielraum um die Arena herum - soll nur Unsinn abfangen, keine
-// Bewegung prüfen (das kommt in einem späteren Schritt).
+// Fängt nur Unsinn ab, prüft keine Bewegung
 const BOUNDS_MARGIN = 2
 const MAX_HEIGHT = 30
 
@@ -184,9 +168,8 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
-// Nimmt nur bekannte Felder mit plausiblen Werten - der Rest der Nachricht
-// wird verworfen, damit kein Client beliebige Daten an alle anderen
-// weiterreichen kann.
+// Nur bekannte, plausible Felder - kein Client soll beliebige Daten an
+// alle weiterreichen können
 function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
   if (typeof raw !== 'object' || raw === null) return null
   const s = raw as Record<string, any>
@@ -213,13 +196,12 @@ function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
     sprinting: Boolean(s.sprinting),
     shield: s.shield,
     maxShield: s.maxShield,
-    // Team bestimmt ausschließlich der Server, egal was der Client meldet
+    // Team bestimmt der Server
     team,
   }
 }
 
-// Hat sich der Spieler bewegt, umgeschaut oder geduckt? Kleine Schwellen,
-// damit Rundungsrauschen nicht als Aktivität zählt.
+// Schwellen, damit Rundungsrauschen nicht als Aktivität zählt
 function isActivity(before: PlayerNetworkState | null, after: PlayerNetworkState): boolean {
   if (!before) return true
   const a = before.position
@@ -231,7 +213,6 @@ function isActivity(before: PlayerNetworkState | null, after: PlayerNetworkState
   )
 }
 
-// Neue Spieler kommen ins kleinere Team, bei Gleichstand zufällig.
 function pickTeam(): Team {
   let red = 0
   let blue = 0
@@ -243,10 +224,8 @@ function pickTeam(): Team {
   return Math.random() < 0.5 ? 'red' : 'blue'
 }
 
-// Spawn-Punkt, dessen nächster lebender Gegner am weitesten weg ist - so
-// spawnt man nicht direkt vor einem Gegner. Punkte, auf denen gerade
-// jemand steht, fallen weg (sonst stecken Teamkameraden ineinander),
-// solange es noch freie gibt.
+// Punkt mit dem größten Abstand zum nächsten Gegner; belegte Punkte
+// (Teamkameraden) nur, wenn nichts anderes frei ist
 const SPAWN_OCCUPIED_RADIUS = 3
 
 function pickSpawnIndex(team: Team): number {
@@ -276,15 +255,13 @@ function pickSpawnIndex(team: Team): number {
   return bestIndex
 }
 
-// Setzt einen Spieler mit vollem Leben an einen (neuen) Spawn-Punkt -
-// nach dem Tod, zu Rundenbeginn und beim Team-Wechsel.
+// Nach Tod, zu Rundenbeginn und beim Team-Wechsel
 function respawn(client: Client, now: number) {
   client.respawnAt = null
   client.vitals = fullVitals()
   client.protectedUntil = now + SPAWN_PROTECTION * 1000
   const spawnIndex = pickSpawnIndex(client.team)
-  // Sofort am Spawn-Punkt führen, nicht erst wenn der Client seine neue
-  // Position schickt - sonst tauchen andere kurz an der alten Stelle auf.
+  // Sofort am Spawn führen, sonst sehen andere kurz die alte Position
   if (client.state) client.state = { ...client.state, position: { ...SPAWN_POINTS[spawnIndex] } }
   client.life += 1
   broadcast({ t: 'respawn', id: client.id, spawnIndex, life: client.life, team: client.team })
@@ -296,8 +273,7 @@ function teamSizes(): Scores {
   return sizes
 }
 
-// Bei 2+ Spielern Unterschied wechselt der zuletzt beigetretene Spieler
-// des größeren Teams die Seite (er hat am wenigsten "investiert").
+// Ab 2 Spielern Unterschied wechselt der zuletzt Beigetretene des größeren Teams
 function balanceTeams(now: number): boolean {
   let changed = false
   for (;;) {
@@ -333,8 +309,7 @@ function startRound(now: number) {
   broadcastRoster()
 }
 
-// Einfacher HTTP-Endpunkt: Hosting-Anbieter prüfen per HTTP, ob der Dienst
-// lebt - außerdem praktisch zum schnellen Testen im Browser.
+// HTTP-Statusseite (Health-Check des Hostings, Aufwecken)
 const httpServer = createServer((_request, response) => {
   response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
   response.end(`Dusk Arena Server - ${clients.size}/${MAX_PLAYERS} Spieler\n`)
@@ -467,10 +442,9 @@ setInterval(() => {
   }
 }, HEARTBEAT_INTERVAL_MS)
 
-// Der Schütze meldet, wen er getroffen hat (er sieht die Welt ~100ms
-// verzögert, siehe remotePlayers.ts - der Server würde mit eigener
-// Treffer-Berechnung ständig echte Treffer ablehnen). Geprüft wird
-// deshalb nur, was sich ohne Lag-Ausgleich sicher prüfen lässt.
+// Der Schütze meldet Treffer (er sieht Gegner ~100ms verzögert, eine
+// Server-Berechnung würde echte Treffer ablehnen); geprüft wird nur, was
+// ohne Lag-Ausgleich sicher geht
 function handleHit(shooter: Client, targetId: unknown) {
   const target = typeof targetId === 'number' ? clients.get(targetId) : undefined
   if (!target || target === shooter) return
@@ -508,14 +482,10 @@ function sanitizeVec3(raw: unknown): Vec3 | null {
   return { x: v.x, y: v.y, z: v.z }
 }
 
-// Die Mündung sitzt knapp vor der Kamera - weiter weg vom zuletzt
-// gemeldeten Standort darf ein Schuss nicht starten (Bewegung zwischen
-// zwei Zustands-Paketen eingerechnet).
 const MAX_MUZZLE_OFFSET = 3
 const MAX_TRACER_LENGTH = 120
 
-// Reine Optik, aber trotzdem gefiltert: sonst könnte ein Client beliebig
-// viele/lange Leuchtspuren überall bei allen anderen erzeugen.
+// Reine Optik, trotzdem gefiltert (sonst beliebige Spuren bei allen)
 function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown) {
   const from = sanitizeVec3(rawFrom)
   const to = sanitizeVec3(rawTo)
@@ -528,7 +498,6 @@ function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown) {
   if (Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) > MAX_TRACER_LENGTH) return
   shooter.lastShotAt = now
   shooter.lastActivityAt = now
-  // Wer schießt, verzichtet auf den restlichen Spawn-Schutz
   shooter.protectedUntil = 0
 
   broadcast({ t: 'shot', id: shooter.id, from, to }, shooter.id)
@@ -536,9 +505,7 @@ function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown) {
 
 let lastTickAt = performance.now()
 
-// Ein gemeinsamer Snapshot für alle - jeder Client ignoriert darin seinen
-// eigenen Eintrag. Bei max. 8 Spielern ist das billiger und einfacher als
-// pro Empfänger eine eigene Liste zu bauen.
+// Ein gemeinsamer Snapshot für alle (Clients ignorieren den eigenen Eintrag)
 setInterval(() => {
   const now = performance.now()
   const deltaSeconds = (now - lastTickAt) / 1000
@@ -557,8 +524,7 @@ setInterval(() => {
       console.log(`Spieler ${client.id} ist AFK - zurück zum Startbildschirm`)
       client.removing = true
       send(client.socket, { t: 'kicked', reason: 'afk' })
-      // Kurz warten, damit die Nachricht vor dem Schließen ankommt (auch
-      // mit simuliertem Ping, der das Senden verzögert)
+      // Kurz warten, damit die Nachricht vor dem Schließen ankommt
       setTimeout(() => client.socket.close(), 500)
     }
   }

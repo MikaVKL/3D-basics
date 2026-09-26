@@ -2,7 +2,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* keine Scrollbalken im Vollbild-Spiel */
+  overflow: hidden;
   background: #1a1f2e;
   font-family: system-ui, sans-serif;
 }
@@ -16,7 +16,7 @@ body {
   display: block;
 }
 
-/* Fadenkreuz: einfaches Kreuz aus zwei kleinen Balken in der Bildschirmmitte */
+/* Fadenkreuz */
 #crosshair {
   position: fixed;
   top: 50%;
@@ -51,8 +51,7 @@ body {
   transform: translateY(-50%);
 }
 
-/* Hitmarker: vier kurze diagonale Striche um das Fadenkreuz, als zwei
-   gedrehte Kreuze aus ::before/::after mit Lücke in der Mitte (Maske) */
+/* Hitmarker: gedrehtes Kreuz, Mitte per Maske ausgespart */
 #hitmarker {
   position: fixed;
   top: 50%;
@@ -104,8 +103,7 @@ body {
   background: #ff4d5a;
 }
 
-/* Schadens-Richtung: Bogen-Segment auf einem Kreis um die Bildschirmmitte,
-   per rotate() in Richtung des Angreifers gedreht (0 = von vorne) */
+/* Schadens-Richtung: Bogen, per rotate() zum Angreifer gedreht (0 = vorne) */
 #damage-indicators {
   position: fixed;
   top: 50%;
@@ -126,9 +124,7 @@ body {
   border: 6px solid transparent;
   border-top-color: rgba(255, 60, 60, 0.85);
   filter: drop-shadow(0 0 6px rgba(255, 60, 60, 0.6));
-  /* border-top allein wäre ein Viertelkreis - so breit, dass zwei Treffer
-     aus verschiedenen Richtungen zu einem Halbkreis verschmelzen. Die
-     Maske lässt nur ~50° um "oben" (= Richtung des Angreifers) stehen. */
+  /* Nur ~50° statt Viertelkreis, sonst verschmelzen zwei Richtungen */
   -webkit-mask: conic-gradient(from -25deg, #000 0 50deg, transparent 50deg);
   mask: conic-gradient(from -25deg, #000 0 50deg, transparent 50deg);
 }
@@ -148,7 +144,7 @@ body {
   transition: none;
 }
 
-/* Munitionsanzeige unten mittig */
+/* Munition */
 #ammo-hud {
   position: fixed;
   bottom: 24px;
@@ -209,7 +205,7 @@ body {
   top: 28%;
   left: 50%;
   transform: translateX(-50%);
-  white-space: nowrap; /* sonst begrenzt left:50% die Breite -> Umbruch */
+  white-space: nowrap; /* left:50% würde sonst die Breite begrenzen */
   padding: 14px 32px;
   text-align: center;
   font-family: system-ui, sans-serif;
@@ -390,7 +386,7 @@ body {
   opacity: 0.7;
 }
 
-/* Lebensanzeige unten links: Balken + Zahl */
+/* Lebensanzeige */
 #health-hud {
   position: fixed;
   bottom: 24px;
@@ -421,7 +417,7 @@ body {
   overflow: hidden;
 }
 
-/* Stamina/Schild sind schmaler - deutlich zweitrangig gegenüber Leben */
+/* Stamina/Schild schmaler als Leben */
 #stamina-bar-track,
 #shield-bar-track {
   height: 8px;
@@ -448,7 +444,7 @@ body {
   transition: width 0.15s ease, background-color 0.15s ease;
 }
 
-/* Bei niedrigem Leben wird der Balken warnend orange/rot statt Neon-Cyan */
+/* niedriges Leben */
 #health-bar-fill.low {
   background: #ff6b3d;
 }
@@ -460,7 +456,7 @@ body {
   min-width: 2.5em;
 }
 
-/* Sterbebildschirm während der Respawn-Wartezeit */
+/* Todes-Overlay */
 #death-overlay {
   position: fixed;
   inset: 0;
@@ -483,7 +479,7 @@ body {
   display: none;
 }
 
-/* Startbildschirm-Overlay */
+/* Startbildschirm */
 #overlay {
   position: fixed;
   inset: 0;
@@ -511,7 +507,7 @@ body {
   margin: 0 0 0.5rem;
   font-size: 2.5rem;
   letter-spacing: 0.05em;
-  color: #33e6cc; /* Neon-Akzent aus der Palette */
+  color: #33e6cc;
   text-shadow: 0 0 12px rgba(51, 230, 204, 0.6);
 }
 
@@ -557,23 +553,19 @@ body {
   color: #8a97ab;
 }
 
-/* ---------------------------------------------------------------------- */
-/* Touch-Steuerung (iPad/Handy)                                          */
-/* ---------------------------------------------------------------------- */
+/* --- Touch-Steuerung --- */
 
 #touch-controls {
   position: fixed;
   inset: 0;
-  z-index: 4; /* unter dem Overlay (10), über dem Canvas */
+  z-index: 4; /* unter dem Overlay */
 }
 
 #touch-controls.hidden {
   display: none;
 }
 
-/* Die beiden Touch-Zonen sind unsichtbar, reagieren aber auf Finger-Input.
-   touch-action: none verhindert, dass der Browser die Geste als Scrollen
-   oder Zoomen interpretiert. */
+/* Unsichtbare Zonen; touch-action: none verhindert Scrollen/Zoomen */
 #touch-move-zone,
 #touch-look-zone {
   position: absolute;
@@ -591,7 +583,7 @@ body {
   right: 0;
 }
 
-/* Der Joystick erscheint dort, wo man mit dem Finger hintippt ("floating") */
+/* Joystick erscheint dort, wo man hintippt */
 #joystick-base {
   position: fixed;
   width: 100px;
@@ -643,9 +635,9 @@ body {
 
 #shoot-button {
   position: fixed;
-  right: 140px; /* etwas weiter links vom Sprung-Button als vorher */
+  right: 140px;
   bottom: 28px;
-  width: 88px; /* größer - Hauptaktion, wird am häufigsten gebraucht */
+  width: 88px; /* Hauptaktion, daher größer */
   height: 88px;
   border-radius: 50%;
   border: 2px solid rgba(51, 230, 204, 0.6);
@@ -662,7 +654,7 @@ body {
 
 #reload-button {
   position: fixed;
-  right: 156px; /* über der Mitte des (jetzt größeren) Schieß-Buttons */
+  right: 156px;
   bottom: 128px;
   width: 56px;
   height: 56px;
@@ -679,8 +671,7 @@ body {
   background: rgba(232, 236, 241, 0.3);
 }
 
-/* Vorläufige Position (über dem Sprung-Button) - finales Layout kommt erst,
-   wenn alle Buttons stehen, siehe Kommentar bei den anderen Buttons. */
+/* vorläufige Position */
 #crouch-button {
   position: fixed;
   right: 28px;
@@ -696,8 +687,7 @@ body {
   touch-action: none;
 }
 
-/* Ducken ist ein Umschalter (siehe TouchInput.ts) - "active" markiert den
-   Zustand dauerhaft, nicht nur während des Antippens wie bei :active. */
+/* Ducken ist ein Umschalter: .active = dauerhaft geduckt */
 #crouch-button.active {
   background: rgba(255, 107, 61, 0.55);
   border-color: rgba(255, 107, 61, 0.9);
