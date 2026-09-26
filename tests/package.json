@@ -1,0 +1,10 @@
+{
+  "name": "3d-basics-tests",
+  "private": true,
+  "type": "module",
+  "description": "Browser-Tests (Playwright) - eigenes Paket, damit das Hosting (npm ci im Hauptordner) keine Browser-Abhängigkeiten installiert",
+  "dependencies": {
+    "playwright": "^1.56.0",
+    "ws": "^8.18.0"
+  }
+}

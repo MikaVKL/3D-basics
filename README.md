@@ -114,6 +114,17 @@ prüfen, kann der Server eine Verzögerung simulieren:
 SIMULATED_LATENCY_MS=120 SIMULATED_JITTER_MS=20 npm run dev:server
 ```
 
+### Automatische Tests
+
+```bash
+npm run test:setup   # einmalig: Playwright + ws in tests/ installieren
+npm test             # Bewegung, Stecken-Fuzz-Test, Mehrspieler mit 2 Browsern
+```
+
+Einzeln: `npm run test:movement`, `npm run test:stuck`, `npm run test:mp`
+(Details in [CLAUDE.md](CLAUDE.md)). Die Tests starten Vite und Spielserver
+selbst auf eigenen Ports.
+
 ### Multiplayer-Server hosten (kostenlos, Render.com)
 
 GitHub Pages kann nur statische Dateien ausliefern, der Spielserver braucht

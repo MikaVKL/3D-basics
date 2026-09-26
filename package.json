@@ -8,7 +8,12 @@
     "dev:server": "node --watch server/index.ts",
     "start": "node server/index.ts",
     "build": "tsc && tsc -p server && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:setup": "npm install --prefix tests",
+    "test:stuck": "node tests/stuck-fuzz.mjs",
+    "test:movement": "node tests/movement.mjs",
+    "test:mp": "node tests/multiplayer.mjs",
+    "test": "node tests/movement.mjs && node tests/stuck-fuzz.mjs 500 20 1 && node tests/multiplayer.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
