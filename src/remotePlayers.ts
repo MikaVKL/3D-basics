@@ -88,14 +88,14 @@ export class RemotePlayers {
       },
     }
     player.avatar.mesh.userData.damageable = damageable
-    this.scene.add(player.avatar.mesh)
+    this.scene.add(player.avatar.root)
     this.shootables.push(player.avatar.mesh)
     this.players.set(id, player)
     return player
   }
 
   private remove(id: PlayerId, player: RemotePlayer) {
-    this.scene.remove(player.avatar.mesh)
+    this.scene.remove(player.avatar.root)
     const index = this.shootables.indexOf(player.avatar.mesh)
     if (index !== -1) this.shootables.splice(index, 1)
     player.avatar.dispose()
@@ -130,7 +130,7 @@ export class RemotePlayers {
   // Am Boden = Höhe ändert sich höchstens so stark wie auf einer Rampe
   // (Steigung ~0.3); im Sprung/Fall ist sie deutlich steiler. Geduckt lautlos.
   private trackFootsteps(player: RemotePlayer, state: PlayerNetworkState) {
-    const position = player.avatar.mesh.position
+    const position = player.avatar.root.position
     const last = player.lastPosition
     player.lastPosition = position.clone()
     if (!last || !state.isAlive || state.crouching) return
@@ -145,7 +145,7 @@ export class RemotePlayers {
   }
 
   getPosition(id: PlayerId): THREE.Vector3 | null {
-    return this.players.get(id)?.avatar.mesh.position.clone() ?? null
+    return this.players.get(id)?.avatar.centerPosition ?? null
   }
 
   get count(): number {

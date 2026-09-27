@@ -89,18 +89,15 @@ const randomSpawnPoint =
   arena.spawnPoints[Math.floor(Math.random() * arena.spawnPoints.length)]
 player.spawn(randomSpawnPoint)
 
-// Eigene Hülle - nicht in shootables, man soll sich nicht selbst treffen
+// Eigene Figur: nicht in der Szene (die Kamera säße im Kopf) und nicht in
+// shootables; hält nur Team und Zustand
 const playerAvatar = new PlayerAvatar(player.team)
 playerAvatar.mesh.userData.damageable = player
-scene.add(playerAvatar.mesh)
 
-// TEMPORÄR: Kopie der Spieler-Hülle zum Begutachten des Modells
-const inspectionAvatarMesh = new THREE.Mesh(
-  new THREE.CapsuleGeometry(0.35, 1.0, 4, 8),
-  new THREE.MeshStandardMaterial({ color: Palette.accentWarm })
-)
-inspectionAvatarMesh.position.set(16, 0.85, 16)
-scene.add(inspectionAvatarMesh)
+// TEMPORÄR: Figur zum Begutachten des Modells im Singleplayer
+const inspectionAvatar = new PlayerAvatar('red')
+inspectionAvatar.applyState({ ...player.getNetworkState(), position: { x: 16, y: 1.7, z: 16 }, yaw: Math.PI * 0.75, team: 'red', isAlive: true, crouching: false })
+scene.add(inspectionAvatar.root)
 
 const lookControl = new LookControl(camera)
 const scoreboard = new Scoreboard()
