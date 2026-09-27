@@ -2,6 +2,8 @@
 // Jede Synth-Funktion spielt auf ein beliebiges Ziel - live oder in einem
 // OfflineAudioContext (Tests prüfen so, dass jeder Sound hörbar ist).
 
+import * as THREE from 'three'
+
 type Synth = (ctx: BaseAudioContext, out: AudioNode, noise: AudioBuffer) => void
 
 const MUTE_STORAGE_KEY = 'duskArena.muted'
@@ -82,6 +84,21 @@ export const SYNTHS = {
 
 export type SoundName = keyof typeof SYNTHS
 
+// Räumliche Ortung für Sounds anderer Spieler: Richtung (auch vorne/hinten
+// über HRTF) und Abschwächung mit der Entfernung
+export function createPanner(ctx: BaseAudioContext, position: { x: number; y: number; z: number }) {
+  const panner = ctx.createPanner()
+  panner.panningModel = 'HRTF'
+  panner.distanceModel = 'inverse'
+  panner.refDistance = 4
+  panner.rolloffFactor = 1.3
+  panner.maxDistance = 90
+  panner.positionX.value = position.x
+  panner.positionY.value = position.y
+  panner.positionZ.value = position.z
+  return panner
+}
+
 export class SoundFx {
   private ctx: AudioContext | null = null
   private master: GainNode | null = null
@@ -125,7 +142,40 @@ export class SoundFx {
     out.connect(this.master)
     SYNTHS[name](this.ctx, out, this.noise)
   }
+
+  playAt(name: SoundName, position: { x: number; y: number; z: number }, volume = 1) {
+    if (!this.ctx || !this.master || !this.noise) return
+    const out = this.ctx.createGain()
+    out.gain.value = volume
+    out.connect(createPanner(this.ctx, position)).connect(this.master)
+    SYNTHS[name](this.ctx, out, this.noise)
+  }
+
+  // Hörposition = Kamera, pro Frame
+  updateListener(camera: THREE.Camera) {
+    if (!this.ctx) return
+    const listener = this.ctx.listener
+    camera.getWorldDirection(forward)
+    // Firefox kennt nur die alte Schnittstelle
+    if (!listener.positionX) {
+      listener.setPosition(camera.position.x, camera.position.y, camera.position.z)
+      listener.setOrientation(forward.x, forward.y, forward.z, 0, 1, 0)
+      return
+    }
+    const t = this.ctx.currentTime
+    listener.positionX.setValueAtTime(camera.position.x, t)
+    listener.positionY.setValueAtTime(camera.position.y, t)
+    listener.positionZ.setValueAtTime(camera.position.z, t)
+    listener.forwardX.setValueAtTime(forward.x, t)
+    listener.forwardY.setValueAtTime(forward.y, t)
+    listener.forwardZ.setValueAtTime(forward.z, t)
+    listener.upX.setValueAtTime(0, t)
+    listener.upY.setValueAtTime(1, t)
+    listener.upZ.setValueAtTime(0, t)
+  }
 }
+
+const forward = new THREE.Vector3()
 
 export function createNoiseBuffer(ctx: BaseAudioContext): AudioBuffer {
   const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate)

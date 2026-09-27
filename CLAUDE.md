@@ -100,8 +100,7 @@ Stolperfallen bei Headless-Tests:
 
 ## Offene Ideen / nächste Schritte
 
-- Reihenfolge (mit Nutzer abgestimmt): Sound (Schritt 1 eigene Sounds
-  erledigt, Schritt 2 räumliche Sounds der Gegner) -> Spielermodell ->
+- Reihenfolge (mit Nutzer abgestimmt): Sound (erledigt) -> Spielermodell ->
   Effekte -> Kopftreffer -> zweite Waffe -> Rutschen/Bunny-Hop -> Ping ->
   Arena/Optik/HUD -> Raum-Codes -> Hintergrund-Tab -> Server-Prüfung.
 - Noch zu entscheiden: Kopftreffer-Bonus? Kollision zwischen Spielern?

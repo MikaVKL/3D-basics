@@ -9,14 +9,19 @@ const servers = await startServers()
 const browser = await launchBrowser()
 const errors = []
 
-// Protokolliert jeden sound.play()-Aufruf der Seite in window.__sounds
+// Protokolliert sound.play() als "name" und sound.playAt() als "@name"
 const spySounds = (page) =>
   page.evaluate(() => {
     window.__sounds = []
-    const original = __dusk.sound.play.bind(__dusk.sound)
+    const play = __dusk.sound.play.bind(__dusk.sound)
+    const playAt = __dusk.sound.playAt.bind(__dusk.sound)
     __dusk.sound.play = (name, volume) => {
       window.__sounds.push(name)
-      original(name, volume)
+      play(name, volume)
+    }
+    __dusk.sound.playAt = (name, position, volume) => {
+      window.__sounds.push('@' + name)
+      playAt(name, position, volume)
     }
   })
 const takeSounds = (page) =>
@@ -49,6 +54,35 @@ try {
   for (const [name, { peak, invalid }] of Object.entries(levels)) {
     check(`Sound "${name}" hörbar und sauber`, peak > 0.02 && peak < 1.2 && invalid === 0, `Spitze ${peak.toFixed(2)}`)
   }
+
+  // Räumlich: Hörer im Ursprung, Blick nach -z (Web-Audio-Standard)
+  const spatial = await page.evaluate(async () => {
+    const { SYNTHS, createNoiseBuffer, createPanner } = await import('/3D-basics/src/sound.ts')
+    const render = async (position) => {
+      const ctx = new OfflineAudioContext(2, 44100, 44100)
+      const out = ctx.createGain()
+      out.connect(createPanner(ctx, position)).connect(ctx.destination)
+      SYNTHS.shot(ctx, out, createNoiseBuffer(ctx))
+      const buffer = await ctx.startRendering()
+      const rms = (channel) => Math.sqrt(buffer.getChannelData(channel).reduce((sum, v) => sum + v * v, 0) / buffer.length)
+      return [rms(0), rms(1)]
+    }
+    return {
+      right: await render({ x: 10, y: 0, z: 0 }),
+      left: await render({ x: -10, y: 0, z: 0 }),
+      near: await render({ x: 0, y: 0, z: -5 }),
+      far: await render({ x: 0, y: 0, z: -40 }),
+    }
+  })
+  const ratio = ([l, r]) => (r / l).toFixed(1)
+  check('Schuss von rechts: rechts lauter', spatial.right[1] > spatial.right[0] * 2, `R/L ${ratio(spatial.right)}`)
+  check('Schuss von links: links lauter', spatial.left[0] > spatial.left[1] * 2, `R/L ${ratio(spatial.left)}`)
+  const loudness = ([l, r]) => l + r
+  check(
+    'weit weg deutlich leiser als nah',
+    loudness(spatial.far) < loudness(spatial.near) / 3,
+    `40m/5m = ${(loudness(spatial.far) / loudness(spatial.near)).toFixed(2)}`
+  )
 
   // --- 2) Singleplayer-Ereignisse ---
   await play(page)
@@ -126,8 +160,29 @@ try {
   await wait(600)
   const aSounds = await takeSounds(A)
   const bSounds = await takeSounds(B)
+  check('Getroffener hört A\'s Schüsse räumlich', bSounds.filter((s) => s === '@shot').length === 9)
   check('Getroffener hört Treffer-Wumms', bSounds.filter((s) => s === 'hurt').length === 9, bSounds.join())
   check('Schütze hört Kill-Ton vom Server', aSounds.includes('kill'), aSounds.join())
+
+  // Schritte des Gegners: B läuft (echte Frames), A hört sie räumlich
+  await takeSounds(A)
+  await wait(3500) // B's Respawn + Spawn-Schutz
+  await B.evaluate(() => __dusk.player.setMoveInput(0, 1))
+  await wait(3000)
+  await B.evaluate(() => __dusk.player.setMoveInput(0, 0))
+  const walkSteps = (await takeSounds(A)).filter((s) => s === '@step').length
+  check('A hört B\'s Schritte räumlich', walkSteps >= 2, `${walkSteps} Schritte`)
+  await B.evaluate(() => {
+    __dusk.player.setCrouching(true)
+    __dusk.player.setMoveInput(0, -1)
+  })
+  await wait(3000)
+  await B.evaluate(() => {
+    __dusk.player.setMoveInput(0, 0)
+    __dusk.player.setCrouching(false)
+  })
+  await wait(300)
+  check('geduckter Gegner lautlos', !(await takeSounds(A)).includes('@step'))
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

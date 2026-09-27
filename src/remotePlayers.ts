@@ -11,6 +11,7 @@ const INTERPOLATION_DELAY_MS = 100
 // Anpassung an dauerhaft höheren Ping pro Zustand (niedrigerer: sofort)
 const CLOCK_ADAPT_RATE = 0.02
 const MAX_BUFFERED_SNAPSHOTS = 30
+const STEP_DISTANCE = 2.2 // wie bei den eigenen Schritten (main.ts)
 
 interface Sample {
   time: number // Uhr des Senders
@@ -24,6 +25,8 @@ interface RemotePlayer {
   // (Jitter fängt der Interpolations-Puffer auf)
   clockOffset: number | null
   spawnProtected: boolean
+  lastPosition: THREE.Vector3 | null
+  stepDistance: number
 }
 
 export class RemotePlayers {
@@ -32,6 +35,8 @@ export class RemotePlayers {
   private readonly scene: THREE.Scene
   private readonly shootables: THREE.Object3D[]
   private readonly onHit: (id: PlayerId) => void
+  // Schritt eines Gegners (für räumliche Schrittgeräusche)
+  onFootstep?: (position: THREE.Vector3) => void
 
   // shootables: Liste der Waffe (Hüllen werden ein-/ausgetragen)
   constructor(scene: THREE.Scene, shootables: THREE.Object3D[], onHit: (id: PlayerId) => void) {
@@ -62,7 +67,12 @@ export class RemotePlayers {
   }
 
   private add(id: PlayerId, state: PlayerNetworkState): RemotePlayer {
-    const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [], clockOffset: null, spawnProtected: false }
+    const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [],
+      clockOffset: null,
+      spawnProtected: false,
+      lastPosition: null,
+      stepDistance: 0,
+    }
     // Schaden wird nur gemeldet - ob er zählt, entscheidet der Server
     const damageable: Damageable = {
       get isAlive() {
@@ -95,7 +105,9 @@ export class RemotePlayers {
   // Alte Samples verwerfen, sonst gleitet die Figur von der Todesstelle zum Spawn
   handleRespawn(id: PlayerId) {
     const player = this.players.get(id)
-    if (player) player.samples.length = 0
+    if (!player) return
+    player.samples.length = 0
+    player.lastPosition = null
   }
 
   // Hüllen von nicht (mehr) verbundenen Spielern werden entfernt
@@ -107,9 +119,28 @@ export class RemotePlayers {
     for (const player of this.players.values()) {
       if (player.samples.length > 0 && player.clockOffset !== null) {
         const renderTime = now + player.clockOffset - INTERPOLATION_DELAY_MS
-        player.avatar.applyState(interpolate(player.samples, renderTime))
+        const state = interpolate(player.samples, renderTime)
+        player.avatar.applyState(state)
+        this.trackFootsteps(player, state)
       }
       player.avatar.update(deltaSeconds)
+    }
+  }
+
+  // Am Boden = Höhe ändert sich höchstens so stark wie auf einer Rampe
+  // (Steigung ~0.3); im Sprung/Fall ist sie deutlich steiler. Geduckt lautlos.
+  private trackFootsteps(player: RemotePlayer, state: PlayerNetworkState) {
+    const position = player.avatar.mesh.position
+    const last = player.lastPosition
+    player.lastPosition = position.clone()
+    if (!last || !state.isAlive || state.crouching) return
+    const horizontal = Math.hypot(position.x - last.x, position.z - last.z)
+    const vertical = Math.abs(position.y - last.y)
+    if (horizontal > 2 || vertical > horizontal * 0.4 + 0.005) return // Teleport/Respawn bzw. Luft
+    player.stepDistance += horizontal
+    if (player.stepDistance >= STEP_DISTANCE) {
+      player.stepDistance = 0
+      this.onFootstep?.(position.clone())
     }
   }
 

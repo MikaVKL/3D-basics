@@ -204,11 +204,13 @@ const network: NetworkClient = new NetworkClient({
     nextRoundAt = null
     roundBanner.classList.add('hidden')
   },
-  onRemoteShot: (from, to) =>
+  onRemoteShot: (from, to) => {
+    sound.playAt('shot', from, 0.8)
     weapon.showRemoteTracer(
       new THREE.Vector3(from.x, from.y, from.z),
       new THREE.Vector3(to.x, to.y, to.z)
-    ),
+    )
+  },
   onHurt: (by) => {
     hitFeedback.showDamageFrom(remotePlayers.getPosition(by), camera)
     sound.play('hurt')
@@ -238,6 +240,7 @@ weapon.onEnemyHit = (kill) => {
   sound.play(kill ? 'kill' : 'hit')
 }
 weapon.onReload = () => sound.play('reload', 0.6)
+remotePlayers.onFootstep = (position) => sound.playAt('step', position, 0.8)
 player.onJump = () => sound.play('jump', 0.5)
 // Kleine Höhenwechsel (Rampe runter) sind keine Landung
 player.onLand = (fallSpeed) => {
@@ -469,6 +472,7 @@ function animate() {
   }
   playerAvatar.applyState(player.getNetworkState())
   remotePlayers.update(deltaSeconds, network.remotePlayers)
+  sound.updateListener(camera)
   killFeed.update()
   hitFeedback.update()
   scoreTable.render(network.roster, network.localId)
