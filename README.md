@@ -57,6 +57,8 @@ zuverlässiger als reines Feature-Sniffing):
 - Maus: Umschauen (Klick auf den Startbildschirm aktiviert die Maussteuerung)
 - `Leertaste`: Springen
 - `ESC`: Maussteuerung freigeben (Menü)
+- `Tab` (halten): Punktetabelle
+- `M`: Ton an/aus
 
 **Tablet/Handy (Touch):**
 - Linke Bildschirmhälfte: virtueller Joystick zum Bewegen (erscheint dort, wo man hintippt)

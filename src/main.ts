@@ -18,6 +18,7 @@ import { TeamLabel, type Team } from './team'
 import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
+import { SoundFx } from './sound'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
 
@@ -133,6 +134,7 @@ const scoreGoal = document.querySelector<HTMLDivElement>('#score-goal')!
 // Zeitpunkt der nächsten Runde (nur während der Sieger-Anzeige)
 let nextRoundAt: number | null = null
 
+const sound = new SoundFx()
 const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#hitmarker')!,
   document.querySelector<HTMLDivElement>('#damage-indicators')!,
@@ -177,7 +179,10 @@ const network: NetworkClient = new NetworkClient({
     player.applyServerVitals(health, shield, spawnProtected),
   onKill: (killer, victim, scores) => {
     scoreboard.setScores(scores)
-    if (killer === network.localId) hitFeedback.showHit(true)
+    if (killer === network.localId) {
+      hitFeedback.showHit(true)
+      sound.play('kill')
+    }
     killFeed.add(killer, victim, network.localId, (id) => network.nameOf(id))
   },
   onRespawn: (id, spawnIndex, team) => {
@@ -204,7 +209,10 @@ const network: NetworkClient = new NetworkClient({
       new THREE.Vector3(from.x, from.y, from.z),
       new THREE.Vector3(to.x, to.y, to.z)
     ),
-  onHurt: (by) => hitFeedback.showDamageFrom(remotePlayers.getPosition(by), camera),
+  onHurt: (by) => {
+    hitFeedback.showDamageFrom(remotePlayers.getPosition(by), camera)
+    sound.play('hurt')
+  },
   onKicked: () => {
     // Zurück auf den Startbildschirm; erneuter Klick tritt wieder bei
     if (document.pointerLockElement) document.exitPointerLock()
@@ -221,12 +229,29 @@ const network: NetworkClient = new NetworkClient({
   },
 })
 
-weapon.onShot = (from, to) => network.sendShot(from, to)
-weapon.onEnemyHit = (kill) => hitFeedback.showHit(kill)
+weapon.onShot = (from, to) => {
+  network.sendShot(from, to)
+  sound.play('shot', 0.7)
+}
+weapon.onEnemyHit = (kill) => {
+  hitFeedback.showHit(kill)
+  sound.play(kill ? 'kill' : 'hit')
+}
+weapon.onReload = () => sound.play('reload', 0.6)
+player.onJump = () => sound.play('jump', 0.5)
+// Kleine Höhenwechsel (Rampe runter) sind keine Landung
+player.onLand = (fallSpeed) => {
+  if (fallSpeed > 3) sound.play('land', Math.min(1, fallSpeed / 10))
+}
+
+// M schaltet den Ton um (nicht beim Tippen im Namensfeld)
+window.addEventListener('keydown', (event) => {
+  if (event.code === 'KeyM' && !(event.target instanceof HTMLInputElement)) sound.toggleMute()
+})
 
 // Nur im Dev-Build: Zugriff für die Browser-Tests (tests/)
 if (import.meta.env.DEV) {
-  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback } })
+  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound } })
 }
 
 // --- Eingabe ---
@@ -260,6 +285,7 @@ function setActive(active: boolean) {
   isActive = active
   overlay.classList.toggle('hidden', active)
   if (active) {
+    sound.unlock()
     overlayNotice.textContent = ''
     cancelLeave()
     network.join()
@@ -412,6 +438,21 @@ function updateShieldAndStaminaHud() {
   staminaBarFill.style.width = `${(stamina.current / stamina.max) * 100}%`
 }
 
+// Schritt-Geräusch pro zurückgelegter Strecke am Boden; geduckt lautlos
+const STEP_DISTANCE = 2.2
+let stepDistance = 0
+const lastStepPosition = new THREE.Vector3()
+function updateOwnFootsteps() {
+  const moved = Math.hypot(camera.position.x - lastStepPosition.x, camera.position.z - lastStepPosition.z)
+  lastStepPosition.copy(camera.position)
+  if (!player.isOnGround || player.getNetworkState().crouching || moved > 1) return
+  stepDistance += moved
+  if (stepDistance >= STEP_DISTANCE) {
+    stepDistance = 0
+    sound.play('step', 0.5)
+  }
+}
+
 function animate() {
   requestAnimationFrame(animate)
 
@@ -420,6 +461,7 @@ function animate() {
 
   if (isActive) {
     player.update(deltaSeconds)
+    updateOwnFootsteps()
   }
   weapon.update(deltaSeconds)
   for (const target of targets) {

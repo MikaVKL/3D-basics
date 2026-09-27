@@ -65,6 +65,9 @@ export type { PlayerNetworkState } from './shared/protocol'
 export class Player implements Damageable {
   private velocity = new THREE.Vector3()
   private onGround = true
+  onJump?: () => void
+  // fallSpeed in m/s beim Aufsetzen
+  onLand?: (fallSpeed: number) => void
   private solids: Solid[]
   private ramps: Ramp[]
 
@@ -119,6 +122,10 @@ export class Player implements Damageable {
     this.stamina = MAX_STAMINA
     this.vitals.shield = MAX_SHIELD
     this.vitals.shieldRegenCooldown = 0
+  }
+
+  get isOnGround(): boolean {
+    return this.onGround
   }
 
   get isAlive(): boolean {
@@ -199,6 +206,7 @@ export class Player implements Damageable {
     if (this.onGround && this.isAlive) {
       this.velocity.y = JUMP_SPEED
       this.onGround = false
+      this.onJump?.()
     }
   }
 
@@ -293,6 +301,7 @@ export class Player implements Damageable {
     const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z, feetBefore)
 
     if (this.bodyY <= groundHeight) {
+      if (!this.onGround) this.onLand?.(-this.velocity.y)
       this.bodyY = groundHeight
       this.velocity.y = 0
       this.onGround = true

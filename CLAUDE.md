@@ -49,6 +49,7 @@ Weiterarbeiten wissen muss.
 - `server/index.ts` – autoritativ für Leben/Schild/Tod/Respawn/Punkte/Teams,
   Treffer-Prüfung (Schütze meldet, Server prüft), Runden, Team-Ausgleich,
   AFK/Geister-Entfernung. Läuft direkt als TypeScript (Node ≥ 22.18).
+- `src/sound.ts` – synthetisierte Sounds (Web Audio, keine Dateien)
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
   (Interpolation auf der Uhr des Absenders), `src/player.ts` (Bewegung und
   Kollision: Boden über die ganze Standfläche, Deckenkollision, "nur tiefer
@@ -70,6 +71,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Leuchtspuren, Tabelle. `node tests/multiplayer.mjs --long` zusätzlich
   Menü-Austritt, eingefrorener Tab, AFK (~2,5 Min.).
   Mit Ping: `SIMULATED_LATENCY_MS=150 SIMULATED_JITTER_MS=30 npm run test:mp`.
+- `npm run test:sound` – jeder Sound hörbar (Offline-Rendering) und an
+  den richtigen Ereignissen (Schuss, Treffer, Kill, Sprung, Schritte, ...)
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -97,8 +100,10 @@ Stolperfallen bei Headless-Tests:
 
 ## Offene Ideen / nächste Schritte
 
-- Politur: Sound (Schüsse, Schritte, Treffer), Spielermodell statt Kapsel,
-  Effekte, Arena-Optik.
+- Reihenfolge (mit Nutzer abgestimmt): Sound (Schritt 1 eigene Sounds
+  erledigt, Schritt 2 räumliche Sounds der Gegner) -> Spielermodell ->
+  Effekte -> Kopftreffer -> zweite Waffe -> Rutschen/Bunny-Hop -> Ping ->
+  Arena/Optik/HUD -> Raum-Codes -> Hintergrund-Tab -> Server-Prüfung.
 - Noch zu entscheiden: Kopftreffer-Bonus? Kollision zwischen Spielern?
 - Später: Raum-Codes für private Runden, Ping-Anzeige, strengere
   Bewegungsprüfung auf dem Server, Hintergrund-Tab sendet nur ~1×/s.

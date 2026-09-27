@@ -59,6 +59,7 @@ export class Weapon {
   onShot?: (from: THREE.Vector3, to: THREE.Vector3) => void
   // Für den Hitmarker; kill nur lokal erkannt (Dummies), online meldet der Server
   onEnemyHit?: (kill: boolean) => void
+  onReload?: () => void
 
   private ammo = MAGAZINE_SIZE
   private reloadRemaining = 0
@@ -168,6 +169,7 @@ export class Weapon {
   reload() {
     if (this.reloadRemaining > 0 || this.ammo === MAGAZINE_SIZE) return
     this.reloadRemaining = RELOAD_DURATION
+    this.onReload?.()
   }
 
   getAmmoState(): AmmoState {
