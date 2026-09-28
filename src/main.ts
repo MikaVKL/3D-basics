@@ -337,7 +337,7 @@ document.addEventListener('visibilitychange', () => {
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
   overlayHint.textContent =
-    'Links: Joystick zum Bewegen (voll ausgelenkt = Sprinten) · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen/Ducken/Waffe wechseln · Punktestand oben antippen: Tabelle'
+    'Links: Joystick zum Bewegen (voll ausgelenkt = Sprinten) · Rechts: Wischen zum Umschauen · Buttons: Springen (halten = weiterhüpfen) / Schießen (halten + wischen = zielen) / Nachladen / Ducken (halten) / Waffe wechseln · Punktestand oben antippen: Tabelle'
   touchControls.classList.remove('hidden')
 
   const touchInput = new TouchInput(

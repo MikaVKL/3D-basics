@@ -64,6 +64,48 @@ try {
   check('Halten im Sprint: rutscht', sliding.sliding, JSON.stringify(sliding))
   check('Loslassen beendet das Rutschen sofort', !afterRelease.sliding)
   check('danach wieder aufrecht', Math.abs(standing.eye - 1.7) < 0.01, `Augenhöhe ${standing.eye.toFixed(2)}`)
+  // Schießen-Button: gedrückt halten und wischen = schießen und zielen
+  const shootBox = await page.locator('#shoot-button').boundingBox()
+  const shootPoint = { x: shootBox.x + shootBox.width / 2, y: shootBox.y + shootBox.height / 2, id: 2 }
+  await page.evaluate(() => {
+    __dusk.player.spawn({ x: 0, y: 1.7, z: 12, clone() { return this } })
+    __dusk.weapon.switchTo('rifle')
+    __dusk.weapon.switchRemaining = 0
+    window.__yaw0 = __dusk.lookControl.euler.y
+  })
+  const ammo0 = await page.evaluate(() => __dusk.weapon.ammo)
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [shootPoint] })
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...shootPoint, x: shootPoint.x - i * 8 }] })
+    await wait(40)
+  }
+  const during = await page.evaluate(() => ({ turned: __dusk.lookControl.euler.y - window.__yaw0, ammo: __dusk.weapon.ammo }))
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await wait(300)
+  const ammoAfter = await page.evaluate(() => __dusk.weapon.ammo)
+  await wait(300)
+  check('Wischen auf Schießen dreht die Sicht', Math.abs(during.turned - 80 * 0.0025) < 0.02, `${during.turned.toFixed(3)} rad`)
+  check('dabei wird geschossen, Loslassen stoppt', during.ammo < ammo0 && (await page.evaluate(() => __dusk.weapon.ammo)) === ammoAfter, `${ammo0} -> ${during.ammo} -> ${ammoAfter}`)
+
+  // Sprung-Button halten: hüpft weiter (wie gehaltene Leertaste), Loslassen stoppt
+  const jumpBox = await page.locator('#jump-button').boundingBox()
+  const jumpPoint = { x: jumpBox.x + jumpBox.width / 2, y: jumpBox.y + jumpBox.height / 2, id: 3 }
+  await page.evaluate(() => {
+    window.__jumps = 0
+    const onJump = __dusk.player.onJump
+    __dusk.player.onJump = () => {
+      window.__jumps++
+      onJump?.()
+    }
+  })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [jumpPoint] })
+  await wait(2500)
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  const jumpsHeld = await page.evaluate(() => window.__jumps)
+  await wait(1500)
+  const jumpsAfter = await page.evaluate(() => window.__jumps)
+  check('Sprung halten: hüpft mehrfach', jumpsHeld >= 3, `${jumpsHeld} Sprünge in 2,5 s`)
+  check('Loslassen: keine weiteren Sprünge', jumpsAfter - jumpsHeld <= 1, `${jumpsAfter - jumpsHeld} danach`)
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

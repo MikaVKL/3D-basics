@@ -9,6 +9,9 @@ import type { Weapon } from '../weapon'
 
 const JOYSTICK_RADIUS = 45 // Pixel
 const SPRINT_JOYSTICK_THRESHOLD = 0.9 // Auslenkung, ab der gesprintet wird
+// Gehaltener Sprung-Button hüpft weiter (wie die Tasten-Wiederholung der
+// Leertaste): jump() in der Luft merkt den Sprung für die Landung vor
+const JUMP_REPEAT_MS = 50
 
 interface TouchElements {
   moveZone: HTMLElement
@@ -28,6 +31,11 @@ export class TouchInput {
 
   private lookTouchId: number | null = null
   private lastLookPos = { x: 0, y: 0 }
+
+  // Wischen auf dem Schießen-Button zielt (ein Daumen: schießen + zielen)
+  private shootTouchId: number | null = null
+  private lastShootPos = { x: 0, y: 0 }
+  private jumpRepeat: ReturnType<typeof setInterval> | null = null
 
   private elements: TouchElements
   private player: Player
@@ -56,16 +64,38 @@ export class TouchInput {
       e.preventDefault()
       e.stopPropagation()
       this.player.jump()
+      if (this.jumpRepeat === null) this.jumpRepeat = setInterval(() => this.player.jump(), JUMP_REPEAT_MS)
     })
+    const stopJumpRepeat = () => {
+      if (this.jumpRepeat !== null) clearInterval(this.jumpRepeat)
+      this.jumpRepeat = null
+    }
+    jumpButton.addEventListener('touchend', stopJumpRepeat)
+    jumpButton.addEventListener('touchcancel', stopJumpRepeat)
 
     shootButton.addEventListener('touchstart', (e) => {
       e.preventDefault()
       e.stopPropagation()
+      const touch = e.changedTouches[0]
+      this.shootTouchId = touch.identifier
+      this.lastShootPos = { x: touch.clientX, y: touch.clientY }
       if (!this.player.isAlive) return
       this.weapon.setTrigger(true)
     })
-    shootButton.addEventListener('touchend', () => this.weapon.setTrigger(false))
-    shootButton.addEventListener('touchcancel', () => this.weapon.setTrigger(false))
+    shootButton.addEventListener('touchmove', (e) => {
+      const touch = this.findTouch(e.touches, this.shootTouchId)
+      if (!touch) return
+      e.preventDefault()
+      this.lookControl.rotate(touch.clientX - this.lastShootPos.x, touch.clientY - this.lastShootPos.y)
+      this.lastShootPos = { x: touch.clientX, y: touch.clientY }
+    }, { passive: false })
+    const stopShooting = (e: TouchEvent) => {
+      if (!this.findTouch(e.changedTouches, this.shootTouchId)) return
+      this.shootTouchId = null
+      this.weapon.setTrigger(false)
+    }
+    shootButton.addEventListener('touchend', stopShooting)
+    shootButton.addEventListener('touchcancel', stopShooting)
 
     switchButton.addEventListener('touchstart', (e) => {
       e.preventDefault()

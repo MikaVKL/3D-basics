@@ -904,6 +904,17 @@ body {
 
 /* --- Touch-Steuerung --- */
 
+/* Touch-Buttons: auf großen Touch-Bildschirmen (Tablets) 25 % größer */
+:root {
+  --btn: 1;
+}
+
+@media (pointer: coarse) and (min-height: 600px) {
+  :root {
+    --btn: 1.25;
+  }
+}
+
 #touch-controls {
   position: fixed;
   inset: 0;
@@ -967,13 +978,13 @@ body {
   position: fixed;
   right: 28px;
   bottom: 28px;
-  width: 72px;
-  height: 72px;
+  width: calc(72px * var(--btn));
+  height: calc(72px * var(--btn));
   border-radius: 50%;
   border: 2px solid rgba(255, 107, 61, 0.6);
   background: rgba(255, 107, 61, 0.18);
   color: #ffe4d6;
-  font-size: 1.6rem;
+  font-size: calc(1.6rem * var(--btn));
   z-index: 6;
   touch-action: none;
 }
@@ -984,15 +995,15 @@ body {
 
 #shoot-button {
   position: fixed;
-  right: 140px;
+  right: calc(28px + 112px * var(--btn));
   bottom: 28px;
-  width: 88px; /* Hauptaktion, daher größer */
-  height: 88px;
+  width: calc(88px * var(--btn)); /* Hauptaktion, daher größer */
+  height: calc(88px * var(--btn));
   border-radius: 50%;
   border: 2px solid rgba(51, 230, 204, 0.6);
   background: rgba(51, 230, 204, 0.18);
   color: #d6fff8;
-  font-size: 1.8rem;
+  font-size: calc(1.8rem * var(--btn));
   z-index: 6;
   touch-action: none;
 }
@@ -1003,15 +1014,15 @@ body {
 
 #reload-button {
   position: fixed;
-  right: 156px;
-  bottom: 128px;
-  width: 56px;
-  height: 56px;
+  right: calc(28px + 128px * var(--btn));
+  bottom: calc(28px + 100px * var(--btn));
+  width: calc(56px * var(--btn));
+  height: calc(56px * var(--btn));
   border-radius: 50%;
   border: 2px solid rgba(232, 236, 241, 0.5);
   background: rgba(232, 236, 241, 0.12);
   color: var(--c-text);
-  font-size: 1.3rem;
+  font-size: calc(1.3rem * var(--btn));
   z-index: 6;
   touch-action: none;
 }
@@ -1024,14 +1035,14 @@ body {
 #crouch-button {
   position: fixed;
   right: 28px;
-  bottom: 112px;
-  width: 56px;
-  height: 56px;
+  bottom: calc(28px + 84px * var(--btn));
+  width: calc(56px * var(--btn));
+  height: calc(56px * var(--btn));
   border-radius: 50%;
   border: 2px solid rgba(255, 107, 61, 0.6);
   background: rgba(255, 107, 61, 0.18);
   color: #ffe4d6;
-  font-size: 1.5rem;
+  font-size: calc(1.5rem * var(--btn));
   z-index: 6;
   touch-action: none;
 }
@@ -1040,14 +1051,14 @@ body {
 #switch-button {
   position: fixed;
   right: 28px;
-  bottom: 196px;
-  width: 56px;
-  height: 56px;
+  bottom: calc(28px + 168px * var(--btn));
+  width: calc(56px * var(--btn));
+  height: calc(56px * var(--btn));
   border-radius: 50%;
   border: 2px solid rgba(232, 236, 241, 0.5);
   background: rgba(232, 236, 241, 0.12);
   color: var(--c-text);
-  font-size: 1.4rem;
+  font-size: calc(1.4rem * var(--btn));
   z-index: 6;
   touch-action: none;
 }
