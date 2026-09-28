@@ -58,6 +58,8 @@ Weiterarbeiten wissen muss.
 - `src/sky.ts` – Abendhimmel-Kuppel (Farbverlauf), folgt der Kamera
 - `src/surfaceTextures.ts` – Kisten-/Plattenmuster (Canvas, Graustufen x
   Palettenfarbe); `worldBox()` statt BoxGeometry, damit Muster nicht verzerren
+- `src/decorations.ts` – Wandlampen, Rampen-Schilder A/B (reine Optik: nicht
+  in solids/shootables, Schüsse gehen durch)
 - `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` (Körper-Kapsel)
   und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`

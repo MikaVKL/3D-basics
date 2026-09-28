@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
 import { createCrateTexture, createPanelTexture, worldBox, CRATE_TILE, PANEL_TILE } from './surfaceTextures'
+import { addWallLamps, addLabel } from './decorations'
 import {
   MAIN_ROOM_WIDTH,
   MAIN_ROOM_DEPTH,
@@ -493,6 +494,21 @@ export function buildArena(): ArenaResult {
       omitCurbSide: 1,
     }
   )
+
+  // --- Deko (reine Optik): Wandlampen an den Innenseiten, Rampen-Schilder ---
+  const inner = WALL_THICKNESS / 2
+  const v = (x: number, z: number) => new THREE.Vector3(x, 0, z)
+  addWallLamps(group, [
+    { from: v(-26, -MAIN_HALF_D + inner), to: v(26, -MAIN_HALF_D + inner), count: 7, normal: v(0, 1) },
+    { from: v(-26, MAIN_HALF_D - inner), to: v(26, MAIN_HALF_D - inner), count: 7, normal: v(0, -1) },
+    { from: v(-MAIN_HALF_W + inner, -14), to: v(-MAIN_HALF_W + inner, 14), count: 3, normal: v(1, 0) },
+    { from: v(sideRoomMaxX - inner, -8), to: v(sideRoomMaxX - inner, 8), count: 3, normal: v(-1, 0) },
+  ])
+  // Rampe A: Plattform bei (15, 0), Schild auf Süd- und Nordseite
+  addLabel(group, 'A', new THREE.Vector3(15, 1.4, 3), v(0, 1))
+  addLabel(group, 'A', new THREE.Vector3(15, 1.4, -3), v(0, -1))
+  // Rampe B: West-Plattform, Schild auf der Westseite
+  addLabel(group, 'B', new THREE.Vector3(WEST_PLATFORM_CENTER_X - WEST_PLATFORM_SIZE / 2, 1.2, WEST_PLATFORM_CENTER_Z), v(-1, 0), 1.1)
 
   const spawnPoints = SPAWN_POINTS.map((p) => new THREE.Vector3(p.x, p.y, p.z))
 
