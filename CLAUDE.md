@@ -168,7 +168,9 @@ Stolperfallen bei Headless-Tests:
   erkennbar). Farben in `src/palette.ts`.
 - Deckungskisten vor den mittleren Spawns (0, ±18). Bot-Test mit Sichtlinie:
   Nord-Spawn 68 % -> 41 % früh getroffen; Süd-Spawn bleibt ~80 % (Schüsse
-  kommen schräg) - Lösung mit Nutzer abstimmen. Tests laufen deshalb nicht
+  kommen schräg) - Lösung mit Nutzer abstimmen. Mit den Laufstegen
+  darüber (5 Bots x 420 s, 2 Läufe): Nord 38/17 %, Süd 63/38 % früh
+  getroffen (je nur 8 Spawns, Schüsse schräg aus West-Zone und Osten). Tests laufen deshalb nicht
   mehr auf der Linie x = 0 (Bahnen bei x = -8 bzw. 12).
 - Beitritt zur Online-Runde (auch automatisch, wenn der Server erst aufwacht
   oder neu startet) setzt einen an einen Spawn - mit kurzem Abblenden und
