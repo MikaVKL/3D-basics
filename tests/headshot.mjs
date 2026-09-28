@@ -39,16 +39,16 @@ try {
   const bodyNumbers = await damageNumbers(A)
   await wait(500)
   const afterBody = await vitals(B)
-  check('Körpertreffer: 15 Schaden', afterBody.shield === 10 && afterBody.health === 100, JSON.stringify(afterBody))
-  check('Körpertreffer: weiße Zahl "15"', bodyNumbers.join() === '15', bodyNumbers.join())
+  check('Körpertreffer: 20 Schaden', afterBody.shield === 5 && afterBody.health === 100, JSON.stringify(afterBody))
+  check('Körpertreffer: weiße Zahl "20"', bodyNumbers.join() === '20', bodyNumbers.join())
 
   await shootAt(A, [0, 1.7, 5])
   const headNumbers = await damageNumbers(A)
   await wait(500)
   const afterHead = await vitals(B)
-  // 30 Schaden: 10 Schild + 20 Leben
-  check('Kopftreffer: 30 Schaden', afterHead.shield === 0 && afterHead.health === 80, JSON.stringify(afterHead))
-  check('Kopftreffer: rote Zahl "30"', headNumbers.includes('rot 30'), headNumbers.join())
+  // 40 Schaden: 5 Schild + 35 Leben
+  check('Kopftreffer: 40 Schaden', afterHead.shield === 0 && afterHead.health === 65, JSON.stringify(afterHead))
+  check('Kopftreffer: rote Zahl "40"', headNumbers.includes('rot 40'), headNumbers.join())
   const sounds = await A.evaluate(() => window.__sounds.filter((s) => s !== 'shot').join())
   check('Töne: erst Treffer, dann Kopftreffer', sounds === 'hit,headshot', sounds)
   await wait(400)
@@ -71,16 +71,14 @@ try {
   await wait(500)
   const crouchHits = await A.evaluate(() => window.__hits.join())
   check('geduckt: über den Kopf vorbei, Kopf tiefer treffbar', crouchHits === 'true', crouchHits)
-  check('geduckter Kopftreffer zählt', (await vitals(B)).health === 50)
+  check('geduckter Kopftreffer zählt', (await vitals(B)).health === 25)
 
-  // 50 Leben = noch 2 Kopftreffer
+  // 25 Leben = noch 1 Kopftreffer
   await B.evaluate(() => __dusk.player.setCrouching(false))
   await wait(800)
   await shootAt(A, [0, 1.7, 5])
-  await wait(300)
-  await shootAt(A, [0, 1.7, 5])
   await wait(600)
-  check('B tot nach insgesamt 1 Körper- + 4 Kopftreffern', !(await B.evaluate(() => __dusk.player.isAlive)))
+  check('B tot nach insgesamt 1 Körper- + 3 Kopftreffern', !(await B.evaluate(() => __dusk.player.isAlive)))
   const feed = () =>
     Promise.all(
       [A, B].map((page) =>

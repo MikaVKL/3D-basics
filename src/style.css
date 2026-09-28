@@ -179,6 +179,26 @@ body {
   z-index: 5;
 }
 
+/* Waffenleiste über der Munition, aktive Waffe hervorgehoben */
+#weapon-slots {
+  position: fixed;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  font-family: system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(232, 236, 241, 0.45);
+  pointer-events: none;
+  z-index: 5;
+}
+
+#weapon-slots .active {
+  color: #33e6cc;
+}
+
 #ammo-hud.reloading {
   color: #ff6b3d;
   text-shadow: 0 0 8px rgba(255, 107, 61, 0.5);
@@ -718,6 +738,25 @@ body {
 }
 
 /* Ducken ist ein Umschalter: .active = dauerhaft geduckt */
+#switch-button {
+  position: fixed;
+  right: 28px;
+  bottom: 196px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 236, 241, 0.5);
+  background: rgba(232, 236, 241, 0.12);
+  color: #e8ecf1;
+  font-size: 1.4rem;
+  z-index: 6;
+  touch-action: none;
+}
+
+#switch-button:active {
+  background: rgba(232, 236, 241, 0.3);
+}
+
 #crouch-button.active {
   background: rgba(255, 107, 61, 0.55);
   border-color: rgba(255, 107, 61, 0.9);

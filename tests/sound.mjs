@@ -161,7 +161,7 @@ try {
   const aSounds = await takeSounds(A)
   const bSounds = await takeSounds(B)
   check('Getroffener hört A\'s Schüsse räumlich', bSounds.filter((s) => s === '@shot').length === 9)
-  check('Getroffener hört Treffer-Wumms', bSounds.filter((s) => s === 'hurt').length === 9, bSounds.join())
+  check('Getroffener hört Treffer-Wumms', bSounds.filter((s) => s === 'hurt').length === 7, bSounds.join())
   check('Schütze hört Kill-Ton vom Server', aSounds.includes('kill'), aSounds.join())
 
   // Schritte des Gegners: B läuft (echte Frames), A hört sie räumlich

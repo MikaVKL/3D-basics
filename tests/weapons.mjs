@@ -1,0 +1,202 @@
+// Waffen: Wechsel (Tasten, Mausrad, Q), Munition je Waffe, Nachladezeiten,
+// Dauerfeuer, Streuung, Lauftempo, Respawn-Ausrüstung und Server-Schaden
+// samt Feuerraten-Begrenzung.
+//
+//   node tests/weapons.mjs
+import { startServers, launchBrowser, openGame, play, shootAt, teleport, wait, createChecks } from './lib.mjs'
+
+const { check, finish } = createChecks()
+const servers = await startServers()
+const browser = await launchBrowser()
+const errors = []
+
+const hud = (page) =>
+  page.evaluate(() => ({
+    weapon: __dusk.weapon.current,
+    playerWeapon: __dusk.player.weapon,
+    slot: document.querySelector('#weapon-slots .active')?.textContent,
+    ammo: document.querySelector('#ammo-hud').textContent,
+  }))
+
+try {
+  // --- Singleplayer ---
+  const page = await openGame(browser, { online: false, errors })
+  await play(page)
+  await wait(500)
+  let h = await hud(page)
+  check('Start mit Pistole', h.weapon === 'pistol' && h.slot === '1 Pistole' && h.ammo === '12 / 12', JSON.stringify(h))
+
+  await page.keyboard.press('Digit2')
+  const duringSwitch = await page.evaluate(() => __dusk.weapon.tryShoot())
+  await wait(500)
+  h = await hud(page)
+  check('Taste 2: Sturmgewehr', h.weapon === 'rifle' && h.playerWeapon === 'rifle' && h.slot === '2 Sturmgewehr' && h.ammo === '30 / 30', JSON.stringify(h))
+  check('während des Wechsels kein Schuss', duringSwitch === false)
+
+  await page.keyboard.press('KeyQ')
+  await wait(400)
+  check('Q: zurück zur Pistole', (await hud(page)).weapon === 'pistol')
+  await page.mouse.wheel(0, 100)
+  await wait(400)
+  check('Mausrad: nächste Waffe', (await hud(page)).weapon === 'rifle')
+  await page.keyboard.press('Digit1')
+  await wait(400)
+
+  // Munition bleibt pro Waffe erhalten
+  await teleport(page, 0, 1.7, 12)
+  await page.evaluate(() => {
+    for (let i = 0; i < 3; i++) {
+      __dusk.weapon.cooldownRemaining = 0
+      __dusk.weapon.tryShoot()
+    }
+    __dusk.weapon.switchTo('rifle')
+    __dusk.weapon.switchRemaining = 0
+    __dusk.weapon.switchTo('pistol')
+    __dusk.weapon.switchRemaining = 0
+  })
+  check('Munition je Waffe bleibt erhalten', (await hud(page)).ammo === '9 / 12')
+
+  // Nachladezeiten direkt über update() (Headless-FPS zu ungenau)
+  const reloads = await page.evaluate(() => {
+    const W = __dusk.weapon
+    const result = {}
+    W.reload()
+    W.update(1.1)
+    result.pistolAt11 = W.ammo
+    W.update(0.15)
+    result.pistolAt125 = W.ammo
+    W.switchTo('rifle')
+    W.switchRemaining = 0
+    W.ammo = 5
+    W.reload()
+    W.update(1.9)
+    result.rifleAt19 = W.ammo
+    W.update(0.15)
+    result.rifleAt205 = W.ammo
+    W.ammo = 5
+    W.reload()
+    W.update(0.5)
+    W.switchTo('pistol')
+    W.update(2)
+    W.switchTo('rifle')
+    W.switchRemaining = 0
+    result.rifleAfterCancel = W.ammo
+    return result
+  })
+  check('Pistole lädt in 1,2 s nach', reloads.pistolAt11 === 9 && reloads.pistolAt125 === 12, JSON.stringify(reloads))
+  check('Sturmgewehr lädt in 2 s nach', reloads.rifleAt19 === 5 && reloads.rifleAt205 === 30)
+  check('Wechsel bricht Nachladen ab', reloads.rifleAfterCancel === 5)
+
+  // Dauerfeuer: echte Frames (über Nachholen unabhängig von den FPS)
+  const burst = await page.evaluate(async () => {
+    const W = __dusk.weapon
+    W.ammo = 30
+    W.setTrigger(true)
+    await new Promise((r) => setTimeout(r, 1000))
+    W.setTrigger(false)
+    const rifleShots = 30 - W.ammo
+    W.switchTo('pistol')
+    W.switchRemaining = 0
+    W.ammo = 12
+    W.setTrigger(true)
+    await new Promise((r) => setTimeout(r, 600))
+    W.setTrigger(false)
+    return { rifleShots, pistolShots: 12 - W.ammo }
+  })
+  check('Sturmgewehr: ~10 Schuss/s bei gehaltener Taste', burst.rifleShots >= 9 && burst.rifleShots <= 12, `${burst.rifleShots} Schuss`)
+  check('Pistole: gehaltene Taste = ein Schuss', burst.pistolShots === 1, `${burst.pistolShots} Schuss`)
+
+  // Streuung: 15 Schüsse ohne Pause an die Wand, Winkel zur Blickrichtung
+  const spread = await page.evaluate(() => {
+    const W = __dusk.weapon
+    W.switchTo('rifle')
+    W.switchRemaining = 0
+    W.heat = 0
+    const eye = __dusk.camera.position.clone()
+    const forward = __dusk.camera.getWorldDirection(new eye.constructor())
+    const angles = []
+    const original = W.onShot
+    W.onShot = (from, to, hit) => {
+      angles.push(to.clone().sub(eye).normalize().angleTo(forward))
+      original(from, to, hit)
+    }
+    for (let i = 0; i < 15; i++) {
+      W.cooldownRemaining = 0
+      W.ammo = 30
+      W.tryShoot()
+    }
+    W.onShot = original
+    return angles
+  })
+  const first = Math.max(...spread.slice(0, 3))
+  const later = Math.max(...spread.slice(8))
+  check('erste Schüsse der Salve genau', first < 0.001, `${first.toFixed(4)} rad`)
+  check('Dauerfeuer streut, begrenzt', later > 0.01 && Math.max(...spread) <= 0.0351, `bis ${Math.max(...spread).toFixed(4)} rad`)
+
+  // Lauftempo über Physik-Simulation
+  const distance = (weaponId) =>
+    page.evaluate((id) => {
+      const P = __dusk.player
+      P.spawn({ x: 0, y: 1.7, z: 12, clone() { return this } })
+      __dusk.camera.lookAt(0, 1.7, 0)
+      P.weapon = id
+      P.setMoveInput(0, 1)
+      for (let i = 0; i < 30; i++) P.update(1 / 60)
+      P.setMoveInput(0, 0)
+      return 12 - __dusk.camera.position.z
+    }, weaponId)
+  const pistolDistance = await distance('pistol')
+  const rifleDistance = await distance('rifle')
+  await page.evaluate(() => (__dusk.player.weapon = __dusk.weapon.current))
+  const ratio = rifleDistance / pistolDistance
+  check('Sturmgewehr läuft 92 % so schnell', Math.abs(ratio - 0.92) < 0.01, ratio.toFixed(3))
+
+  // Respawn: Startwaffe, volle Magazine
+  await page.evaluate(() => {
+    __dusk.weapon.switchTo('rifle')
+    __dusk.weapon.ammo = 3
+    __dusk.player.takeDamage(999)
+  })
+  await wait(3600)
+  const respawned = await page.evaluate(() => ({
+    alive: __dusk.player.isAlive,
+    weapon: __dusk.weapon.current,
+    rifleAmmo: __dusk.weapon.ammoByWeapon.rifle,
+  }))
+  check('nach Respawn: Pistole, volle Magazine', respawned.alive && respawned.weapon === 'pistol' && respawned.rifleAmmo === 30, JSON.stringify(respawned))
+
+  // --- Mehrspieler: Schaden rechnet der Server nach der gehaltenen Waffe ---
+  const A = await openGame(browser, { name: 'Anna', errors })
+  const B = await openGame(browser, { name: 'Ben', errors })
+  await play(A)
+  await play(B)
+  await wait(3800)
+  const vitals = () => B.evaluate(() => ({ ...__dusk.player.vitals }))
+  await teleport(B, 0, 1.7, 5)
+  await teleport(A, 0, 1.7, 10)
+  await A.keyboard.press('Digit2')
+  await wait(700)
+  await shootAt(A, [0, 0.9, 5])
+  await wait(300)
+  await shootAt(A, [0, 1.7, 5])
+  await wait(500)
+  const afterRifle = await vitals()
+  // 12 + 24 = 36: Schild 25 weg, 11 aufs Leben
+  check('Sturmgewehr: 12 Körper + 24 Kopf', afterRifle.shield === 0 && afterRifle.health === 89, JSON.stringify(afterRifle))
+
+  // Manipulierter Client: 10 Treffermeldungen auf einmal
+  await A.keyboard.press('Digit1')
+  await wait(1200)
+  await A.evaluate(() => {
+    const id = [...__dusk.network.remotePlayers][0]
+    for (let i = 0; i < 10; i++) __dusk.network.sendHit(id, false)
+  })
+  await wait(500)
+  const afterSpam = await vitals()
+  check('Server begrenzt Trefferflut (3 x 20)', afterSpam.health === 29, JSON.stringify(afterSpam))
+  check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
+} finally {
+  await browser.close()
+  servers.stop()
+  finish()
+}

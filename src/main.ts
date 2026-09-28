@@ -20,6 +20,7 @@ import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
 import { SoundFx } from './sound'
 import { Effects, CameraShake } from './effects'
+import { WEAPONS, WEAPON_SLOTS } from './shared/weapons'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
 
@@ -256,6 +257,9 @@ weapon.onEnemyHit = (kill, point, damage, headshot) => {
   sound.play(kill ? 'kill' : headshot ? 'headshot' : 'hit')
 }
 weapon.onReload = () => sound.play('reload', 0.6)
+weapon.onSwitch = (id) => {
+  player.weapon = id
+}
 remotePlayers.onFootstep = (position) => sound.playAt('step', position, 0.8)
 player.onJump = () => sound.play('jump', 0.5)
 // Kleine Höhenwechsel (Rampe runter) sind keine Landung
@@ -324,7 +328,7 @@ document.addEventListener('visibilitychange', () => {
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
   overlayHint.textContent =
-    'Links: Joystick zum Bewegen (voll ausgelenkt = Sprinten) · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen/Ducken · Punktestand oben antippen: Tabelle'
+    'Links: Joystick zum Bewegen (voll ausgelenkt = Sprinten) · Rechts: Wischen zum Umschauen · Buttons: Springen/Schießen/Nachladen/Ducken/Waffe wechseln · Punktestand oben antippen: Tabelle'
   touchControls.classList.remove('hidden')
 
   const touchInput = new TouchInput(
@@ -337,6 +341,7 @@ if (isTouchDevice) {
       shootButton: document.querySelector<HTMLButtonElement>('#shoot-button')!,
       reloadButton: document.querySelector<HTMLButtonElement>('#reload-button')!,
       crouchButton: document.querySelector<HTMLButtonElement>('#crouch-button')!,
+      switchButton: document.querySelector<HTMLButtonElement>('#switch-button')!,
     },
     player,
     lookControl,
@@ -429,8 +434,17 @@ function updateScoreboardHud() {
   scoreBlue.textContent = String(scoreboard.getScore('blue'))
 }
 
+const weaponSlots = document.querySelector<HTMLDivElement>('#weapon-slots')!
+const slotElements = WEAPON_SLOTS.map((id, index) => {
+  const element = document.createElement('span')
+  element.textContent = `${index + 1} ${WEAPONS[id].label}`
+  weaponSlots.appendChild(element)
+  return element
+})
+
 function updateAmmoHud() {
   const ammo = weapon.getAmmoState()
+  WEAPON_SLOTS.forEach((id, index) => slotElements[index].classList.toggle('active', id === ammo.weapon))
   ammoHud.textContent = ammo.reloading ? 'Nachladen...' : `${ammo.current} / ${ammo.max}`
   ammoHud.classList.toggle('reloading', ammo.reloading)
 }
@@ -472,6 +486,7 @@ function updateOwnFootsteps() {
   }
 }
 
+let wasAlive = true
 function animate() {
   requestAnimationFrame(animate)
 
@@ -482,6 +497,10 @@ function animate() {
     player.update(deltaSeconds)
     updateOwnFootsteps()
   }
+  // Respawn (online wie offline): volle Magazine, Startwaffe
+  if (player.isAlive && !wasAlive) weapon.resetLoadout()
+  if (!player.isAlive) weapon.cancelFire()
+  wasAlive = player.isAlive
   weapon.update(deltaSeconds)
   for (const target of targets) {
     target.update(deltaSeconds, camera)

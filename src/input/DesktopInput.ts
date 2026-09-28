@@ -1,6 +1,7 @@
 import type { Player } from '../player'
 import type { LookControl } from '../lookControl'
 import type { Weapon } from '../weapon'
+import { WEAPON_SLOTS } from '../shared/weapons'
 
 // Maus + Tastatur über die rohe Pointer-Lock-API; Umschauen läuft wie bei
 // Touch über lookControl.rotate()
@@ -35,8 +36,17 @@ export class DesktopInput {
 
     document.addEventListener('mousemove', (e) => this.handleMouseMove(e))
     document.addEventListener('mousedown', (e) => this.handleMouseDown(e))
+    document.addEventListener('mouseup', (e) => {
+      if (e.button === 0) this.weapon.setTrigger(false)
+    })
+    document.addEventListener('wheel', (e) => {
+      if (document.pointerLockElement !== this.domElement || e.deltaY === 0) return
+      this.weapon.cycle(e.deltaY > 0 ? 1 : -1)
+    })
     document.addEventListener('pointerlockchange', () => {
-      this.onLockChange(document.pointerLockElement === this.domElement)
+      const locked = document.pointerLockElement === this.domElement
+      if (!locked) this.weapon.cancelFire()
+      this.onLockChange(locked)
     })
   }
 
@@ -54,7 +64,7 @@ export class DesktopInput {
     if (document.pointerLockElement !== this.domElement) return
     if (e.button !== 0) return
     if (!this.player.isAlive) return
-    this.weapon.tryShoot()
+    this.weapon.setTrigger(true)
   }
 
   private setKey(code: string, pressed: boolean) {
@@ -81,6 +91,16 @@ export class DesktopInput {
         break
       case 'KeyR':
         if (pressed) this.weapon.reload()
+        break
+      case 'Digit1':
+      case 'Digit2':
+      case 'Digit3': {
+        const slot = WEAPON_SLOTS[Number(code.slice(5)) - 1]
+        if (pressed && slot) this.weapon.switchTo(slot)
+        break
+      }
+      case 'KeyQ':
+        if (pressed) this.weapon.switchToPrevious()
         break
       case 'ControlLeft':
       case 'ControlRight':

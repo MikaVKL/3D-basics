@@ -1,9 +1,10 @@
 // Nachrichten Client <-> Server (von beiden importiert: kein Three.js/DOM)
 
 import type { Team } from '../team.ts'
+import type { WeaponId } from './weapons.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 13
+export const PROTOCOL_VERSION = 14
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -26,6 +27,7 @@ export interface PlayerNetworkState {
   shield: number
   maxShield: number
   team: Team
+  weapon: WeaponId
 }
 
 // health/shield/isAlive kommen immer vom Server (auch fürs eigene HUD)

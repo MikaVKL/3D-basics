@@ -22,13 +22,12 @@ import {
   SPAWN_PROTECTION,
   KILLS_TO_WIN,
   ROUND_END_PAUSE,
-  FIRE_COOLDOWN,
-  HIT_DAMAGE,
   HEADSHOT_MULTIPLIER,
   applyDamage,
   regenerateShield,
   type Vitals,
 } from '../src/shared/gameRules.ts'
+import { WEAPONS, DEFAULT_WEAPON, isWeaponId } from '../src/shared/weapons.ts'
 import type { Team } from '../src/team.ts'
 
 // Läuft direkt als TypeScript (Node-Type-Stripping, kein Build-Schritt)
@@ -64,8 +63,8 @@ interface Client {
   vitals: Vitals
   respawnAt: number | null // performance.now()-Zeitpunkt, solange tot
   protectedUntil: number // Spawn-Schutz bis zu diesem performance.now()-Zeitpunkt
-  lastHitAt: number
-  lastShotAt: number
+  hitBudget: RateBudget
+  shotBudget: RateBudget
   lastStateAt: number
   lastActivityAt: number
   removing: boolean // wird gerade entfernt (Close läuft noch)
@@ -80,9 +79,21 @@ const KILLS_TO_WIN_ACTIVE = Number(process.env.KILLS_TO_WIN) || KILLS_TO_WIN
 let nextRoundAt: number | null = null
 let roundWinner: Team | null = null
 
-// Etwas dichter als die Feuerrate erlaubt (Netzwerk-Schwankungen), aber
-// kein Skript-Dauerfeuer
-const MIN_HIT_INTERVAL_MS = FIRE_COOLDOWN * 1000 * 0.6
+// Im Schnitt höchstens so schnell, wie die Waffe feuert; der kleine Vorrat
+// fängt Netzwerk-Schwankungen ab (Pakete kommen oft gebündelt an)
+interface RateBudget {
+  tokens: number
+  updatedAt: number
+}
+const RATE_BURST = 3
+
+function takeRateToken(budget: RateBudget, intervalSeconds: number, now: number): boolean {
+  budget.tokens = Math.min(RATE_BURST, budget.tokens + (now - budget.updatedAt) / (intervalSeconds * 1000))
+  budget.updatedAt = now
+  if (budget.tokens < 1) return false
+  budget.tokens -= 1
+  return true
+}
 // Arena-Diagonale ~90m
 const MAX_HIT_DISTANCE = 100
 
@@ -199,6 +210,7 @@ function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
     maxShield: s.maxShield,
     // Team bestimmt der Server
     team,
+    weapon: isWeaponId(s.weapon) ? s.weapon : DEFAULT_WEAPON,
   }
 }
 
@@ -365,8 +377,8 @@ wss.on('connection', (socket) => {
         vitals: fullVitals(),
         respawnAt: null,
         protectedUntil: performance.now() + SPAWN_PROTECTION * 1000,
-        lastHitAt: 0,
-        lastShotAt: 0,
+        hitBudget: { tokens: RATE_BURST, updatedAt: performance.now() },
+        shotBudget: { tokens: RATE_BURST, updatedAt: performance.now() },
         lastStateAt: performance.now(),
         lastActivityAt: performance.now(),
         removing: false,
@@ -456,13 +468,14 @@ function handleHit(shooter: Client, targetId: unknown, headshot: boolean) {
   const now = performance.now()
   if (nextRoundAt !== null) return
   if (isProtected(target, now)) return
-  if (now - shooter.lastHitAt < MIN_HIT_INTERVAL_MS) return
   const a = shooter.state.position
   const b = target.state.position
   if (Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) > MAX_HIT_DISTANCE) return
-  shooter.lastHitAt = now
+  // Waffe laut letztem Zustand: der kommt über dieselbe Verbindung vor dem Treffer an
+  const weapon = WEAPONS[shooter.state.weapon]
+  if (!takeRateToken(shooter.hitBudget, weapon.fireInterval, now)) return
 
-  const killed = applyDamage(target.vitals, HIT_DAMAGE * (headshot ? HEADSHOT_MULTIPLIER : 1))
+  const killed = applyDamage(target.vitals, weapon.damage * (headshot ? HEADSHOT_MULTIPLIER : 1))
   send(target.socket, { t: 'hurt', by: shooter.id })
   if (killed) {
     target.respawnAt = now + RESPAWN_DELAY * 1000
@@ -493,11 +506,10 @@ function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown, hit: unkn
   if (!from || !to || !shooter.state || !isAlive(shooter)) return
 
   const now = performance.now()
-  if (now - shooter.lastShotAt < MIN_HIT_INTERVAL_MS) return
   const p = shooter.state.position
   if (Math.hypot(from.x - p.x, from.y - p.y, from.z - p.z) > MAX_MUZZLE_OFFSET) return
   if (Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) > MAX_TRACER_LENGTH) return
-  shooter.lastShotAt = now
+  if (!takeRateToken(shooter.shotBudget, WEAPONS[shooter.state.weapon].fireInterval, now)) return
   shooter.lastActivityAt = now
   shooter.protectedUntil = 0
 

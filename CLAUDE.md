@@ -44,10 +44,12 @@ Weiterarbeiten wissen muss.
 ## Code-Landkarte
 
 - `src/shared/` – von Client UND Server importiert (kein Three.js/DOM):
-  `protocol.ts` (Nachrichten, Version), `gameRules.ts` (Schaden, Schild,
-  Respawn, Spawn-Schutz, Rundenziel), `arenaLayout.ts` (Maße, Spawn-Punkte).
+  `protocol.ts` (Nachrichten, Version), `gameRules.ts` (Schild, Respawn,
+  Spawn-Schutz, Rundenziel), `weapons.ts` (Waffenwerte: Schaden, Feuerrate,
+  Magazin, Tempo, Streuung), `arenaLayout.ts` (Maße, Spawn-Punkte).
 - `server/index.ts` – autoritativ für Leben/Schild/Tod/Respawn/Punkte/Teams,
-  Treffer-Prüfung (Schütze meldet, Server prüft), Runden, Team-Ausgleich,
+  Treffer-Prüfung (Schütze meldet, Server rechnet Schaden nach der Waffe im
+  letzten Zustand, Feuerrate per Token-Bucket), Runden, Team-Ausgleich,
   AFK/Geister-Entfernung. Läuft direkt als TypeScript (Node ≥ 22.18).
 - `src/sound.ts` – synthetisierte Sounds (Web Audio, keine Dateien)
 - `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall) + Kamera-Ruck
@@ -80,6 +82,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:effects` – Mündungsleuchten, Funken, Todeseffekt, Kamera-Ruck
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
+- `npm run test:weapons` – Wechsel (1/2, Mausrad, Q), Munition je Waffe,
+  Nachladen, Dauerfeuer, Streuung, Tempo, Respawn, Server-Schaden/Ratenlimit
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -106,11 +110,15 @@ Stolperfallen bei Headless-Tests:
 - Treffer: "was der Schütze sah, zählt" (keine Server-Sichtlinienprüfung).
 - Kopftreffer = 2× Schaden; Schadenszahlen bei jedem Treffer (Kopf rot),
   Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
+- Waffen (abgestimmt): 1 Pistole (20, 5/s, 12er, Tempo 100 %),
+  2 Sturmgewehr (12, 10/s auto, 30er, 92 %, Streuung ab dem 4. Schuss),
+  3 Messer (50, 2/s, ~2,5 m, 115 %) folgt. Wechsel 0,3 s, Respawn mit Pistole.
 
 ## Offene Ideen / nächste Schritte
 
 - Reihenfolge (mit Nutzer abgestimmt): Sound, Spielermodell, Effekte,
-  Kopftreffer (erledigt) -> zweite Waffe -> Rutschen/Bunny-Hop -> Ping ->
+  Kopftreffer (erledigt) -> Waffen (Pistole/Sturmgewehr erledigt; offen:
+  Messer, Waffe an fremder Figur + Sounds je Waffe + Kill-Feed-Symbol) -> Rutschen/Bunny-Hop -> Ping ->
   Arena/Optik/HUD -> Raum-Codes -> Hintergrund-Tab -> Server-Prüfung.
 - Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
 - Noch zu entscheiden: Kollision zwischen Spielern?

@@ -3,22 +3,36 @@ import { Palette } from './palette'
 import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
 import type { Team } from './team'
-import { FIRE_COOLDOWN, HEADSHOT_MULTIPLIER, HIT_DAMAGE } from './shared/gameRules'
+import { HEADSHOT_MULTIPLIER } from './shared/gameRules'
+import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, type WeaponId } from './shared/weapons'
 
-// Hitscan aus der Bildschirmmitte, Munition, Nachladen. Treffer laufen
-// generisch über Damageable (Dummy oder fremder Spieler).
+// Hitscan aus der Bildschirmmitte, mehrere Waffen mit eigener Munition,
+// Nachladen, Wechsel, Dauerfeuer. Treffer laufen generisch über Damageable
+// (Dummy oder fremder Spieler).
 
 const IMPACT_MARKER_LIFETIME = 2 // Sekunden
 const TRACER_LIFETIME = 0.06 // Sekunden
 const TRACER_MAX_DISTANCE = 60 // bei Schuss ins Leere
 
-const MAGAZINE_SIZE = 12
-const RELOAD_DURATION = 1.2 // Sekunden
+// "Hitze" des Dauerfeuers: +1 pro Schuss, klingt so schnell ab (pro Sekunde).
+// Die ersten Schüsse einer Salve treffen genau.
+const HEAT_DECAY = 4
+const PRECISE_SHOTS = 2
+// Dauerfeuer holt verpasste Schüsse nach (sonst hinge die Feuerrate an den
+// FPS), aber höchstens so viel Rückstand
+const MAX_FIRE_CATCHUP = 0.1 // Sekunden
 
 export interface AmmoState {
+  weapon: WeaponId
   current: number
   max: number
   reloading: boolean
+}
+
+function fullMagazines(): Record<WeaponId, number> {
+  const ammo = {} as Record<WeaponId, number>
+  for (const id of WEAPON_SLOTS) ammo[id] = WEAPONS[id].magazine
+  return ammo
 }
 
 interface ImpactMarker {
@@ -60,9 +74,17 @@ export class Weapon {
   // Für Hitmarker und Schadenszahl; kill nur lokal erkannt (Dummies), online meldet der Server
   onEnemyHit?: (kill: boolean, point: THREE.Vector3, damage: number, headshot: boolean) => void
   onReload?: () => void
+  onSwitch?: (weapon: WeaponId) => void
 
-  private ammo = MAGAZINE_SIZE
+  private weaponId: WeaponId = DEFAULT_WEAPON
+  private previousWeapon: WeaponId = WEAPON_SLOTS[1]
+  private ammoByWeapon = fullMagazines()
   private reloadRemaining = 0
+  private switchRemaining = 0
+  private triggerHeld = false
+  // Klick während der Feuerpause: Schuss folgt, sobald sie vorbei ist
+  private shotQueued = false
+  private heat = 0
 
   constructor(
     camera: THREE.Camera,
@@ -79,15 +101,88 @@ export class Weapon {
     this.onKill = onKill
   }
 
+  get current(): WeaponId {
+    return this.weaponId
+  }
+
+  private get stats() {
+    return WEAPONS[this.weaponId]
+  }
+
+  get ammo(): number {
+    return this.ammoByWeapon[this.weaponId]
+  }
+
+  set ammo(value: number) {
+    this.ammoByWeapon[this.weaponId] = value
+  }
+
+  switchTo(id: WeaponId) {
+    if (id === this.weaponId) return
+    this.previousWeapon = this.weaponId
+    this.weaponId = id
+    // Nachladen bricht ab (Munition bleibt wie sie war)
+    this.reloadRemaining = 0
+    this.switchRemaining = SWITCH_TIME
+    this.heat = 0
+    this.shotQueued = false
+    this.view.setWeapon(id)
+    this.onSwitch?.(id)
+  }
+
+  // Mausrad: +1 = nächste Waffe
+  cycle(direction: 1 | -1) {
+    const index = WEAPON_SLOTS.indexOf(this.weaponId)
+    this.switchTo(WEAPON_SLOTS[(index + direction + WEAPON_SLOTS.length) % WEAPON_SLOTS.length])
+  }
+
+  switchToPrevious() {
+    this.switchTo(this.previousWeapon)
+  }
+
+  // Nach dem Respawn: alles voll, Startwaffe in der Hand
+  resetLoadout() {
+    this.ammoByWeapon = fullMagazines()
+    this.switchTo(DEFAULT_WEAPON)
+    this.previousWeapon = WEAPON_SLOTS[1]
+    this.reloadRemaining = 0
+    this.switchRemaining = 0
+    this.cancelFire()
+  }
+
+  // Tod, Menü: kein Weiterfeuern und kein vorgemerkter Schuss
+  cancelFire() {
+    this.triggerHeld = false
+    this.shotQueued = false
+  }
+
+  // Gedrückt halten: Dauerfeuer nur bei automatischen Waffen
+  setTrigger(pressed: boolean) {
+    this.triggerHeld = pressed
+    if (pressed && !this.tryShoot() && this.cooldownRemaining > 0) this.shotQueued = true
+  }
+
   update(deltaSeconds: number) {
-    this.cooldownRemaining = Math.max(0, this.cooldownRemaining - deltaSeconds)
+    const autoFire = this.triggerHeld && this.stats.automatic
+    this.cooldownRemaining -= deltaSeconds
+    if (!autoFire) this.cooldownRemaining = Math.max(0, this.cooldownRemaining)
+    this.switchRemaining = Math.max(0, this.switchRemaining - deltaSeconds)
+    this.heat = Math.max(0, this.heat - HEAT_DECAY * deltaSeconds)
+    this.view.lowered = this.switchRemaining / SWITCH_TIME
     this.view.update(deltaSeconds)
 
     if (this.reloadRemaining > 0) {
       this.reloadRemaining = Math.max(0, this.reloadRemaining - deltaSeconds)
       if (this.reloadRemaining === 0) {
-        this.ammo = MAGAZINE_SIZE
+        this.ammo = this.stats.magazine
       }
+    }
+    if (this.shotQueued && this.cooldownRemaining <= 0) {
+      this.shotQueued = false
+      this.tryShoot()
+    }
+    while (autoFire && this.triggerHeld && this.cooldownRemaining <= 0 && this.tryShoot()) {
+      // mehrere Schüsse in einem Bild bei niedriger Bildrate
     }
 
     for (let i = this.impactMarkers.length - 1; i >= 0; i--) {
@@ -109,15 +204,16 @@ export class Weapon {
     }
   }
 
-  tryShoot() {
-    if (this.reloadRemaining > 0) return
+  // true = Schuss abgegeben
+  tryShoot(): boolean {
+    if (this.reloadRemaining > 0 || this.switchRemaining > 0) return false
     if (this.ammo <= 0) {
       this.reload()
-      return
+      return false
     }
-    if (this.cooldownRemaining > 0) return
+    if (this.cooldownRemaining > 0) return false
 
-    this.cooldownRemaining = FIRE_COOLDOWN
+    this.cooldownRemaining = Math.max(this.cooldownRemaining, -MAX_FIRE_CATCHUP) + this.stats.fireInterval
     this.ammo -= 1
     this.view.playShootEffect()
 
@@ -126,6 +222,8 @@ export class Weapon {
     this.camera.updateMatrixWorld()
 
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
+    this.applySpread()
+    this.heat += 1
 
     const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
     // Raycaster ignoriert "visible" nicht - tote Spieler fingen sonst Kugeln ab
@@ -142,7 +240,7 @@ export class Weapon {
         this.spawnImpactMarker(hits[0])
       } else if (damageable) {
         const headshot = hits[0].object.userData.headshot === true
-        const damage = HIT_DAMAGE * (headshot ? HEADSHOT_MULTIPLIER : 1)
+        const damage = this.stats.damage * (headshot ? HEADSHOT_MULTIPLIER : 1)
         const wasAlive = damageable.isAlive
         damageable.takeDamage(damage, headshot)
         const killed = wasAlive && !damageable.isAlive
@@ -166,16 +264,37 @@ export class Weapon {
     if (this.ammo === 0) {
       this.reload()
     }
+    return true
   }
 
   reload() {
-    if (this.reloadRemaining > 0 || this.ammo === MAGAZINE_SIZE) return
-    this.reloadRemaining = RELOAD_DURATION
+    if (this.reloadRemaining > 0 || this.switchRemaining > 0 || this.ammo === this.stats.magazine) return
+    this.reloadRemaining = this.stats.reloadTime
     this.onReload?.()
   }
 
   getAmmoState(): AmmoState {
-    return { current: this.ammo, max: MAGAZINE_SIZE, reloading: this.reloadRemaining > 0 }
+    return {
+      weapon: this.weaponId,
+      current: this.ammo,
+      max: this.stats.magazine,
+      reloading: this.reloadRemaining > 0,
+    }
+  }
+
+  // Zufällige Abweichung im Kegel, abhängig von der Hitze
+  private applySpread() {
+    const spread = Math.min(this.stats.maxSpread, Math.max(0, this.heat - PRECISE_SHOTS) * this.stats.spreadPerHeat)
+    if (spread <= 0) return
+    const quaternion = this.camera.getWorldQuaternion(new THREE.Quaternion())
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion)
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion)
+    const angle = Math.random() * Math.PI * 2
+    const radius = Math.sqrt(Math.random()) * spread
+    this.raycaster.ray.direction
+      .addScaledVector(right, Math.cos(angle) * radius)
+      .addScaledVector(up, Math.sin(angle) * radius)
+      .normalize()
   }
 
   private spawnImpactMarker(hit: THREE.Intersection) {

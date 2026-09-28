@@ -72,7 +72,7 @@ try {
   const seen = await A.evaluate((id) => __dusk.remotePlayers.getPosition(id)?.toArray(), b0.id)
   check('A sieht B an der richtigen Stelle', seen && Math.abs(seen[0]) < 0.05 && Math.abs(seen[2] - 5) < 0.05, JSON.stringify(seen))
 
-  // Treffer: 2 Schüsse = 30 Schaden, Schild (25) fängt zuerst ab
+  // Treffer: 2 Pistolenschüsse = 40 Schaden, Schild (25) fängt zuerst ab
   await B.evaluate(() => {
     window.__tracers = 0
     const original = __dusk.weapon.showRemoteTracer.bind(__dusk.weapon)
@@ -87,18 +87,18 @@ try {
   }
   await wait(400 + LAG * 2)
   const b1 = await state(B)
-  check('2 Treffer -> Schild 0, HP 95', b1.hp === 95 && b1.shield === 0, `HP ${b1.hp}, Schild ${b1.shield}`)
+  check('2 Treffer -> Schild 0, HP 85', b1.hp === 85 && b1.shield === 0, `HP ${b1.hp}, Schild ${b1.shield}`)
   check('B sieht A\'s Leuchtspuren', (await B.evaluate(() => window.__tracers)) === 2)
 
-  // Kill: weitere 7 Treffer
-  for (let i = 0; i < 7; i++) {
+  // Kill: weitere 5 Treffer
+  for (let i = 0; i < 5; i++) {
     await shootAt(A, [0, 0.9, 5])
     await wait(150)
   }
   await wait(500 + LAG * 2)
   const a2 = await state(A)
   const b2 = await state(B)
-  check('9 Treffer -> B tot', !b2.alive)
+  check('7 Treffer -> B tot', !b2.alive)
   check('Kill-Feed mit Namen', b2.feed.includes('Anna ✕ Du') && a2.feed.includes('Du ✕ Ben'), `${a2.feed} | ${b2.feed}`)
   check('Punktestand + Tabelle', a2.roster.join() === 'Anna:1/0,Ben:0/1', `${a2.score} ${a2.roster.join()}`)
   await wait(3300 + LAG * 2)

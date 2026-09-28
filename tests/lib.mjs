@@ -98,6 +98,7 @@ export async function shootAt(page, target) {
     __dusk.camera.lookAt(x, y, z)
     __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     __dusk.weapon.cooldownRemaining = 0
+    __dusk.weapon.switchRemaining = 0
     __dusk.weapon.reloadRemaining = 0
     __dusk.weapon.ammo = 12
     __dusk.weapon.tryShoot()

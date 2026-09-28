@@ -4,6 +4,7 @@ import { rampHeightAt } from './arena'
 import type { Damageable } from './damageable'
 import type { Team } from './team'
 import type { PlayerNetworkState } from './shared/protocol'
+import { WEAPONS, DEFAULT_WEAPON, type WeaponId } from './shared/weapons'
 import {
   MAX_HEALTH,
   MAX_SHIELD,
@@ -94,6 +95,8 @@ export class Player implements Damageable {
 
   // Online entscheidet der Server über Schaden/Schild/Respawn
   networkControlled = false
+  // Gehaltene Waffe bestimmt das Lauftempo (setzt main.ts)
+  weapon: WeaponId = DEFAULT_WEAPON
   // Nur Anzeige (entscheidet der Server)
   spawnProtected = false
   private respawnRemaining = 0
@@ -166,6 +169,7 @@ export class Player implements Damageable {
       shield: this.vitals.shield,
       maxShield: MAX_SHIELD,
       team: this.team,
+      weapon: this.weapon,
     }
   }
 
@@ -281,11 +285,11 @@ export class Player implements Damageable {
       if (moveDirection.length() > 1) {
         moveDirection.normalize()
       }
-      let speed = MOVE_SPEED
+      let speed = MOVE_SPEED * WEAPONS[this.weapon].moveSpeed
       if (this.isCrouching) {
-        speed = MOVE_SPEED * CROUCH_SPEED_MULTIPLIER
+        speed *= CROUCH_SPEED_MULTIPLIER
       } else if (this.isSprinting) {
-        speed = MOVE_SPEED * SPRINT_SPEED_MULTIPLIER
+        speed *= SPRINT_SPEED_MULTIPLIER
       }
       moveDirection.multiplyScalar(speed * deltaSeconds)
 
