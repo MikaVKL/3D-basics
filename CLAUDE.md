@@ -102,6 +102,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:connection` – Verbindungswarnung: nie im normalen Spiel (auch
   mit Ping), erscheint bei eingefrorenem Server (SIGSTOP), verschwindet danach,
   Spiel läuft weiter
+- `npm run test:hud` – HUD: Lebensanzeige (Werte, Aufblitzen bei Schaden,
+  Pulsieren ab 30 Leben, nicht bei Tod/Respawn)
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:

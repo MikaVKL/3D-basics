@@ -380,6 +380,7 @@ const timer = new THREE.Timer()
 const ammoHud = document.querySelector<HTMLDivElement>('#ammo-hud')!
 const healthBarFill = document.querySelector<HTMLDivElement>('#health-bar-fill')!
 const healthText = document.querySelector<HTMLSpanElement>('#health-text')!
+const shieldText = document.querySelector<HTMLSpanElement>('#shield-text')!
 const deathOverlay = document.querySelector<HTMLDivElement>('#death-overlay')!
 const respawnCountdown = document.querySelector<HTMLSpanElement>('#respawn-countdown')!
 const scoreRed = document.querySelector<HTMLSpanElement>('#score-red')!
@@ -467,12 +468,27 @@ function updateAmmoHud() {
   ammoHud.classList.toggle('reloading', ammo.reloading)
 }
 
+// Treffer lassen Leben/Schild kurz aufblitzen
+const BAR_FLASH_MS = 120
+let lastVitals = 0
+let barFlashUntil = 0
+
 function updateHealthHud() {
   const health = player.getHealthState()
+  const shield = player.getShieldState()
   const ratio = health.current / health.max
+  const now = performance.now()
+  const vitals = health.current + shield.current
+  // Nur Schaden (Tod und Respawn setzen die Werte auch zurück)
+  if (player.isAlive && vitals < lastVitals - 0.5) barFlashUntil = now + BAR_FLASH_MS
+  lastVitals = vitals
+  const flash = now < barFlashUntil
+  healthBarFill.classList.toggle('flash', flash && health.current < health.max)
+  shieldBarFill.classList.toggle('flash', flash && shield.current > 0)
   healthBarFill.style.width = `${ratio * 100}%`
-  healthBarFill.classList.toggle('low', ratio <= 0.3)
-  healthText.textContent = String(health.current)
+  healthBarFill.classList.toggle('low', player.isAlive && ratio <= 0.3)
+  healthText.textContent = String(Math.ceil(health.current))
+  shieldText.textContent = String(Math.ceil(shield.current))
 
   spawnProtectionHud.classList.toggle('hidden', !player.spawnProtected || !player.isAlive)
   deathOverlay.classList.toggle('hidden', player.isAlive)

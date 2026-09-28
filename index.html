@@ -43,21 +43,24 @@
     <!-- Hinweis, wenn online länger nichts vom Server kommt -->
     <div id="connection-warning" class="hidden">Verbindung instabil – warte auf Server…</div>
 
-    <!-- Lebensanzeige (unten links): Stamina + Schild + Leben gestapelt -->
+    <!-- Lebensanzeige (unten links): je Zeile Beschriftung, Balken, Wert -->
     <div id="health-hud">
       <div id="spawn-protection" class="hidden">Spawn-Schutz</div>
-      <div id="stamina-bar-track">
-        <div id="stamina-bar-fill"></div>
+      <span class="bar-label">Ausdauer</span>
+      <div id="stamina-bar-track" class="bar-track">
+        <div id="stamina-bar-fill" class="bar-fill"></div>
       </div>
-      <div id="shield-bar-track">
-        <div id="shield-bar-fill"></div>
+      <span></span>
+      <span class="bar-label">Schild</span>
+      <div id="shield-bar-track" class="bar-track">
+        <div id="shield-bar-fill" class="bar-fill"></div>
       </div>
-      <div id="health-row">
-        <div id="health-bar-track">
-          <div id="health-bar-fill"></div>
-        </div>
-        <span id="health-text">100</span>
+      <span id="shield-text" class="bar-value">25</span>
+      <span class="bar-label">Leben</span>
+      <div id="health-bar-track" class="bar-track">
+        <div id="health-bar-fill" class="bar-fill"></div>
       </div>
+      <span id="health-text" class="bar-value">100</span>
     </div>
 
     <!-- Erscheint kurz beim Tod, bis der Spieler respawnt -->
