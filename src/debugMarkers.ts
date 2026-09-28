@@ -10,6 +10,8 @@ export class DebugMarkers {
 
   constructor(scene: THREE.Scene) {
     this.group = new THREE.Group()
+    // Aus, bis F1 gedrückt wird (sonst sehen alle Spieler die Spawn-Säulen)
+    this.group.visible = false
     scene.add(this.group)
   }
 
