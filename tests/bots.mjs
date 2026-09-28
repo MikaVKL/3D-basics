@@ -59,9 +59,31 @@ function installBot() {
     window.__hitsSent++
     sendHit(id, headshot)
   }
+  // Spawn-Statistik je Spawn-Punkt: getroffen bis 2 s nach Ende des
+  // Spawn-Schutzes (2 s), gestorben innerhalb von 6 s
+  window.__spawns = {}
+  let lastSpawn = null
+  const spawnStats = (index) => (window.__spawns[index] ??= { count: 0, hurtEarly: 0, diedEarly: 0 })
+  const onRespawn = D.network.handlers.onRespawn
+  D.network.handlers.onRespawn = (id, spawnIndex, team) => {
+    if (id === D.network.localId) {
+      lastSpawn = { t: performance.now(), index: spawnIndex, hurt: false }
+      spawnStats(spawnIndex).count++
+    }
+    onRespawn(id, spawnIndex, team)
+  }
+  const onKill = D.network.handlers.onKill
+  D.network.handlers.onKill = (killer, victim, ...rest) => {
+    if (victim === D.network.localId && lastSpawn && performance.now() - lastSpawn.t < 6000) spawnStats(lastSpawn.index).diedEarly++
+    onKill(killer, victim, ...rest)
+  }
   const onHurt = D.network.handlers.onHurt
   D.network.handlers.onHurt = (by) => {
     window.__hurtReceived++
+    if (lastSpawn && !lastSpawn.hurt && performance.now() - lastSpawn.t < 4000) {
+      lastSpawn.hurt = true
+      spawnStats(lastSpawn.index).hurtEarly++
+    }
     onHurt(by)
   }
   const pick = (list) => list[Math.floor(Math.random() * list.length)]
@@ -145,6 +167,7 @@ function snapshot() {
   return {
     time: Date.now(),
     hitsSent: window.__hitsSent ?? 0,
+    spawns: window.__spawns ?? {},
     hurtReceived: window.__hurtReceived ?? 0,
     frames: window.__frames ?? 0,
     trail: window.__trail ?? [],
@@ -325,6 +348,7 @@ async function probeStuck(bot, s) {
 const streaks = new Map()
 const lagSamples = [] // Verzögerung bei großen, aber erklärbaren Abweichungen
 let heavyLag = 0
+const spawnTotals = {}
 const allDelays = [] // stimmt erst mit mehr als der erwarteten Verzögerung (überlastete Bots)
 function persistent(key, bad, needed = 4) {
   const count = bad ? (streaks.get(key) ?? 0) + 1 : 0
@@ -449,6 +473,15 @@ try {
       const delta = (key) => (bot.lastSnap && s[key] >= bot.lastSnap[key] ? s[key] - bot.lastSnap[key] : s[key])
       bot.hitsSent = (bot.hitsSent ?? 0) + delta('hitsSent')
       bot.hurtReceived = (bot.hurtReceived ?? 0) + delta('hurtReceived')
+      // Spawn-Statistik: nach Neuladen beginnt die Seite bei 0
+      if (bot.lastSnap) {
+        for (const [index, now] of Object.entries(s.spawns)) {
+          const before = bot.lastSnap.spawns[index] ?? { count: 0, hurtEarly: 0, diedEarly: 0 }
+          const reloaded = now.count < before.count
+          const total = (spawnTotals[index] ??= { count: 0, hurtEarly: 0, diedEarly: 0 })
+          for (const key of ['count', 'hurtEarly', 'diedEarly']) total[key] += reloaded ? now[key] : now[key] - before[key]
+        }
+      }
       bot.lastSnap = s
       checkSingle(bot, s)
     }
@@ -487,6 +520,10 @@ try {
   const hurtReceived = bots.reduce((sum, b) => sum + (b.hurtReceived ?? 0), 0)
   const stuckChecks = bots.reduce((sum, b) => sum + (b.stuckChecks ?? 0), 0)
   console.log(`Treffer gemeldet ${hitsSent}, beim Opfer angekommen ${hurtReceived}; Ausbruchsversuche ${stuckChecks}`)
+  const spawnLines = Object.entries(spawnTotals)
+    .filter(([, t]) => t.count > 0)
+    .map(([index, t]) => `Spawn ${index}: ${t.count}x, früh getroffen ${Math.round((100 * t.hurtEarly) / t.count)} %, früh gestorben ${Math.round((100 * t.diedEarly) / t.count)} %`)
+  if (spawnLines.length) console.log(spawnLines.join('\n'))
   allDelays.sort((x, y) => x - y)
   const pct = (p) => allDelays[Math.floor(allDelays.length * p)]
   if (allDelays.length) console.log(`Verzögerung bei Bewegung (${allDelays.length} Messungen): Median ${pct(0.5)} ms, 90 % unter ${pct(0.9)} ms`)

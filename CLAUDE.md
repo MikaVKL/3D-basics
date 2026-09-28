@@ -100,7 +100,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Störungen (Menü, Neuladen, Hintergrund, eingefroren) und ein Fuzz-Bot mit
   kaputten Nachrichten; prüft Invarianten (Leben/Munition/Tempo, Punkte und
   Tabelle bei allen gleich, Positionen, Sichtbarkeit, Steckenbleiben,
-  Speicher, Server-Fehler). Auch mit Ping laufen lassen.
+  Speicher, Server-Fehler). Auch mit Ping laufen lassen. Gibt je Spawn-Punkt
+  aus, wie oft man kurz nach dem Spawn getroffen wird/stirbt.
 - `npm run test:touch` – Touch-Steuerung (Handy-Emulation): Ducken-Button
   halten = ducken/rutschen, loslassen = aufstehen; Schießen halten + wischen =
   zielen; Sprung halten = weiterhüpfen

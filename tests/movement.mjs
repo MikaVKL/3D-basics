@@ -13,6 +13,8 @@ try {
     const P = __dusk.player
     const cam = __dusk.camera
     const DT = 1 / 60
+    // Freie Bahn für Rutschen/Bunny-Hop: ab z=4 gut 16 m Richtung Süden ohne Hindernis
+    const LANE_X = -8
     const place = (x, z, yaw) => {
       const ground = P.groundHeightAt(x, z)
       P.spawn({ x, y: ground + 1.7, z, clone() { return this } })
@@ -101,7 +103,7 @@ try {
 
     // Rutschen: offene Fläche im Süden, Blick nach +z (yaw PI)
     const slideRun = (crouchFrame, sprint, releaseAt = Infinity) => {
-      place(0, 4, Math.PI)
+      place(LANE_X, 4, Math.PI)
       P.setSprinting(sprint)
       P.setMoveInput(0, 1)
       const startZ = cam.position.z
@@ -128,7 +130,7 @@ try {
     out.slideRelease = slideRun(20, true, 30)
 
     // Cooldown: sofort erneut ducken rutscht nicht gleich wieder
-    place(0, 4, Math.PI)
+    place(LANE_X, 4, Math.PI)
     P.setSprinting(true)
     P.setMoveInput(0, 1)
     let slides = 0
@@ -154,7 +156,7 @@ try {
     // Bunny-Hop: Leertaste kurz vor der Landung (Puffer) bzw. zu spät.
     // Nach jeder Landung zurück auf die freie Fläche, Schwung bleibt.
     const hops = (count, { sprint = false, lateFrames = 0, crouchAtEnd = false } = {}) => {
-      place(0, 4, Math.PI)
+      place(LANE_X, 4, Math.PI)
       P.setSprinting(sprint)
       P.setMoveInput(0, 1)
       run(30)
@@ -194,7 +196,7 @@ try {
     out.hopIntoSlide = hops(4, { sprint: true, crouchAtEnd: true })
 
     // Schwung in der Luft: Taste im Sprung loslassen, man fliegt weiter
-    place(0, 4, Math.PI)
+    place(LANE_X, 4, Math.PI)
     P.setSprinting(true)
     P.setMoveInput(0, 1)
     run(30)
@@ -213,7 +215,7 @@ try {
     out.stopAfterLanding = P.horizontalSpeed
 
     // Normales Gehen unverändert: sofort volles Tempo, sofort Stillstand
-    place(0, 4, Math.PI)
+    place(LANE_X, 4, Math.PI)
     P.setMoveInput(0, 1)
     run(1)
     out.walkStart = P.horizontalSpeed
@@ -224,7 +226,7 @@ try {
     // Sprint loslassen (Shift weiter gehalten): sofort stehen, kein Nachgleiten
     // (Bug: Sprint-Tempo galt als Schwung, man glitt bis 4,5 m weiter)
     const coast = (sprintFrames) => {
-      place(0, 4, Math.PI)
+      place(LANE_X, 4, Math.PI)
       P.setSprinting(true)
       P.setMoveInput(0, 1)
       run(sprintFrames)
@@ -238,7 +240,7 @@ try {
     out.coastSprint = coast(60)
 
     // Aus dem Rutschen springen: Tempo des Rutschens bleibt in der Luft
-    place(0, 4, Math.PI)
+    place(LANE_X, 4, Math.PI)
     P.setSprinting(true)
     P.setMoveInput(0, 1)
     run(20)
