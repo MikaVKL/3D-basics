@@ -52,7 +52,8 @@ Weiterarbeiten wissen muss.
   letzten Zustand, Feuerrate per Token-Bucket), Runden, Team-Ausgleich,
   AFK/Geister-Entfernung. Läuft direkt als TypeScript (Node ≥ 22.18).
 - `src/sound.ts` – synthetisierte Sounds (Web Audio, keine Dateien)
-- `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall) + Kamera-Ruck
+- `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall), Kamera-Ruck
+  und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
 - `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` (Körper-Kapsel)
   und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
@@ -79,7 +80,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Mit Ping: `SIMULATED_LATENCY_MS=150 SIMULATED_JITTER_MS=30 npm run test:mp`.
 - `npm run test:sound` – jeder Sound hörbar (Offline-Rendering) und an
   den richtigen Ereignissen (Schuss, Treffer, Kill, Sprung, Schritte, ...)
-- `npm run test:avatar` – Spielerfigur: Laufanimation, Duck-Pose, Tod
+- `npm run test:avatar` – Spielerfigur: Laufanimation, Duck-Pose (weich, bleibt
+  am Boden), Rutsch-Pose, eigene Rutsch-Sicht (FOV/Neigung), Tod
 - `npm run test:effects` – Mündungsleuchten, Funken, Todeseffekt, Kamera-Ruck
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer

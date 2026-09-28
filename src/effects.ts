@@ -214,3 +214,37 @@ export class CameraShake {
     this.offset.set(0, 0, 0)
   }
 }
+
+// Rutschen aus eigener Sicht: Kamera leicht zur Seite gekippt, Sichtfeld
+// etwas weiter. Die Neigung dreht nur um die Blickachse (Zielpunkt in der
+// Bildmitte bleibt) und wird wie der Kamera-Ruck nur fürs Rendern aufgeschlagen.
+const SLIDE_ROLL = 0.07 // rad
+const SLIDE_FOV_BOOST = 7 // Grad
+const SLIDE_BLEND_SPEED = 8 // pro Sekunde
+
+export class SlideView {
+  amount = 0
+  private readonly baseFov: number
+  private appliedRoll = 0
+
+  constructor(camera: THREE.PerspectiveCamera) {
+    this.baseFov = camera.fov
+  }
+
+  apply(camera: THREE.PerspectiveCamera, sliding: boolean, deltaSeconds: number) {
+    const step = SLIDE_BLEND_SPEED * deltaSeconds
+    this.amount += THREE.MathUtils.clamp((sliding ? 1 : 0) - this.amount, -step, step)
+    const fov = this.baseFov + SLIDE_FOV_BOOST * this.amount
+    if (camera.fov !== fov) {
+      camera.fov = fov
+      camera.updateProjectionMatrix()
+    }
+    this.appliedRoll = SLIDE_ROLL * this.amount
+    camera.rotateZ(this.appliedRoll)
+  }
+
+  restore(camera: THREE.Camera) {
+    camera.rotateZ(-this.appliedRoll)
+    this.appliedRoll = 0
+  }
+}

@@ -207,6 +207,8 @@ function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
     maxHealth: s.maxHealth,
     isAlive: Boolean(s.isAlive),
     crouching: Boolean(s.crouching),
+    sliding: Boolean(s.sliding),
+    eyeHeight: isFiniteNumber(s.eyeHeight) ? Math.min(2, Math.max(0.5, s.eyeHeight)) : s.crouching ? 1 : 1.7,
     sprinting: Boolean(s.sprinting),
     shield: s.shield,
     maxShield: s.maxShield,

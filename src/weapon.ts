@@ -75,6 +75,8 @@ export class Weapon {
   onEnemyHit?: (kill: boolean, point: THREE.Vector3, damage: number, headshot: boolean) => void
   onReload?: () => void
   onSwitch?: (weapon: WeaponId) => void
+  // 0..1, Waffe neigt sich beim Rutschen (setzt main.ts)
+  slideAmount = 0
   // Messerstich (getroffen oder nicht), für den Ton
   onSwing?: () => void
 
@@ -171,6 +173,7 @@ export class Weapon {
     this.switchRemaining = Math.max(0, this.switchRemaining - deltaSeconds)
     this.heat = Math.max(0, this.heat - HEAT_DECAY * deltaSeconds)
     this.view.lowered = this.switchRemaining / SWITCH_TIME
+    this.view.slide = this.slideAmount
     this.view.update(deltaSeconds)
 
     if (this.reloadRemaining > 0) {

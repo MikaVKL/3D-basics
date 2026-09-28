@@ -177,7 +177,7 @@ function interpolate(samples: Sample[], renderTime: number): PlayerNetworkState 
   const a = from.state
   const b = to.state
   return {
-    // Nur Bewegung wird geglättet
+    // Nur Bewegung (und Duck-Höhe) wird geglättet
     ...b,
     position: {
       x: THREE.MathUtils.lerp(a.position.x, b.position.x, t),
@@ -185,6 +185,7 @@ function interpolate(samples: Sample[], renderTime: number): PlayerNetworkState 
       z: THREE.MathUtils.lerp(a.position.z, b.position.z, t),
     },
     yaw: lerpAngle(a.yaw, b.yaw, t),
+    eyeHeight: THREE.MathUtils.lerp(a.eyeHeight, b.eyeHeight, t),
   }
 }
 

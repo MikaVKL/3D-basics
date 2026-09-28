@@ -21,6 +21,11 @@ const HIT_FLASH_DURATION = 0.08
 const TEAM_GLOW = 0.35
 const STRIDE = 1.1 // Meter pro halbem Beinschwung
 const MAX_LEG_SWING = 0.6 // rad
+// Rutsch-Pose: Beine nach vorn gestreckt, Oberkörper zurückgelehnt
+const SLIDE_POSE_SPEED = 10 // Übergang pro Sekunde
+const SLIDE_HIP_HEIGHT = 0.3
+const SLIDE_LEG_ANGLE = 1.3 // rad
+const SLIDE_LEAN = 0.3 // rad
 
 function box(width: number, height: number, depth: number, material: THREE.Material): THREE.Mesh {
   return new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material)
@@ -52,6 +57,11 @@ export class PlayerAvatar {
   heldWeapon: WeaponId = DEFAULT_WEAPON
   private hitFlashRemaining = 0
   private walkPhase = 0
+  private walkSwing = 0
+  // 0..1: Ducken folgt der gesendeten Augenhöhe, Rutschen wird geglättet
+  private crouchAmount = 0
+  private slideAmount = 0
+  private slideTarget = 0
   private readonly lastPosition = new THREE.Vector3()
   private hasLastPosition = false
 
@@ -160,22 +170,19 @@ export class PlayerAvatar {
     if (this.team !== state.team) this.setTeam(state.team)
     if (this.heldWeapon !== state.weapon) this.setWeapon(state.weapon)
 
-    const eyeHeight = state.crouching ? CROUCH_EYE_HEIGHT : EYE_HEIGHT
-    this.root.position.set(state.position.x, state.position.y - eyeHeight, state.position.z)
+    // Tatsächliche Augenhöhe statt Duck-Flag: beim Ducken sinkt die Kamera
+    // über ~0,1 s ab - mit dem Flag hüpfte die Figur dabei 0,7 m hoch
+    this.root.position.set(state.position.x, state.position.y - state.eyeHeight, state.position.z)
     this.root.rotation.set(0, state.yaw, 0)
-    this.root.updateMatrixWorld()
+    this.crouchAmount = THREE.MathUtils.clamp((EYE_HEIGHT - state.eyeHeight) / (EYE_HEIGHT - CROUCH_EYE_HEIGHT), 0, 1)
+    this.slideTarget = state.sliding ? 1 : 0
 
-    const height = state.crouching ? BODY_HEIGHT - CROUCH_DROP : BODY_HEIGHT
+    const height = BODY_HEIGHT - CROUCH_DROP * this.crouchAmount
     this.mesh.scale.y = height / BODY_HEIGHT
     this.mesh.position.y = height / 2
-    this.upperBody.position.y = state.crouching ? -CROUCH_DROP : 0
-    const legScale = state.crouching ? 0.35 : 1
-    this.leftLeg.scale.y = legScale
-    this.rightLeg.scale.y = legScale
-    this.leftLeg.position.y = 0.8 * legScale
-    this.rightLeg.position.y = 0.8 * legScale
 
-    this.animateWalk(state)
+    this.animateWalk()
+    this.applyPose()
 
     this.root.visible = state.isAlive
     // Raycaster prüft "visible" am getroffenen Objekt selbst, nicht am Elternteil
@@ -183,8 +190,26 @@ export class PlayerAvatar {
     this.headMesh.visible = state.isAlive
   }
 
+  // Stehen/Ducken/Rutschen stufenlos gemischt
+  private applyPose() {
+    const crouch = this.crouchAmount
+    const slide = this.slideAmount
+    this.upperBody.position.y = -CROUCH_DROP * Math.max(crouch, slide)
+    this.upperBody.rotation.x = SLIDE_LEAN * slide
+    const crouchLegScale = 1 - 0.65 * crouch
+    const legScale = THREE.MathUtils.lerp(crouchLegScale, 1, slide)
+    const hipHeight = THREE.MathUtils.lerp(0.8 * crouchLegScale, SLIDE_HIP_HEIGHT, slide)
+    const swing = this.walkSwing * (1 - 0.5 * crouch)
+    for (const [leg, side] of [[this.leftLeg, 1], [this.rightLeg, -1]] as const) {
+      leg.scale.y = legScale
+      leg.position.y = hipHeight
+      leg.rotation.x = THREE.MathUtils.lerp(swing * side, SLIDE_LEG_ANGLE - 0.1 * side, slide)
+    }
+    this.root.updateMatrixWorld()
+  }
+
   // Beine schwingen passend zur zurückgelegten Strecke am Boden
-  private animateWalk(state: PlayerNetworkState) {
+  private animateWalk() {
     const position = this.root.position
     const moved = this.hasLastPosition
       ? Math.hypot(position.x - this.lastPosition.x, position.z - this.lastPosition.z)
@@ -194,10 +219,7 @@ export class PlayerAvatar {
     if (moved > 2) return // Teleport/Respawn
     this.walkPhase += (moved / STRIDE) * Math.PI
     // Stillstand: Beine laufen langsam zurück in die Ruheposition
-    const swing = moved > 0.002 ? Math.sin(this.walkPhase) * MAX_LEG_SWING : this.leftLeg.rotation.x * 0.8
-    const amplitude = state.crouching ? 0.5 : 1
-    this.leftLeg.rotation.x = swing * amplitude
-    this.rightLeg.rotation.x = -swing * amplitude
+    this.walkSwing = moved > 0.002 ? Math.sin(this.walkPhase) * MAX_LEG_SWING : this.walkSwing * 0.8
   }
 
   // Spawn-Schutz: halb durchsichtig
@@ -215,6 +237,11 @@ export class PlayerAvatar {
   }
 
   update(deltaSeconds: number) {
+    if (this.slideAmount !== this.slideTarget) {
+      const step = SLIDE_POSE_SPEED * deltaSeconds
+      this.slideAmount += THREE.MathUtils.clamp(this.slideTarget - this.slideAmount, -step, step)
+      this.applyPose()
+    }
     if (this.hitFlashRemaining <= 0) return
     this.hitFlashRemaining -= deltaSeconds
     if (this.hitFlashRemaining <= 0) this.resetGlow()

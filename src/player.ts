@@ -212,6 +212,8 @@ export class Player implements Damageable {
       maxHealth: MAX_HEALTH,
       isAlive: this.isAlive,
       crouching: this.isCrouching,
+      sliding: this.sliding,
+      eyeHeight: this.eyeHeight,
       sprinting: this.isSprinting,
       shield: this.vitals.shield,
       maxShield: MAX_SHIELD,

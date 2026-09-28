@@ -44,6 +44,8 @@ export class WeaponView {
   private recoilRemaining = 0
   // 0 = im Anschlag, 1 = ganz abgesenkt (Waffenwechsel)
   lowered = 0
+  // 0..1 beim Rutschen: Waffe nach innen geneigt und etwas tiefer
+  slide = 0
 
   constructor(camera: THREE.Camera) {
     this.group.position.copy(REST_POSITION)
@@ -128,7 +130,8 @@ export class WeaponView {
 
   update(deltaSeconds: number) {
     this.recoilRemaining = Math.max(0, this.recoilRemaining - deltaSeconds)
-    this.group.position.y = REST_POSITION.y - SWITCH_DROP * this.lowered
+    this.group.position.y = REST_POSITION.y - SWITCH_DROP * this.lowered - 0.05 * this.slide
+    this.group.rotation.z = 0.35 * this.slide
     if (this.current.stab) {
       // Schnell vor, langsamer zurück
       const t = 1 - this.recoilRemaining / STAB_DURATION // 0 -> 1

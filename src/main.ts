@@ -19,7 +19,7 @@ import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
 import { SoundFx } from './sound'
-import { Effects, CameraShake } from './effects'
+import { Effects, CameraShake, SlideView } from './effects'
 import { WEAPONS, WEAPON_SLOTS } from './shared/weapons'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
@@ -80,6 +80,7 @@ const targets = [
 ]
 const effects = new Effects(scene)
 const cameraShake = new CameraShake()
+const slideView = new SlideView(camera)
 for (const target of targets) {
   scene.add(target.mesh)
   arena.shootables.push(target.mesh)
@@ -285,7 +286,7 @@ window.addEventListener('keydown', (event) => {
 
 // Nur im Dev-Build: Zugriff für die Browser-Tests (tests/)
 if (import.meta.env.DEV) {
-  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake } })
+  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake, slideView } })
 }
 
 // --- Eingabe ---
@@ -532,7 +533,10 @@ function animate() {
 
   effects.update(deltaSeconds)
   cameraShake.apply(camera, deltaSeconds)
+  slideView.apply(camera, player.isSliding && player.isAlive, deltaSeconds)
+  weapon.slideAmount = slideView.amount
   renderer.render(scene, camera)
+  slideView.restore(camera)
   cameraShake.restore(camera)
 }
 
