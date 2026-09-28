@@ -1,24 +1,9 @@
 import type { PlayerId } from './shared/protocol'
-import { WEAPONS, type WeaponId } from './shared/weapons'
+import type { WeaponId } from './shared/weapons'
+import { weaponIcon } from './weaponIcons'
 
 const ENTRY_LIFETIME_MS = 6000
 const MAX_ENTRIES = 5
-
-// Umriss-Symbole (feste Strings, kein Nutzerinhalt)
-const WEAPON_ICONS: Record<WeaponId, string> = {
-  pistol: 'M2 2h17v4h-8l-1.5 6h-4l1.5-6H2z',
-  rifle: 'M1 4h20V2h7v3h3v2H19l-2.5 5h-3l1.5-5H9l-2.5 4H2l1-3H1z',
-  knife: 'M1 4.5h8v3H1zM9.5 3h1.5v6H9.5zM11 4.5h13l6 1.5-6 1.5H11z',
-}
-
-function weaponIcon(weapon: WeaponId): HTMLElement {
-  const icon = document.createElement('span')
-  icon.className = 'weapon-icon'
-  icon.dataset.weapon = weapon
-  icon.title = WEAPONS[weapon].label
-  icon.innerHTML = `<svg viewBox="0 0 32 12" width="32" height="12"><path d="${WEAPON_ICONS[weapon]}" fill="currentColor"/></svg>`
-  return icon
-}
 
 // Kill-Anzeige oben rechts, eigene Kills/Tode hervorgehoben
 export class KillFeed {

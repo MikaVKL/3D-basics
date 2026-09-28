@@ -27,6 +27,7 @@ export interface AmmoState {
   current: number
   max: number
   reloading: boolean
+  reloadProgress: number // 0..1 während des Nachladens
 }
 
 function fullMagazines(): Record<WeaponId, number> {
@@ -298,6 +299,7 @@ export class Weapon {
       current: this.ammo,
       max: this.stats.magazine,
       reloading: this.reloadRemaining > 0,
+      reloadProgress: this.stats.reloadTime > 0 ? 1 - this.reloadRemaining / this.stats.reloadTime : 1,
     }
   }
 

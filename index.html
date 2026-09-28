@@ -15,9 +15,19 @@
     <div id="damage-indicators"></div>
     <div id="damage-vignette"></div>
 
-    <!-- Munitionsanzeige -->
-    <div id="weapon-slots"></div>
-    <div id="ammo-hud">12 / 12</div>
+    <!-- Waffenfeld (unten rechts, Touch: unten mittig): Waffen 1-3, aktive
+         Waffe mit Symbol, Munition, Nachlade-Fortschritt -->
+    <div id="weapon-hud">
+      <div id="weapon-slots"></div>
+      <div id="weapon-main">
+        <span id="weapon-current-icon"></span>
+        <div id="weapon-text">
+          <div id="weapon-name"></div>
+          <div id="ammo-hud"><span id="ammo-current"></span><span id="ammo-max"></span></div>
+        </div>
+      </div>
+      <div id="reload-bar"><div id="reload-bar-fill"></div></div>
+    </div>
 
     <!-- Team-Scoreboard (oben mittig): Kills pro Team -->
     <div id="scoreboard">

@@ -79,6 +79,31 @@ try {
   b = await bars(page)
   check('Respawn: Leben 100, Schild 25', b.health === '100' && b.shield === '25', JSON.stringify(b))
   check('Respawn/Tod lösen kein Blitzen aus', !seen.health && !seen.shield, JSON.stringify(seen))
+  // Waffenfeld: Nachlade-Balken und leeres Magazin
+  const weaponHud = () =>
+    page.evaluate(() => ({
+      ammo: document.querySelector('#ammo-hud').textContent,
+      reloadVisible: getComputedStyle(document.querySelector('#reload-bar')).visibility === 'visible',
+      progress: parseFloat(document.querySelector('#reload-bar-fill').style.width),
+      empty: document.querySelector('#ammo-hud').classList.contains('empty'),
+    }))
+  const idle = await weaponHud()
+  check('ohne Nachladen kein Balken', !idle.reloadVisible && !idle.empty, JSON.stringify(idle))
+  await page.evaluate(() => {
+    __dusk.weapon.ammo = 0
+  })
+  await wait(200)
+  const empty = await weaponHud()
+  check('leeres Magazin: Zahl warnt', empty.empty && empty.ammo === '0 / 12', JSON.stringify(empty))
+  await page.evaluate(() => __dusk.weapon.reload())
+  await wait(300)
+  const early = await weaponHud()
+  await wait(500)
+  const later = await weaponHud()
+  check('Nachladen: Balken sichtbar und wächst', early.reloadVisible && later.progress > early.progress && later.progress < 100, `${early.progress.toFixed(0)} % -> ${later.progress.toFixed(0)} %`)
+  await wait(700)
+  const done = await weaponHud()
+  check('nach dem Nachladen: Balken weg, 12 / 12', !done.reloadVisible && !done.empty && done.ammo === '12 / 12', JSON.stringify(done))
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

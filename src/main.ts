@@ -20,7 +20,8 @@ import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
 import { SoundFx } from './sound'
 import { Effects, CameraShake, SlideView } from './effects'
-import { WEAPONS, WEAPON_SLOTS } from './shared/weapons'
+import { WEAPONS, WEAPON_SLOTS, type WeaponId } from './shared/weapons'
+import { weaponIcon } from './weaponIcons'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
 
@@ -378,6 +379,12 @@ window.addEventListener('resize', () => {
 
 const timer = new THREE.Timer()
 const ammoHud = document.querySelector<HTMLDivElement>('#ammo-hud')!
+const ammoCurrent = document.querySelector<HTMLSpanElement>('#ammo-current')!
+const ammoMax = document.querySelector<HTMLSpanElement>('#ammo-max')!
+const weaponName = document.querySelector<HTMLDivElement>('#weapon-name')!
+const weaponCurrentIcon = document.querySelector<HTMLSpanElement>('#weapon-current-icon')!
+const reloadBar = document.querySelector<HTMLDivElement>('#reload-bar')!
+const reloadBarFill = document.querySelector<HTMLDivElement>('#reload-bar-fill')!
 const healthBarFill = document.querySelector<HTMLDivElement>('#health-bar-fill')!
 const healthText = document.querySelector<HTMLSpanElement>('#health-text')!
 const shieldText = document.querySelector<HTMLSpanElement>('#shield-text')!
@@ -455,17 +462,32 @@ function updateScoreboardHud() {
 const weaponSlots = document.querySelector<HTMLDivElement>('#weapon-slots')!
 const slotElements = WEAPON_SLOTS.map((id, index) => {
   const element = document.createElement('span')
-  element.textContent = `${index + 1} ${WEAPONS[id].label}`
+  element.className = 'weapon-slot'
+  element.dataset.weapon = id
+  const key = document.createElement('span')
+  key.className = 'slot-key'
+  key.textContent = String(index + 1)
+  element.append(key, weaponIcon(id, 0.75))
   weaponSlots.appendChild(element)
   return element
 })
+let shownWeapon: WeaponId | null = null
 
 function updateAmmoHud() {
   const ammo = weapon.getAmmoState()
-  WEAPON_SLOTS.forEach((id, index) => slotElements[index].classList.toggle('active', id === ammo.weapon))
-  if (ammo.max === 0) ammoHud.textContent = '—'
-  else ammoHud.textContent = ammo.reloading ? 'Nachladen...' : `${ammo.current} / ${ammo.max}`
+  if (shownWeapon !== ammo.weapon) {
+    shownWeapon = ammo.weapon
+    WEAPON_SLOTS.forEach((id, index) => slotElements[index].classList.toggle('active', id === ammo.weapon))
+    weaponName.textContent = WEAPONS[ammo.weapon].label
+    weaponCurrentIcon.replaceChildren(weaponIcon(ammo.weapon, 1.5))
+  }
+  const melee = ammo.max === 0
+  ammoCurrent.textContent = melee ? '—' : String(ammo.current)
+  ammoMax.textContent = melee ? '' : ` / ${ammo.max}`
   ammoHud.classList.toggle('reloading', ammo.reloading)
+  ammoHud.classList.toggle('empty', !melee && ammo.current === 0)
+  reloadBar.classList.toggle('active', ammo.reloading)
+  reloadBarFill.style.width = `${ammo.reloadProgress * 100}%`
 }
 
 // Treffer lassen Leben/Schild kurz aufblitzen

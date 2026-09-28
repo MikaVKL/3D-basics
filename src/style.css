@@ -181,43 +181,129 @@ body {
   transition: none;
 }
 
-/* Munition */
-#ammo-hud {
+/* Waffenfeld unten rechts */
+#weapon-hud {
   position: fixed;
   bottom: var(--edge-bottom);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--c-text);
-  text-shadow: 0 0 8px rgba(51, 230, 204, 0.5);
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* Waffenleiste über der Munition, aktive Waffe hervorgehoben */
-#weapon-slots {
-  position: fixed;
-  bottom: 52px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: var(--edge-right);
   display: flex;
-  gap: 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(232, 236, 241, 0.45);
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+  padding: 8px 12px 10px;
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
+  color: var(--c-text);
+  text-shadow: var(--shadow-text);
   pointer-events: none;
   z-index: 5;
 }
 
-#weapon-slots .active {
+/* Touch: unten rechts liegen die Buttons */
+@media (pointer: coarse) {
+  #weapon-hud {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+#weapon-slots {
+  display: flex;
+  gap: 8px;
+}
+
+.weapon-slot {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.4;
+}
+
+.weapon-slot.active {
+  opacity: 1;
   color: var(--c-neon);
 }
 
+.slot-key {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.weapon-slot .weapon-icon {
+  margin: 0;
+}
+
+#weapon-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#weapon-current-icon {
+  color: var(--c-neon);
+  opacity: 0.85;
+}
+
+#weapon-current-icon .weapon-icon {
+  margin: 0;
+}
+
+#weapon-text {
+  text-align: right;
+}
+
+#weapon-name {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+#ammo-hud {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+#ammo-current {
+  font-size: 1.6rem;
+}
+
+#ammo-max {
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
 #ammo-hud.reloading {
+  opacity: 0.45;
+}
+
+/* Magazin leer: Zahl warnt */
+#ammo-hud.empty #ammo-current {
   color: var(--c-warm);
-  text-shadow: 0 0 8px rgba(255, 107, 61, 0.5);
+}
+
+/* Nachlade-Fortschritt, sonst unsichtbar (Platz bleibt, nichts springt) */
+#reload-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(232, 236, 241, 0.15);
+  overflow: hidden;
+  visibility: hidden;
+}
+
+#reload-bar.active {
+  visibility: visible;
+}
+
+#reload-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--c-warm);
 }
 
 #scoreboard {

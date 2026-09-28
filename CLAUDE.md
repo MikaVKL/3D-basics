@@ -54,6 +54,7 @@ Weiterarbeiten wissen muss.
 - `src/sound.ts` – synthetisierte Sounds (Web Audio, keine Dateien)
 - `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall), Kamera-Ruck
   und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
+- `src/weaponIcons.ts` – Waffen-Umrisse (SVG) für Kill-Feed und Waffenfeld
 - `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` (Körper-Kapsel)
   und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
@@ -103,7 +104,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   mit Ping), erscheint bei eingefrorenem Server (SIGSTOP), verschwindet danach,
   Spiel läuft weiter
 - `npm run test:hud` – HUD: Lebensanzeige (Werte, Aufblitzen bei Schaden,
-  Pulsieren ab 30 Leben, nicht bei Tod/Respawn)
+  Pulsieren ab 30 Leben, nicht bei Tod/Respawn), Waffenfeld (Nachlade-Balken,
+  leeres Magazin)
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:

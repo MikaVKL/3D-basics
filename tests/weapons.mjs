@@ -14,7 +14,9 @@ const hud = (page) =>
   page.evaluate(() => ({
     weapon: __dusk.weapon.current,
     playerWeapon: __dusk.player.weapon,
-    slot: document.querySelector('#weapon-slots .active')?.textContent,
+    // Aktives Feld der Waffenleiste + Name im Waffenfeld
+    slot: `${document.querySelector('#weapon-slots .active')?.textContent} ${document.querySelector('#weapon-name').textContent}`,
+    icon: document.querySelector('#weapon-current-icon .weapon-icon')?.dataset.weapon,
     ammo: document.querySelector('#ammo-hud').textContent,
   }))
 
@@ -24,13 +26,13 @@ try {
   await play(page)
   await wait(500)
   let h = await hud(page)
-  check('Start mit Pistole', h.weapon === 'pistol' && h.slot === '1 Pistole' && h.ammo === '12 / 12', JSON.stringify(h))
+  check('Start mit Pistole', h.weapon === 'pistol' && h.slot === '1 Pistole' && h.icon === 'pistol' && h.ammo === '12 / 12', JSON.stringify(h))
 
   await page.keyboard.press('Digit2')
   const duringSwitch = await page.evaluate(() => __dusk.weapon.tryShoot())
   await wait(500)
   h = await hud(page)
-  check('Taste 2: Sturmgewehr', h.weapon === 'rifle' && h.playerWeapon === 'rifle' && h.slot === '2 Sturmgewehr' && h.ammo === '30 / 30', JSON.stringify(h))
+  check('Taste 2: Sturmgewehr', h.weapon === 'rifle' && h.playerWeapon === 'rifle' && h.slot === '2 Sturmgewehr' && h.icon === 'rifle' && h.ammo === '30 / 30', JSON.stringify(h))
   check('während des Wechsels kein Schuss', duringSwitch === false)
 
   await page.keyboard.press('KeyQ')
@@ -166,7 +168,7 @@ try {
   await page.keyboard.press('Digit3')
   await wait(500)
   h = await hud(page)
-  check('Taste 3: Messer', h.weapon === 'knife' && h.slot === '3 Messer' && h.ammo === '—', JSON.stringify(h))
+  check('Taste 3: Messer', h.weapon === 'knife' && h.slot === '3 Messer' && h.icon === 'knife' && h.ammo === '—', JSON.stringify(h))
   const knifeRatio = (await distance('knife')) / pistolDistance
   await page.evaluate(() => (__dusk.player.weapon = __dusk.weapon.current))
   check('Messer läuft 115 % so schnell', Math.abs(knifeRatio - 1.15) < 0.01, knifeRatio.toFixed(3))
