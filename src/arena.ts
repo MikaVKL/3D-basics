@@ -361,6 +361,10 @@ export function buildArena(): ArenaResult {
     [-27, 8, 3, 3, 2.8],
     [-24, -16, 3, 2, 2.4],
     [15, -8, 2, 2, 1.4],
+    // Deckung vor den mittleren Spawns (0, ±18): dort wurde man im Bot-Test
+    // oft direkt nach dem Spawn getroffen (50-62 % statt 3-9 %)
+    [1.7, -14, 4, 1, 2.4],
+    [0, 14, 5, 1, 2.4],
     // Flankenraum
     [sideRoomMinX + 6, -5, 2.4, 2.4, 2.4],
     [sideRoomMinX + 13, 7, 2, 4.5, 2.8],

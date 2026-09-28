@@ -64,13 +64,21 @@ function installBot() {
   window.__spawns = {}
   let lastSpawn = null
   const spawnStats = (index) => (window.__spawns[index] ??= { count: 0, hurtEarly: 0, diedEarly: 0 })
+  // Woher kamen die frühen Treffer? (Schützenposition je Spawn-Punkt)
+  window.__earlyShooters = []
   const onRespawn = D.network.handlers.onRespawn
   D.network.handlers.onRespawn = (id, spawnIndex, team) => {
     if (id === D.network.localId) {
-      lastSpawn = { t: performance.now(), index: spawnIndex, hurt: false }
+      lastSpawn = { t: performance.now(), index: spawnIndex, hurt: false, shot: false }
       spawnStats(spawnIndex).count++
     }
     onRespawn(id, spawnIndex, team)
+  }
+  // Eigener Schuss beendet den Spawn-Schutz (Server) - für die Auswertung
+  const onShot = D.weapon.onShot
+  D.weapon.onShot = (...args) => {
+    if (lastSpawn) lastSpawn.shot = true
+    onShot?.(...args)
   }
   const onKill = D.network.handlers.onKill
   D.network.handlers.onKill = (killer, victim, ...rest) => {
@@ -83,6 +91,8 @@ function installBot() {
     if (lastSpawn && !lastSpawn.hurt && performance.now() - lastSpawn.t < 4000) {
       lastSpawn.hurt = true
       spawnStats(lastSpawn.index).hurtEarly++
+      const from = D.remotePlayers.getGroundPosition(by)
+      if (from) window.__earlyShooters.push([lastSpawn.index, Math.round(from.x), Math.round(from.z), lastSpawn.shot ? 'selbst geschossen' : 'nicht geschossen'])
     }
     onHurt(by)
   }
@@ -168,6 +178,7 @@ function snapshot() {
     time: Date.now(),
     hitsSent: window.__hitsSent ?? 0,
     spawns: window.__spawns ?? {},
+    earlyShooters: window.__earlyShooters ?? [],
     hurtReceived: window.__hurtReceived ?? 0,
     frames: window.__frames ?? 0,
     trail: window.__trail ?? [],
@@ -349,6 +360,7 @@ const streaks = new Map()
 const lagSamples = [] // Verzögerung bei großen, aber erklärbaren Abweichungen
 let heavyLag = 0
 const spawnTotals = {}
+const earlyShooters = []
 const allDelays = [] // stimmt erst mit mehr als der erwarteten Verzögerung (überlastete Bots)
 function persistent(key, bad, needed = 4) {
   const count = bad ? (streaks.get(key) ?? 0) + 1 : 0
@@ -482,6 +494,9 @@ try {
           for (const key of ['count', 'hurtEarly', 'diedEarly']) total[key] += reloaded ? now[key] : now[key] - before[key]
         }
       }
+      // Neue Einträge seit der letzten Messung (nach Neuladen: alle)
+      const known = bot.lastSnap && s.earlyShooters.length >= bot.lastSnap.earlyShooters.length ? bot.lastSnap.earlyShooters.length : 0
+      earlyShooters.push(...s.earlyShooters.slice(known))
       bot.lastSnap = s
       checkSingle(bot, s)
     }
@@ -524,6 +539,7 @@ try {
     .filter(([, t]) => t.count > 0)
     .map(([index, t]) => `Spawn ${index}: ${t.count}x, früh getroffen ${Math.round((100 * t.hurtEarly) / t.count)} %, früh gestorben ${Math.round((100 * t.diedEarly) / t.count)} %`)
   if (spawnLines.length) console.log(spawnLines.join('\n'))
+  if (earlyShooters.length) console.log('Frühe Treffer [Spawn, Schütze x, z, Opfer]:', JSON.stringify(earlyShooters))
   allDelays.sort((x, y) => x - y)
   const pct = (p) => allDelays[Math.floor(allDelays.length * p)]
   if (allDelays.length) console.log(`Verzögerung bei Bewegung (${allDelays.length} Messungen): Median ${pct(0.5)} ms, 90 % unter ${pct(0.9)} ms`)
