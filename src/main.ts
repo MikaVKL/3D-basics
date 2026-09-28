@@ -140,6 +140,21 @@ const scoreGoal = document.querySelector<HTMLDivElement>('#score-goal')!
 let nextRoundAt: number | null = null
 
 const sound = new SoundFx()
+const noticeBanner = document.querySelector<HTMLDivElement>('#notice-banner')!
+const screenFade = document.querySelector<HTMLDivElement>('#screen-fade')!
+const NOTICE_MS = 3500
+let noticeTimer: ReturnType<typeof setTimeout> | null = null
+function showNotice(text: string) {
+  noticeBanner.textContent = text
+  noticeBanner.classList.remove('hidden')
+  if (noticeTimer !== null) clearTimeout(noticeTimer)
+  noticeTimer = setTimeout(() => noticeBanner.classList.add('hidden'), NOTICE_MS)
+}
+function fadeScreen() {
+  screenFade.classList.remove('active')
+  void screenFade.offsetWidth // Animation neu starten
+  screenFade.classList.add('active')
+}
 const SHOT_SOUNDS = { pistol: 'shot', rifle: 'rifleShot', knife: 'knife' } as const
 const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#hitmarker')!,
@@ -178,6 +193,12 @@ const network: NetworkClient = new NetworkClient({
     scoreGoal.textContent = `Erstes Team mit ${killsToWin} Kills gewinnt`
     setLocalTeam(team)
     player.networkControlled = true
+    // Beitritt setzt einen an einen Spawn - ohne Hinweis wirkte das wie ein
+    // zufälliger Teleport (z. B. wenn der Server erst nach dem Start aufwacht)
+    if (isActive) {
+      fadeScreen()
+      showNotice(`Online-Runde beigetreten · Team ${TeamLabel[team]}`)
+    }
     player.spawn(arena.spawnPoints[spawnIndex])
     scoreboard.setScores(scores)
     setTargetsActive(false)
@@ -245,6 +266,7 @@ const network: NetworkClient = new NetworkClient({
     overlayNotice.textContent = 'Wegen Inaktivität aus dem Spiel genommen - klicken, um wieder beizutreten'
   },
   onDisconnect: () => {
+    if (isActive && !document.hidden) showNotice('Verbindung zum Server verloren – Singleplayer, verbinde neu …')
     nextRoundAt = null
     roundBanner.classList.add('hidden')
     player.networkControlled = false

@@ -110,7 +110,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Spielerliste bei stabilem Ping selten verschickt
 - `npm run test:connection` – Verbindungswarnung: nie im normalen Spiel (auch
   mit Ping), erscheint bei eingefrorenem Server (SIGSTOP), verschwindet danach,
-  Spiel läuft weiter
+  Spiel läuft weiter; Server erst später erreichbar bzw. Neustart: Abblenden +
+  Hinweis beim Beitritt, Hinweis bei Verbindungsverlust, keiner beim Menü
 - `npm run test:hud` – HUD: Lebensanzeige (Werte, Aufblitzen bei Schaden,
   Pulsieren ab 30 Leben, nicht bei Tod/Respawn), Waffenfeld (Nachlade-Balken,
   leeres Magazin), Fadenkreuz (Lücke = echte Streuung, Messer-Ring)
@@ -162,6 +163,9 @@ Stolperfallen bei Headless-Tests:
   Nord-Spawn 68 % -> 41 % früh getroffen; Süd-Spawn bleibt ~80 % (Schüsse
   kommen schräg) - Lösung mit Nutzer abstimmen. Tests laufen deshalb nicht
   mehr auf der Linie x = 0 (Bahnen bei x = -8 bzw. 12).
+- Beitritt zur Online-Runde (auch automatisch, wenn der Server erst aufwacht
+  oder neu startet) setzt einen an einen Spawn - mit kurzem Abblenden und
+  Hinweis, sonst wirkt es wie ein zufälliger Teleport (Nutzer-Bugmeldung).
 - Kopftreffer = 2× Schaden; Schadenszahlen bei jedem Treffer (Kopf rot),
   Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
 - Waffen (abgestimmt): 1 Pistole (20, 5/s, 12er, Tempo 100 %),

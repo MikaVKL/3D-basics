@@ -1,8 +1,11 @@
 // Verbindungswarnung: erscheint nur bei echter Stille (Server eingefroren),
 // verschwindet danach wieder; das Spiel läuft nach dem Einfrieren normal weiter.
+// Beitritt während des Singleplayers (Server wacht später auf) und Server-
+// Neustart: Sprung zum Spawn mit Abblenden und Hinweis statt kommentarlos.
 //
 //   node tests/connection.mjs
-import { startServers, launchBrowser, openGame, play, shootAt, teleport, wait, createChecks } from './lib.mjs'
+import { spawn } from 'node:child_process'
+import { startServers, launchBrowser, openGame, play, shootAt, teleport, wait, createChecks, SERVER_PORT } from './lib.mjs'
 
 const { check, finish } = createChecks()
 const browser = await launchBrowser()
@@ -66,6 +69,60 @@ try {
       servers.stop()
       await wait(500)
     }
+  }
+  // Server erst später erreichbar (Aufwachen), dann Neustart (Update)
+  const viteOnly = await startServers({ gameServer: false })
+  const startGameServer = () => spawn('node', ['server/index.ts'], { env: { ...process.env, PORT: String(SERVER_PORT) }, stdio: 'ignore' })
+  let gameServer = null
+  try {
+    const page = await openGame(browser, { name: 'Mika', errors })
+    await play(page)
+    await wait(1500)
+    await teleport(page, -10, 1.7, 3)
+    // Hinweise und Abblenden über die Zeit mitschreiben
+    await page.evaluate(() => {
+      window.__notices = []
+      window.__fades = 0
+      new MutationObserver(() => {
+        const banner = document.querySelector('#notice-banner')
+        if (!banner.classList.contains('hidden')) window.__notices.push(banner.textContent)
+      }).observe(document.querySelector('#notice-banner'), { attributes: true, childList: true, characterData: true, subtree: true })
+      new MutationObserver(() => {
+        if (document.querySelector('#screen-fade').classList.contains('active')) window.__fades++
+      }).observe(document.querySelector('#screen-fade'), { attributes: true })
+    })
+    const singleplayer = await page.evaluate(() => __dusk.network.status)
+    gameServer = startGameServer()
+    await wait(18000)
+    const joined = await page.evaluate(() => ({
+      status: __dusk.network.status,
+      pos: __dusk.camera.position.toArray(),
+      notices: [...new Set(window.__notices)],
+      fades: window.__fades,
+    }))
+    check('Singleplayer, solange der Server fehlt', singleplayer !== 'online', singleplayer)
+    check('Server wacht auf: beigetreten, am Spawn', joined.status === 'online' && Math.hypot(joined.pos[0] + 10, joined.pos[2] - 3) > 3, JSON.stringify(joined.pos))
+    check('Beitritt mit Abblenden und Hinweis', joined.fades >= 1 && joined.notices.some((n) => n.startsWith('Online-Runde beigetreten')), JSON.stringify(joined))
+
+    await page.evaluate(() => (window.__notices = []))
+    gameServer.kill()
+    await wait(1500)
+    gameServer = startGameServer()
+    await wait(18000)
+    const rejoined = await page.evaluate(() => ({ status: __dusk.network.status, notices: [...new Set(window.__notices)] }))
+    check('Server-Neustart: Hinweis "Verbindung verloren"', rejoined.notices.some((n) => n.startsWith('Verbindung zum Server verloren')), JSON.stringify(rejoined.notices))
+    check('danach automatisch wieder beigetreten (mit Hinweis)', rejoined.status === 'online' && rejoined.notices.some((n) => n.startsWith('Online-Runde beigetreten')), JSON.stringify(rejoined))
+
+    // Menü: kein Hinweis beim bewussten Verlassen
+    await page.evaluate(() => {
+      window.__notices = []
+      document.exitPointerLock()
+    })
+    await wait(21500)
+    check('Verlassen über das Menü: kein Verbindungs-Hinweis', !(await page.evaluate(() => window.__notices.some((n) => n.startsWith('Verbindung')))))
+  } finally {
+    gameServer?.kill()
+    viteOnly.stop()
   }
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {

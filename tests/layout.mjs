@@ -26,12 +26,14 @@ try {
     await wait(2500)
     const result = await page.evaluate(() => {
       const style = document.createElement('style')
-      style.textContent = '#score-goal.hidden, #connection-warning.hidden, #spawn-protection.hidden { display: block !important; }'
+      // Warnung ohne !important: der Hinweis hat im Spiel Vorrang (teilen sich den Platz)
+      style.textContent = '#score-goal.hidden, #spawn-protection.hidden, #notice-banner.hidden { display: block !important; } body #connection-warning.hidden { display: block; }'
+      document.querySelector('#notice-banner').textContent = 'Verbindung zum Server verloren – Singleplayer, verbinde neu …'
       document.head.append(style)
       document.querySelector('#score-goal').textContent = 'Erstes Team mit 20 Kills gewinnt'
       const feed = document.querySelector('#kill-feed')
       for (const t of ['Maximilianus1234 ✕ Clara', 'Du ✕ Ben', 'Ben ✕ Du']) { const e = document.createElement('div'); e.className = 'kill-entry'; e.textContent = t; feed.append(e) }
-      const ids = ['#scoreboard', '#score-goal', '#net-status', '#kill-feed', '#connection-warning', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
+      const ids = ['#scoreboard', '#score-goal', '#net-status', '#kill-feed', '#connection-warning', '#notice-banner', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
       const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
         .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
       const overlaps = []

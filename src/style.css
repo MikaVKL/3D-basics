@@ -385,6 +385,69 @@ body {
   display: none;
 }
 
+/* Beitritt/Verbindungsverlust: kurz einblenden. Gleicher Platz wie die
+   Verbindungswarnung (dort ist auf allen Größen frei), beide kommen praktisch
+   nie gleichzeitig - sonst hat der Hinweis Vorrang */
+#notice-banner {
+  position: fixed;
+  top: calc(50% - 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content; /* sonst begrenzt left:50% die Breite auf die halbe Seite */
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--c-text);
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
+  text-shadow: var(--shadow-text);
+  pointer-events: none;
+  z-index: 7;
+}
+
+#notice-banner.hidden {
+  display: none;
+}
+
+/* Touch: rechts liegt die Button-Spalte - symmetrisch freihalten */
+@media (pointer: coarse) {
+  #notice-banner {
+    max-width: calc(100vw - 200px);
+  }
+}
+
+#notice-banner:not(.hidden) ~ #connection-warning {
+  display: none;
+}
+
+/* Beim Beitritt kurz abblenden: der Sprung zum Spawn wirkt dann wie ein
+   Szenenwechsel statt wie ein Fehler */
+#screen-fade {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9;
+}
+
+#screen-fade.active {
+  animation: screen-fade 0.6s ease-out;
+}
+
+@keyframes screen-fade {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 #connection-warning {
   position: fixed;
   top: calc(50% - 64px);
