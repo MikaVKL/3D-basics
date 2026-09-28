@@ -389,6 +389,9 @@ const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill
 const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
 const netText = document.querySelector<HTMLSpanElement>('#net-text')!
 const netPing = document.querySelector<HTMLSpanElement>('#net-ping')!
+const connectionWarning = document.querySelector<HTMLDivElement>('#connection-warning')!
+// Server schickt 20x/s - so lange Stille ist kein normales Schwanken mehr
+const CONNECTION_WARNING_AFTER_MS = 1500
 const spawnProtectionHud = document.querySelector<HTMLDivElement>('#spawn-protection')!
 const scoreTable = new ScoreTable(document.querySelector<HTMLDivElement>('#score-table')!)
 
@@ -433,6 +436,7 @@ function updateNetStatusHud() {
   const ping = network.status === 'online' ? network.ping : null
   netPing.textContent = ping === null ? '' : ` · ${ping} ms`
   netPing.dataset.quality = ping === null ? '' : ping < 80 ? 'good' : ping <= 150 ? 'ok' : 'bad'
+  connectionWarning.classList.toggle('hidden', network.silentFor < CONNECTION_WARNING_AFTER_MS)
 }
 
 function updateRoundHud() {

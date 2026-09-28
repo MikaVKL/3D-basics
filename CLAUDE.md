@@ -99,6 +99,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:ping` – Ping-Anzeige: Messwert (auch mit 200 ms simuliert),
   Farbe, ausgeblendet ohne Verbindung, Ping-Spalte in der Tab-Tabelle,
   Spielerliste bei stabilem Ping selten verschickt
+- `npm run test:connection` – Verbindungswarnung: nie im normalen Spiel (auch
+  mit Ping), erscheint bei eingefrorenem Server (SIGSTOP), verschwindet danach,
+  Spiel läuft weiter
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:

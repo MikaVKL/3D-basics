@@ -66,6 +66,8 @@ export class NetworkClient {
   readonly roster = new Map<PlayerId, RosterEntry>()
   // Hin und zurück in ms (Median der letzten Messungen), null = unbekannt
   ping: number | null = null
+  // performance.now() der letzten Server-Nachricht (Stillstand erkennen)
+  private lastMessageAt = 0
   private pingSamples: number[] = []
 
   private readonly url: string | null
@@ -95,6 +97,11 @@ export class NetworkClient {
     setInterval(() => {
       if (this.status === 'online') this.send({ t: 'ping', time: performance.now(), rtt: this.ping })
     }, PING_INTERVAL_MS)
+  }
+
+  // Wie lange online schon nichts mehr vom Server kam (sonst 0)
+  get silentFor(): number {
+    return this.status === 'online' ? performance.now() - this.lastMessageAt : 0
   }
 
   get playerCount(): number {
@@ -137,6 +144,7 @@ export class NetworkClient {
     })
 
     socket.addEventListener('message', (event) => {
+      this.lastMessageAt = performance.now()
       let message: ServerMessage
       try {
         message = JSON.parse(event.data as string)

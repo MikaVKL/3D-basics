@@ -239,6 +239,27 @@ body {
   display: none;
 }
 
+#connection-warning {
+  position: fixed;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 6px 14px;
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffd166;
+  background: rgba(16, 22, 31, 0.8);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+#connection-warning.hidden {
+  display: none;
+}
+
 #round-banner {
   position: fixed;
   top: 28%;

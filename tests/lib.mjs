@@ -57,6 +57,8 @@ export async function startServers({ gameServer = true, serverEnv = {} } = {}) {
     serverLog: () => children[1]?.log ?? '',
     serverErrors: () => children[1]?.errors ?? '',
     serverExitCode: () => children[1]?.exitCode ?? null,
+    // z.B. 'SIGSTOP'/'SIGCONT': Server einfrieren und weiterlaufen lassen
+    signalServer: (signal) => children[1]?.kill(signal),
     stop: () => children.forEach((child) => child.kill()),
   }
 }
