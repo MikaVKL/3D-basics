@@ -100,10 +100,6 @@ player.spawn(randomSpawnPoint)
 const playerAvatar = new PlayerAvatar(player.team)
 playerAvatar.mesh.userData.damageable = player
 
-// TEMPORÄR: Figur zum Begutachten des Modells im Singleplayer
-const inspectionAvatar = new PlayerAvatar('red')
-inspectionAvatar.applyState({ ...player.getNetworkState(), position: { x: 16, y: 1.7, z: 16 }, yaw: Math.PI * 0.75, team: 'red', isAlive: true, crouching: false })
-scene.add(inspectionAvatar.root)
 
 const lookControl = new LookControl(camera)
 const scoreboard = new Scoreboard()
