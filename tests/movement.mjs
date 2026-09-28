@@ -310,6 +310,13 @@ try {
     placeOnFloor(-9, 10)
     walkTo(Math.PI, 140)
     out.walkUnderSouth = { y: P.bodyY, z: cam.position.z }
+    // Süd-Spawn ist rundum gedeckt: raus nur seitlich unter dem Steg
+    placeOnFloor(0, 18)
+    walkTo(WEST, 120)
+    const spawnWest = cam.position.x
+    placeOnFloor(0, 18)
+    walkTo(EAST, 120)
+    out.spawnExit = { west: spawnWest, east: cam.position.x }
 
     return out
   })
@@ -332,6 +339,7 @@ try {
   check('obere Ebene: Brücke nach Süden auf den Südsteg', Math.abs(r.southCatwalk.y - 2.8) < 0.01 && r.southCatwalk.z > 18.5, `Höhe ${f2(r.southCatwalk.y)}, z ${f2(r.southCatwalk.z)}`)
   check('obere Ebene: Südsteg bis an die Ostwand', Math.abs(r.southEast.y - 2.8) < 0.01 && r.southEast.x > 28.5, `Höhe ${f2(r.southEast.y)}, x ${f2(r.southEast.x)}`)
   check('unter den Südsteg bis an die Wand laufen', r.walkUnderSouth.y < 0.01 && r.walkUnderSouth.z > 19.5, `z ${f2(r.walkUnderSouth.z)}`)
+  check('Süd-Spawn: seitlich unter dem Steg raus', r.spawnExit.west < -6 && r.spawnExit.east > 6, `x ${f2(r.spawnExit.west)} / ${f2(r.spawnExit.east)}`)
   check('unter dem Steg: Sprung stößt an (Kopf <= 2,5 m)', r.underCatwalk.maxHead <= 2.51 && r.underCatwalk.landed < 0.01, `Kopf max ${f2(r.underCatwalk.maxHead)}`)
   check('unter den Steg bis an die Wand laufen', r.walkUnder.y < 0.01 && r.walkUnder.z < -19.5, `z ${f2(r.walkUnder.z)}`)
   check('vom Boden nicht auf den Steg springen', r.noClimb < 0.01, `Höhe ${f2(r.noClimb)}`)

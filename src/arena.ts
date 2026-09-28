@@ -364,7 +364,11 @@ export function buildArena(): ArenaResult {
     // Deckung vor den mittleren Spawns (0, ±18): dort wurde man im Bot-Test
     // oft direkt nach dem Spawn getroffen (50-62 % statt 3-9 %)
     [1.7, -14, 4, 1, 2.4],
-    [0, 14, 5, 1, 2.4],
+    // Süd-Spawn: Schüsse kamen schräg (bis ~55°) - breitere Front und
+    // Seitenteile bis an die Stegkante, raus geht es seitlich unter dem Steg
+    [0, 14, 7, 1, 2.4],
+    [-4, 16, 1, 3, 2.4],
+    [4, 16, 1, 3, 2.4],
     // Flankenraum
     [sideRoomMinX + 6, -5, 2.4, 2.4, 2.4],
     [sideRoomMinX + 13, 7, 2, 4.5, 2.8],
@@ -526,8 +530,8 @@ export function buildArena(): ArenaResult {
       from = gapEnd
     }
 
-    // Stützen unter der Stegkante (nicht auf den Spawns bei x = 0)
-    for (const x of [-12, -3, 8, 24]) {
+    // Stützen unter der Stegkante (Abstand zu den Spawns bei x = 0: dort geht es seitlich raus)
+    for (const x of [-12, -7, 8, 24]) {
       addBlock(x, edge + side * 0.2, 0.4, 0.4, 0, upperBottom)
     }
     addBlock(PLATFORM_A_X - BRIDGE_WIDTH / 2 + 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
