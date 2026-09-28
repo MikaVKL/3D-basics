@@ -263,6 +263,11 @@ try {
       P.setMoveInput(0, 0)
       run(10)
     }
+    // Unter dem Steg (place() würde auf den Steg setzen: Boden direkt)
+    const placeOnFloor = (x, z) => {
+      place(x, z, 0)
+      P.spawn({ x, y: 1.7, z, clone() { return this } })
+    }
     place(-2, 0, EAST)
     walkTo(EAST, 150) // Rampe A hoch bis auf die Plattform (x ~15)
     out.upperPlatform = { y: P.bodyY, x: cam.position.x }
@@ -271,30 +276,45 @@ try {
     out.upperCatwalk = { y: P.bodyY, z: cam.position.z }
     walkTo(WEST, 360) // am Geländer entlang nach Westen
     out.upperWest = { y: P.bodyY, x: cam.position.x }
-    // Geländer hält: nach Süden laufen (keine Lücke bei x ~-17)
+    // Geländer hält: nach Süden laufen (bei x -10 liegt darunter die Nordwest-Rampe)
+    cam.position.x = -10
     const beforeRail = cam.position.z
     walkTo(Math.PI, 60)
     out.railing = { y: P.bodyY, z: cam.position.z, before: beforeRail }
-    // Lücke im Geländer (x -16..-14): hier geht es hinunter
-    cam.position.x = -15
+    // Lücke im Geländer (x 26..28): hier geht es hinunter
+    cam.position.x = 27
     walkTo(Math.PI, 80)
     out.dropDown = { y: P.bodyY, z: cam.position.z }
 
-    // Unter dem Steg (place() würde auf den Steg setzen: Boden direkt)
-    const placeOnFloor = (x, z) => {
-      place(x, z, 0)
-      P.spawn({ x, y: 1.7, z, clone() { return this } })
-    }
+    // Eck-Aufgänge: Nordwest (Rampe steigt nach Westen), Südost (nach Osten)
+    placeOnFloor(-4, -16)
+    walkTo(WEST, 200)
+    out.nwRampTop = { y: P.bodyY, x: cam.position.x }
+    walkTo(0, 60) // von der Eck-Plattform nach Norden auf den Steg
+    out.nwCatwalk = { y: P.bodyY, z: cam.position.z }
+    walkTo(Math.PI, 40) // zurück auf die Plattform, dann die Rampe hinunter
+    walkTo(EAST, 200)
+    out.nwRampDown = { y: P.bodyY, x: cam.position.x }
+    placeOnFloor(17.5, 16)
+    walkTo(EAST, 200)
+    out.seRampTop = { y: P.bodyY, x: cam.position.x }
+    walkTo(Math.PI, 60)
+    out.seCatwalk = { y: P.bodyY, z: cam.position.z }
+    // Von unter dem Steg kommt man nicht seitlich auf die Rampe
+    placeOnFloor(-11, -19)
+    walkTo(Math.PI, 60)
+    out.rampSide = { y: P.bodyY, z: cam.position.z }
+
     placeOnFloor(-9, -19)
     let maxHead = 0
     P.jump()
     run(60, () => (maxHead = Math.max(maxHead, P.bodyY + 2.0)))
     out.underCatwalk = { maxHead, landed: P.bodyY }
-    placeOnFloor(-9, -10)
+    placeOnFloor(-5, -10) // x -9: Nordwest-Rampe, x 5..13: Fensterwand
     walkTo(0, 140) // von der Raummitte unter den Steg bis an die Wand
-    out.walkUnder = { y: P.bodyY, z: cam.position.z }
+    out.walkUnder = { y: P.bodyY, z: cam.position.z, x: cam.position.x }
     // Vom Boden aus kommt man nicht hoch (2,8 m > Sprunghöhe)
-    placeOnFloor(-9, -15.5)
+    placeOnFloor(-5, -15.5)
     P.setMoveInput(0, 1)
     P.jump()
     run(60)
@@ -335,13 +355,19 @@ try {
   check('obere Ebene: über die Brücke auf den Nordsteg', Math.abs(r.upperCatwalk.y - 2.8) < 0.01 && r.upperCatwalk.z < -18.5, `Höhe ${f2(r.upperCatwalk.y)}, z ${f2(r.upperCatwalk.z)}`)
   check('obere Ebene: Steg entlang nach Westen', Math.abs(r.upperWest.y - 2.8) < 0.01 && r.upperWest.x < -17, `Höhe ${f2(r.upperWest.y)}, x ${f2(r.upperWest.x)}`)
   check('Geländer hält (kein Absturz)', Math.abs(r.railing.y - 2.8) < 0.01 && r.railing.z < -17.3, `Höhe ${f2(r.railing.y)}, z ${f2(r.railing.z)}`)
+  check('Nordwest-Rampe hoch auf die Eck-Plattform', Math.abs(r.nwRampTop.y - 2.8) < 0.01 && r.nwRampTop.x < -17, `Höhe ${f2(r.nwRampTop.y)}, x ${f2(r.nwRampTop.x)}`)
+  check('von der Eck-Plattform auf den Nordsteg', Math.abs(r.nwCatwalk.y - 2.8) < 0.01 && r.nwCatwalk.z < -18.5, `Höhe ${f2(r.nwCatwalk.y)}, z ${f2(r.nwCatwalk.z)}`)
+  check('Nordwest-Rampe wieder hinunter', r.nwRampDown.y < 0.01 && r.nwRampDown.x > -6, `Höhe ${f2(r.nwRampDown.y)}, x ${f2(r.nwRampDown.x)}`)
+  check('Südost-Rampe hoch auf die Eck-Plattform', Math.abs(r.seRampTop.y - 2.8) < 0.01 && r.seRampTop.x > 29, `Höhe ${f2(r.seRampTop.y)}, x ${f2(r.seRampTop.x)}`)
+  check('von der Eck-Plattform auf den Südsteg', Math.abs(r.seCatwalk.y - 2.8) < 0.01 && r.seCatwalk.z > 18.5, `Höhe ${f2(r.seCatwalk.y)}, z ${f2(r.seCatwalk.z)}`)
+  check('unter dem Steg: nicht seitlich auf die Rampe', r.rampSide.y < 0.01 && r.rampSide.z < -17.5, `Höhe ${f2(r.rampSide.y)}, z ${f2(r.rampSide.z)}`)
   check('Lücke im Geländer: hinunterspringen', r.dropDown.y < 0.01 && r.dropDown.z > -17, `Höhe ${f2(r.dropDown.y)}, z ${f2(r.dropDown.z)}`)
   check('obere Ebene: Brücke nach Süden auf den Südsteg', Math.abs(r.southCatwalk.y - 2.8) < 0.01 && r.southCatwalk.z > 18.5, `Höhe ${f2(r.southCatwalk.y)}, z ${f2(r.southCatwalk.z)}`)
   check('obere Ebene: Südsteg bis an die Ostwand', Math.abs(r.southEast.y - 2.8) < 0.01 && r.southEast.x > 28.5, `Höhe ${f2(r.southEast.y)}, x ${f2(r.southEast.x)}`)
   check('unter den Südsteg bis an die Wand laufen', r.walkUnderSouth.y < 0.01 && r.walkUnderSouth.z > 19.5, `z ${f2(r.walkUnderSouth.z)}`)
   check('Süd-Spawn: seitlich unter dem Steg raus', r.spawnExit.west < -6 && r.spawnExit.east > 6, `x ${f2(r.spawnExit.west)} / ${f2(r.spawnExit.east)}`)
   check('unter dem Steg: Sprung stößt an (Kopf <= 2,5 m)', r.underCatwalk.maxHead <= 2.51 && r.underCatwalk.landed < 0.01, `Kopf max ${f2(r.underCatwalk.maxHead)}`)
-  check('unter den Steg bis an die Wand laufen', r.walkUnder.y < 0.01 && r.walkUnder.z < -19.5, `z ${f2(r.walkUnder.z)}`)
+  check('unter den Steg bis an die Wand laufen', r.walkUnder.y < 0.01 && r.walkUnder.z < -19.5, `x ${f2(r.walkUnder.x)}, z ${f2(r.walkUnder.z)}`)
   check('vom Boden nicht auf den Steg springen', r.noClimb < 0.01, `Höhe ${f2(r.noClimb)}`)
   const f = (n) => n.toFixed(2)
   check('Rutschen startet aus dem Sprint', r.slide.slideFrames > 20, `${r.slide.slideFrames} Frames, max ${f(r.slide.maxSpeed)} m/s`)

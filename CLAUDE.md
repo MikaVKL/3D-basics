@@ -147,8 +147,11 @@ Stolperfallen bei Headless-Tests:
 
 - **Obere Ebene** auf 2,8 m (Höhe Plattform A): 3 m tiefe Laufstege an
   Nord- und Südwand (Trennwand bis Ostwand), je eine Brücke von Plattform A,
-  Geländer 1 m mit Absprung-Lücken (x -16..-14, 26..28), Unterkante 2,5 m
-  (stehend passt man drunter, im Sprung stößt man an). Hoch nur über Rampe A.
+  Geländer 1 m mit Absprung-Lücke (Nord x 26..28, Süd x -16..-14), Unterkante
+  2,5 m (stehend passt man drunter, im Sprung stößt man an). Aufgänge: Rampe A
+  und Eck-Rampen Nordwest/Südost (3x3-Plattform in der Ecke, 10-m-Rampe am
+  Steg entlang, stegseitig Wand statt Bord). Südwest geht nicht: dort mündet
+  der erhöhte Durchgang (2,4 m).
   Die mittleren Spawns (0, ±18) liegen darunter. Wandlampen auf 5,2 m.
   Nichts unter Steg/Brücke stellen (Kisten wurden deshalb versetzt).
 - Fenster-Deckungswand ist per **Duck-Sprung durchkletterbar** (gewollter
@@ -170,7 +173,9 @@ Stolperfallen bei Headless-Tests:
   Nord-Spawn 68 % -> 41 % früh getroffen; Süd-Spawn bleibt ~80 % (Schüsse
   kommen schräg) - Lösung mit Nutzer abstimmen. Mit den Laufstegen
   darüber (5 Bots x 420 s, 2 Läufe): Nord 38/17 %, Süd 63/38 % früh
-  getroffen (je nur 8 Spawns, Schüsse schräg aus West-Zone und Osten). Tests laufen deshalb nicht
+  getroffen (je nur 8 Spawns, Schüsse schräg aus West-Zone und Osten).
+  Daraufhin (Nutzerwahl) Süd-Spawn rundum gedeckt: Front 7 m, Seitenteile
+  bis zur Stegkante, raus seitlich unter dem Steg (Stütze dafür x -3 -> -7). Tests laufen deshalb nicht
   mehr auf der Linie x = 0 (Bahnen bei x = -8 bzw. 12).
 - Beitritt zur Online-Runde (auch automatisch, wenn der Server erst aufwacht
   oder neu startet) setzt einen an einen Spawn - mit kurzem Abblenden und

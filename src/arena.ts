@@ -355,7 +355,7 @@ export function buildArena(): ArenaResult {
     [4, 9, 5, 2, 1.4],
     [-2, 0, 4, 4, 2.4],
     [24, -14, 1.5, 4, 1.4], // nicht unter den Nord-Laufsteg (dort kein Platz zum Stehen)
-    [22, 16, 2.6, 2.6, 2.8], // endet bündig am Süd-Geländer (kein Klemmspalt)
+    [24, 9, 2.6, 2.6, 2.8], // vorher (22, 16): dort liegt jetzt die Südost-Rampe
     // West-Zone
     [-28, -9, 4.5, 1.8, 2.4],
     [-27, 8, 3, 3, 2.8],
@@ -385,7 +385,7 @@ export function buildArena(): ArenaResult {
   }
 
   // 1.4m: zuverlässig erkletterbar (1.6m lag genau an der Sprunghöhe)
-  buildLCover(-6, -16, 4, 0.8, 1.4, 1, 1)
+  buildLCover(-3, -16, 4, 0.8, 1.4, 1, 1) // Platz vor der Nordwest-Rampe
   buildLCover(sideRoomMinX + 2, -7, 4, 0.8, 1.4, 1, -1)
   buildLCover(9, 16, 3, 0.7, 1.4, 1, -1)
   buildLCover(50, 2, 3, 0.7, 1.4, -1, -1)
@@ -504,12 +504,17 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh) })
   }
 
-  // side: -1 = Nordwand, 1 = Südwand
-  function buildUpperSide(side: -1 | 1) {
+  const westEnd = DIVIDER_X + WALL_THICKNESS / 2
+  const eastEnd = MAIN_HALF_W - WALL_THICKNESS / 2
+  const CORNER_PLATFORM_SIZE = 3
+  const CORNER_RAMP_LENGTH = 10 // Steigung wie Rampe A
+
+  // side: -1 = Nordwand, 1 = Südwand. Eck-Aufgang in der West- bzw. Ostecke:
+  // Plattform bündig an Steg und Wand, Rampe läuft am Steg entlang. Die
+  // Südwest-Ecke bleibt frei - dort mündet der erhöhte Durchgang (2,4 m).
+  function buildUpperSide(side: -1 | 1, cornerEnd: 'west' | 'east', dropGap: [number, number]) {
     const wallFace = side * (MAIN_HALF_D - WALL_THICKNESS / 2)
     const edge = wallFace - side * CATWALK_DEPTH
-    const westEnd = DIVIDER_X + WALL_THICKNESS / 2
-    const eastEnd = MAIN_HALF_W - WALL_THICKNESS / 2
     // Laufsteg über die ganze Hauptraum-Breite (Trennwand bis Ostwand)
     addBlock((westEnd + eastEnd) / 2, (wallFace + edge) / 2, eastEnd - westEnd, CATWALK_DEPTH, upperBottom, UPPER_TOP)
 
@@ -517,13 +522,38 @@ export function buildArena(): ArenaResult {
     const platformEdge = side * (PLATFORM_A_SIZE / 2)
     addBlock(PLATFORM_A_X, (platformEdge + edge) / 2, BRIDGE_WIDTH, Math.abs(edge - platformEdge), upperBottom, UPPER_TOP)
 
-    // Geländer an der Stegkante (Deckung), Lücken: Brücke und zwei Absprünge
+    const cornerDir = cornerEnd === 'west' ? 1 : -1
+    const cornerX = (cornerEnd === 'west' ? westEnd : eastEnd) + (cornerDir * CORNER_PLATFORM_SIZE) / 2
+    const cornerRamp = buildPlatformWithRamp(
+      cornerX,
+      edge - (side * CORNER_PLATFORM_SIZE) / 2,
+      CORNER_PLATFORM_SIZE,
+      UPPER_TOP,
+      CORNER_RAMP_LENGTH,
+      CORNER_PLATFORM_SIZE,
+      'x',
+      cornerEnd === 'east',
+      { omitCurbSide: side }
+    )
+    // Statt Bord auf der Stegseite: Wand unter der Stegkante bis zur
+    // Unterkante, sonst käme man von unter dem Steg seitlich auf die Rampe
+    addBlock(
+      (cornerRamp.minX + cornerRamp.maxX) / 2,
+      edge + side * (RAILING_THICKNESS / 2),
+      cornerRamp.maxX - cornerRamp.minX,
+      RAILING_THICKNESS,
+      0,
+      upperBottom
+    )
+    const cornerGap: [number, number] = [cornerX - CORNER_PLATFORM_SIZE / 2, cornerX + CORNER_PLATFORM_SIZE / 2]
+
+    // Geländer an der Stegkante (Deckung), Lücken: Brücke, Eck-Plattform, Absprung
     const railZ = edge + side * (RAILING_THICKNESS / 2)
     const gaps: [number, number][] = [
-      [-16, -14],
       [PLATFORM_A_X - BRIDGE_WIDTH / 2, PLATFORM_A_X + BRIDGE_WIDTH / 2],
-      [26, 28],
-    ]
+      cornerGap,
+      dropGap,
+    ].sort((a, b) => a[0] - b[0]) as [number, number][]
     let from = westEnd
     for (const [gapStart, gapEnd] of [...gaps, [eastEnd, eastEnd]]) {
       if (gapStart > from) addBlock((from + gapStart) / 2, railZ, gapStart - from, RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
@@ -532,13 +562,15 @@ export function buildArena(): ArenaResult {
 
     // Stützen unter der Stegkante (Abstand zu den Spawns bei x = 0: dort geht es seitlich raus)
     for (const x of [-12, -7, 8, 24]) {
+      if (x > cornerRamp.minX - 0.2 && x < cornerRamp.maxX + 0.2) continue // dort trägt die Wand
       addBlock(x, edge + side * 0.2, 0.4, 0.4, 0, upperBottom)
     }
+    return cornerRamp
     addBlock(PLATFORM_A_X - BRIDGE_WIDTH / 2 + 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
     addBlock(PLATFORM_A_X + BRIDGE_WIDTH / 2 - 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
   }
-  buildUpperSide(-1)
-  buildUpperSide(1)
+  const rampNorthWest = buildUpperSide(-1, 'west', [26, 28])
+  const rampSouthEast = buildUpperSide(1, 'east', [-16, -14])
 
   // West-Plattform (Rampe B): Plattform und Rampe liegen bündig an der
   // Trennwand (kein körperbreiter Spalt), die Wand ersetzt dort das Bord.
@@ -581,7 +613,7 @@ export function buildArena(): ArenaResult {
     group,
     solids,
     spawnPoints,
-    ramps: [rampToMainPlatform, rampToWestPlatform],
+    ramps: [rampToMainPlatform, rampToWestPlatform, rampNorthWest, rampSouthEast],
     shootables: [mainGround, sideGround, ...shootableExtras, ...solids.map((s) => s.mesh)],
   }
 }
