@@ -17,7 +17,7 @@
     "test:sound": "node tests/sound.mjs",
     "test:avatar": "node tests/avatar.mjs",
     "test:headshot": "node tests/headshot.mjs",
-    "test:weapons": "node tests/weapons.mjs && node tests/touch.mjs",
+    "test:weapons": "node tests/weapons.mjs",
     "test:bots": "node tests/bots.mjs",
     "test:touch": "node tests/touch.mjs",
     "test:effects": "node tests/effects.mjs"
