@@ -158,6 +158,10 @@ Stolperfallen bei Headless-Tests:
 - Handy hochkant: nur Hinweis "Gerät drehen" (Buttons + HUD passen nicht).
 - Kisten sandbraun statt orange (zu nah an Team Rot, messbar schlechter
   erkennbar). Farben in `src/palette.ts`.
+- Deckungskisten vor den mittleren Spawns (0, ±18). Bot-Test mit Sichtlinie:
+  Nord-Spawn 68 % -> 41 % früh getroffen; Süd-Spawn bleibt ~80 % (Schüsse
+  kommen schräg) - Lösung mit Nutzer abstimmen. Tests laufen deshalb nicht
+  mehr auf der Linie x = 0 (Bahnen bei x = -8 bzw. 12).
 - Kopftreffer = 2× Schaden; Schadenszahlen bei jedem Treffer (Kopf rot),
   Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
 - Waffen (abgestimmt): 1 Pistole (20, 5/s, 12er, Tempo 100 %),

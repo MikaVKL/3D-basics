@@ -61,10 +61,17 @@ try {
       await wait(500)
     }
   }
-  const offline = await openGame(browser, { online: false, errors })
-  await play(offline)
-  await wait(1500)
-  check('Singleplayer: keine Ping-Anzeige', (await readPing(offline)).text === '')
+  // Eigener Vite-Start: die Server der Schleife sind schon gestoppt (früher
+  // lief hier unbemerkt ein verwaister Vite weiter)
+  const viteOnly = await startServers({ gameServer: false })
+  try {
+    const offline = await openGame(browser, { online: false, errors })
+    await play(offline)
+    await wait(1500)
+    check('Singleplayer: keine Ping-Anzeige', (await readPing(offline)).text === '')
+  } finally {
+    viteOnly.stop()
+  }
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

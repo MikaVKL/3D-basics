@@ -42,8 +42,9 @@ try {
 
   // Rutschen: Sprint (volle Joystick-Auslenkung) + Button halten, früh loslassen
   await page.evaluate(() => {
-    __dusk.player.spawn({ x: 0, y: 1.7, z: 20, clone() { return this } })
-    __dusk.camera.lookAt(0, 1.7, 0)
+    // Freie Bahn (bei x = 0 steht die Deckung vor dem Süd-Spawn)
+    __dusk.player.spawn({ x: -8, y: 1.7, z: 20, clone() { return this } })
+    __dusk.camera.lookAt(-8, 1.7, 0)
     __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     __dusk.player.setSprinting(true)
     __dusk.player.setMoveInput(0, 1)

@@ -15,7 +15,8 @@ const scenes = [
   ['Kiste', [-2, 1.5, 9], [-2, 0, 3.2]],
   ['Wand', [8, 1.5, 12], [8, 0, 18.5]],
   ['Boden', [10, 6, -2], [10, 0, -6]],
-  ['Weite', [0, 1.7, -19], [6, 0, -11]],
+  // Nicht bei x = 0: dort steht die Deckung vor dem Nord-Spawn
+  ['Weite', [12, 1.7, -19], [18, 0, -11]],
 ]
 try {
   const page = await openGame(browser, { online: false })
