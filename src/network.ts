@@ -93,7 +93,7 @@ export class NetworkClient {
       })
     }, 1000 / TICK_RATE)
     setInterval(() => {
-      if (this.status === 'online') this.send({ t: 'ping', time: performance.now() })
+      if (this.status === 'online') this.send({ t: 'ping', time: performance.now(), rtt: this.ping })
     }, PING_INTERVAL_MS)
   }
 

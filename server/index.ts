@@ -68,6 +68,8 @@ interface Client {
   lastStateAt: number
   lastActivityAt: number
   removing: boolean // wird gerade entfernt (Close läuft noch)
+  ping: number | null // vom Client gemeldet (nur Anzeige)
+  pingShown: number | null // zuletzt in der Spielerliste verschickt
 }
 
 const clients = new Map<PlayerId, Client>()
@@ -95,6 +97,17 @@ function takeRateToken(budget: RateBudget, intervalSeconds: number, now: number)
   return true
 }
 
+// Ping-Werte in der Spielerliste: höchstens alle 2 s und nur bei spürbarer
+// Änderung neu verschicken (die Liste geht an alle)
+const PING_ROSTER_INTERVAL_MS = 2000
+const PING_ROSTER_MIN_CHANGE = 5
+setInterval(() => {
+  const changed = [...clients.values()].some(
+    (c) => c.ping !== null && (c.pingShown === null || Math.abs(c.ping - c.pingShown) >= PING_ROSTER_MIN_CHANGE)
+  )
+  if (changed) broadcastRoster()
+}, PING_ROSTER_INTERVAL_MS)
+
 // Zuschlag auf die Waffenreichweite: der Schütze sieht das Ziel ~100ms
 // verzögert (Interpolation + Ping), Messer-Ziele können so weiter weg sein
 const HIT_RANGE_TOLERANCE = 2
@@ -118,7 +131,9 @@ function broadcastRoster() {
     team: c.team,
     kills: c.kills,
     deaths: c.deaths,
+    ping: c.ping,
   }))
+  for (const c of clients.values()) c.pingShown = c.ping
   broadcast({ t: 'roster', players })
 }
 
@@ -386,6 +401,8 @@ wss.on('connection', (socket) => {
         lastStateAt: performance.now(),
         lastActivityAt: performance.now(),
         removing: false,
+        ping: null,
+        pingShown: null,
       }
       clients.set(client.id, client)
       send(socket, {
@@ -420,6 +437,7 @@ wss.on('connection', (socket) => {
     } else if (message.t === 'ping') {
       // Zählt bewusst nicht als Aktivität (AFK-Erkennung)
       if (isFiniteNumber(message.time)) send(socket, { t: 'pong', time: message.time })
+      if (isFiniteNumber(message.rtt)) client.ping = Math.round(Math.min(9999, Math.max(0, message.rtt)))
     } else if (message.t === 'hit') {
       handleHit(client, message.target, message.headshot === true)
     } else if (message.t === 'shot') {

@@ -36,11 +36,13 @@ export class ScoreTable {
       const heading = document.createElement('h2')
       heading.textContent = `Team ${TeamLabel[team]}`
       column.append(heading)
-      const header = this.row('Name', 'K', 'T')
+      const header = this.row('Name', 'K', 'T', 'Ping')
       header.classList.add('header')
       column.append(header)
       for (const p of players) {
-        const row = this.row(p.name, String(p.kills), String(p.deaths))
+        // Ältere Server kennen keinen Ping
+        const ping = p.ping ?? null
+        const row = this.row(p.name, String(p.kills), String(p.deaths), ping === null ? '–' : String(ping))
         if (p.id === localId) row.classList.add('own')
         column.append(row)
       }
@@ -49,10 +51,10 @@ export class ScoreTable {
   }
 
   // textContent statt innerHTML - Namen kommen von anderen Spielern
-  private row(name: string, kills: string, deaths: string): HTMLElement {
+  private row(name: string, kills: string, deaths: string, ping: string): HTMLElement {
     const row = document.createElement('div')
     row.className = 'score-row'
-    for (const text of [name, kills, deaths]) {
+    for (const text of [name, kills, deaths, ping]) {
       const cell = document.createElement('span')
       cell.textContent = text
       row.append(cell)

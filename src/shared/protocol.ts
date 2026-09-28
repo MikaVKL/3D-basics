@@ -57,6 +57,7 @@ export interface RosterEntry {
   team: Team
   kills: number
   deaths: number
+  ping: number | null // vom Spieler gemessen, null = noch unbekannt
 }
 
 export type ClientMessage =
@@ -66,7 +67,7 @@ export type ClientMessage =
   | { t: 'state'; state: PlayerNetworkState; time: number; life: number }
   | { t: 'hit'; target: PlayerId; headshot: boolean }
   // Laufzeitmessung: Server schickt time unverändert als 'pong' zurück
-  | { t: 'ping'; time: number }
+  | { t: 'ping'; time: number; rtt: number | null } // rtt: zuletzt gemessener Ping
   // Nur für die Leuchtspur bei den anderen
   | { t: 'shot'; from: Vec3; to: Vec3; hit: boolean }
 
