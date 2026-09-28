@@ -97,6 +97,19 @@ function installBot() {
     onHurt(by)
   }
   const pick = (list) => list[Math.floor(Math.random() * list.length)]
+  // Sichtlinie wie ein Mensch: nur Gegner, die nicht hinter Wänden/Kisten
+  // stehen, werden anvisiert und beschossen (sonst feuern Bots direkt nach
+  // dem Spawn blind los und beenden so ihren eigenen Spawn-Schutz)
+  const walls = D.arena.solids.map((s) => s.mesh)
+  const sight = new D.weapon.raycaster.constructor()
+  const canSee = (target) => {
+    const from = D.camera.position
+    const direction = target.clone().sub(from)
+    const distance = direction.length()
+    sight.set(from, direction.normalize())
+    sight.far = distance
+    return sight.intersectObjects(walls, false).length === 0
+  }
   setInterval(() => {
     const P = D.player
     const W = D.weapon
@@ -107,12 +120,21 @@ function installBot() {
     const now = performance.now()
     let best = null
     let bestDistance = Infinity
+    // Nächster Gegner auch ohne Sicht: dorthin laufen (wie Schritte hören)
+    let nearest = null
+    let nearestDistance = Infinity
     for (const [id, remote] of D.remotePlayers.players) {
       const entry = D.network.roster.get(id)
       const state = remote.samples[remote.samples.length - 1]?.state
       if (!entry || entry.team === P.team || !state?.isAlive) continue
       const center = remote.avatar.centerPosition
       const distance = center.distanceTo(D.camera.position)
+      const head = remote.avatar.headMesh.getWorldPosition(new Vector3())
+      if (distance < nearestDistance) {
+        nearest = center
+        nearestDistance = distance
+      }
+      if (!canSee(center) && !canSee(head)) continue
       if (distance < bestDistance) {
         best = { center, head: remote.avatar.headMesh.getWorldPosition(new Vector3()) }
         bestDistance = distance
@@ -152,7 +174,9 @@ function installBot() {
       }
     } else {
       W.setTrigger(false)
-      D.lookControl.euler.set(0, bot.yaw, 0)
+      // Meist in Richtung des nächsten Gegners, sonst zufällig (um Wände herum)
+      const yaw = nearest && bot.moveZ === 1 ? Math.atan2(D.camera.position.x - nearest.x, D.camera.position.z - nearest.z) : bot.yaw
+      D.lookControl.euler.set(0, yaw, 0)
       D.camera.quaternion.setFromEuler(D.lookControl.euler)
       P.setMoveInput(bot.moveX, bot.moveZ)
     }
