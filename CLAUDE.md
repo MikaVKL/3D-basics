@@ -77,7 +77,8 @@ getrennt vom Hauptprojekt, damit das Hosting keine Browser-Pakete lädt).
 Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 
 - `npm run test:movement` – Kisten, Rampen, Durchgang, Fenster-Duck-Sprung,
-  Rutschen, Bunny-Hop (+5 %), Schwung in der Luft, kein Nachgleiten
+  obere Ebene (Rampe A -> Brücken -> Nord-/Südsteg, Geländer, Absprung,
+  unter dem Steg), Rutschen, Bunny-Hop (+5 %), Schwung, kein Nachgleiten
 - `npm run test:stuck -- [spieler] [sekunden] [seed] [duckanteil]` –
   Fuzz-Test gegen Steckenbleiben (deterministisch pro Seed). Nach jeder
   Änderung an Kollision oder Level-Geometrie laufen lassen, mehrere Seeds.
@@ -144,6 +145,12 @@ Stolperfallen bei Headless-Tests:
 
 ## Getroffene Entscheidungen (nicht wieder "reparieren")
 
+- **Obere Ebene** auf 2,8 m (Höhe Plattform A): 3 m tiefe Laufstege an
+  Nord- und Südwand (Trennwand bis Ostwand), je eine Brücke von Plattform A,
+  Geländer 1 m mit Absprung-Lücken (x -16..-14, 26..28), Unterkante 2,5 m
+  (stehend passt man drunter, im Sprung stößt man an). Hoch nur über Rampe A.
+  Die mittleren Spawns (0, ±18) liegen darunter. Wandlampen auf 5,2 m.
+  Nichts unter Steg/Brücke stellen (Kisten wurden deshalb versetzt).
 - Fenster-Deckungswand ist per **Duck-Sprung durchkletterbar** (gewollter
   Trick-Weg, Öffnung 1,4 m); stehend passt man nicht durch.
 - Rampe B liegt bündig an der Trennwand (kein Bord auf der Wandseite).
@@ -189,5 +196,6 @@ Stolperfallen bei Headless-Tests:
   Arena/Optik/HUD -> Raum-Codes -> Hintergrund-Tab -> Server-Prüfung.
 - Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
 - Noch zu entscheiden: Kollision zwischen Spielern?
+- Obere Ebene: Bots nutzen sie nicht (laufen nur geradeaus zum Gegner).
 - Später: Raum-Codes für private Runden, Ping-Anzeige, strengere
   Bewegungsprüfung auf dem Server, Hintergrund-Tab sendet nur ~1×/s.
