@@ -6,6 +6,15 @@
   --c-red: #ff4d5a;
   --c-blue: #4da6ff;
   --c-warn: #ffd166;
+  /* Einheitliche HUD-Panels und Randabstand (Handy: Notch-Bereich frei) */
+  --panel: rgba(12, 17, 26, 0.72);
+  --panel-border: 1px solid rgba(232, 236, 241, 0.08);
+  --radius: 8px;
+  --shadow-text: 0 1px 3px rgba(0, 0, 0, 0.7);
+  --edge-top: max(16px, env(safe-area-inset-top));
+  --edge-right: max(16px, env(safe-area-inset-right));
+  --edge-bottom: max(16px, env(safe-area-inset-bottom));
+  --edge-left: max(16px, env(safe-area-inset-left));
 }
 
 html,
@@ -175,7 +184,7 @@ body {
 /* Munition */
 #ammo-hud {
   position: fixed;
-  bottom: 24px;
+  bottom: var(--edge-bottom);
   left: 50%;
   transform: translateX(-50%);
   font-size: 1.1rem;
@@ -213,7 +222,11 @@ body {
 
 #scoreboard {
   position: fixed;
-  top: 24px;
+  top: var(--edge-top);
+  padding: 2px 16px;
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -228,7 +241,8 @@ body {
 
 #score-goal {
   position: fixed;
-  top: 58px;
+  top: calc(var(--edge-top) + 42px);
+  text-shadow: var(--shadow-text);
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.75rem;
@@ -254,8 +268,9 @@ body {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--c-warn);
-  background: rgba(16, 22, 31, 0.8);
-  border-radius: 6px;
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
   pointer-events: none;
   z-index: 6;
 }
@@ -273,8 +288,9 @@ body {
   padding: 14px 32px;
   text-align: center;
   color: var(--c-text);
-  background: rgba(16, 22, 31, 0.8);
-  border-radius: 8px;
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
   pointer-events: none;
   z-index: 7;
 }
@@ -318,8 +334,13 @@ body {
 
 #net-status {
   position: fixed;
-  top: 24px;
-  right: 24px;
+  top: var(--edge-top);
+  right: var(--edge-right);
+  padding: 4px 10px;
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
+  text-shadow: var(--shadow-text);
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -355,8 +376,8 @@ body {
 
 #kill-feed {
   position: fixed;
-  top: 52px;
-  right: 24px;
+  top: calc(var(--edge-top) + 38px);
+  right: var(--edge-right);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -368,9 +389,10 @@ body {
 }
 
 .kill-entry {
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(16, 22, 31, 0.6);
+  padding: 3px 10px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: var(--panel-border);
   color: var(--c-text);
 }
 
@@ -424,8 +446,10 @@ body {
   max-width: calc(100vw - 32px);
   box-sizing: border-box;
   color: var(--c-text);
-  background: rgba(16, 22, 31, 0.85);
-  border-radius: 8px;
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(6px);
   pointer-events: none;
   z-index: 7;
 }
@@ -496,8 +520,13 @@ body {
 /* Lebensanzeige */
 #health-hud {
   position: fixed;
-  bottom: 24px;
-  left: 24px;
+  bottom: var(--edge-bottom);
+  left: var(--edge-left);
+  padding: 10px 12px;
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
+  text-shadow: var(--shadow-text);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
