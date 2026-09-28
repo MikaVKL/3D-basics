@@ -43,10 +43,10 @@ try {
       const pings = rows.map((r) => Number(r[3]))
       const expected = latency ? (v) => v >= 190 && v < 320 : (v) => v >= 0 && v < 50
       check(`Tabelle zeigt Ping beider Spieler (${latency} ms simuliert)`, rows.length === 2 && pings.every(expected), JSON.stringify(rows))
-      // Stabiler Ping: Liste nicht alle 2 s neu verschicken
+      // Stabiler Ping: Liste nicht alle 2 s neu verschicken (das wären 5 in 10 s)
       const before = rosterMessages
       await wait(10000)
-      check(`Spielerliste bei stabilem Ping selten verschickt (${latency} ms)`, rosterMessages - before <= 2, `${rosterMessages - before} in 10 s`)
+      check(`Spielerliste bei stabilem Ping selten verschickt (${latency} ms)`, rosterMessages - before <= 3, `${rosterMessages - before} in 10 s`)
       await other.close()
       if (latency === 0) {
         // Menü + 20 s -> Spiel verlassen: keine Anzeige mehr

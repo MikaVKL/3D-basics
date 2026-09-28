@@ -98,12 +98,17 @@ function takeRateToken(budget: RateBudget, intervalSeconds: number, now: number)
 }
 
 // Ping-Werte in der Spielerliste: höchstens alle 2 s und nur bei spürbarer
-// Änderung neu verschicken (die Liste geht an alle)
+// Änderung neu verschicken (die Liste geht an alle). Relativ, denn der Ping
+// schwankt im WLAN leicht um mehr als ein paar ms.
 const PING_ROSTER_INTERVAL_MS = 2000
-const PING_ROSTER_MIN_CHANGE = 5
+const PING_ROSTER_MIN_CHANGE = 10 // ms
+const PING_ROSTER_MIN_RATIO = 0.15
 setInterval(() => {
   const changed = [...clients.values()].some(
-    (c) => c.ping !== null && (c.pingShown === null || Math.abs(c.ping - c.pingShown) >= PING_ROSTER_MIN_CHANGE)
+    (c) =>
+      c.ping !== null &&
+      (c.pingShown === null ||
+        Math.abs(c.ping - c.pingShown) >= Math.max(PING_ROSTER_MIN_CHANGE, c.pingShown * PING_ROSTER_MIN_RATIO))
   )
   if (changed) broadcastRoster()
 }, PING_ROSTER_INTERVAL_MS)
