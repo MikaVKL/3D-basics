@@ -175,7 +175,9 @@ Stolperfallen bei Headless-Tests:
   darüber (5 Bots x 420 s, 2 Läufe): Nord 38/17 %, Süd 63/38 % früh
   getroffen (je nur 8 Spawns, Schüsse schräg aus West-Zone und Osten).
   Daraufhin (Nutzerwahl) Süd-Spawn rundum gedeckt: Front 7 m, Seitenteile
-  bis zur Stegkante, raus seitlich unter dem Steg (Stütze dafür x -3 -> -7). Tests laufen deshalb nicht
+  bis zur Stegkante, raus seitlich unter dem Steg (Stütze dafür x -3 -> -7).
+  Danach mit Eck-Rampen (2 Läufe): Süd 0/0 % (nur 2/4 Spawns), Nord 60/60 %
+  (je 5 Spawns) - Nord ggf. genauso ausbauen (mit Nutzer abstimmen). Tests laufen deshalb nicht
   mehr auf der Linie x = 0 (Bahnen bei x = -8 bzw. 12).
 - Beitritt zur Online-Runde (auch automatisch, wenn der Server erst aufwacht
   oder neu startet) setzt einen an einen Spawn - mit kurzem Abblenden und
