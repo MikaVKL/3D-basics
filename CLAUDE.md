@@ -68,7 +68,8 @@ Einmalig: `npm run test:setup` (installiert Playwright + ws in `tests/`,
 getrennt vom Hauptprojekt, damit das Hosting keine Browser-Pakete lädt).
 Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 
-- `npm run test:movement` – Kisten, Rampen, Durchgang, Fenster-Duck-Sprung
+- `npm run test:movement` – Kisten, Rampen, Durchgang, Fenster-Duck-Sprung,
+  Rutschen, Bunny-Hop, Schwung in der Luft
 - `npm run test:stuck -- [spieler] [sekunden] [seed] [duckanteil]` –
   Fuzz-Test gegen Steckenbleiben (deterministisch pro Seed). Nach jeder
   Änderung an Kollision oder Level-Geometrie laufen lassen, mehrere Seeds.
@@ -115,11 +116,18 @@ Stolperfallen bei Headless-Tests:
   2 Sturmgewehr (12, 10/s auto, 30er, 92 %, Streuung ab dem 4. Schuss),
   3 Messer (50, 2/s, 2,5 m, 115 %, Kopf auch 2x). Wechsel 0,3 s, Respawn mit
   Pistole. Server prüft Reichweite je Waffe (+2 m Zuschlag für Verzögerung).
+- Bewegung (`player.ts`): horizontale Geschwindigkeit mit Schwung. Bis zum
+  normalen Tempo der Haltung folgt man der Eingabe sofort (wie früher),
+  nur der Überschuss wird gelenkt/abgebremst. Rutschen = Ducken im Sprint
+  (1,25x, max. 13 m/s, läuft mit 10 m/s² aus, 0,6 s Abklingzeit).
+  Bunny-Hop: Sprung bis 0,12 s nach der Landung (oder 0,15 s vorher
+  gedrückt) +8 %, Deckel 12 m/s; mit Ducken landen = weiterrutschen.
+  Leertaste halten hüpft per Tasten-Wiederholung automatisch weiter.
 
 ## Offene Ideen / nächste Schritte
 
 - Reihenfolge (mit Nutzer abgestimmt): Sound, Spielermodell, Effekte,
-  Kopftreffer, Waffen (erledigt) -> Rutschen/Bunny-Hop -> Ping ->
+  Kopftreffer, Waffen, Rutschen/Bunny-Hop (erledigt) -> Ping ->
   Arena/Optik/HUD -> Raum-Codes -> Hintergrund-Tab -> Server-Prüfung.
 - Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
 - Noch zu entscheiden: Kollision zwischen Spielern?

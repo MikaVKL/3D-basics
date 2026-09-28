@@ -150,6 +150,91 @@ try {
     out.wallZ = cam.position.z
     out.wallSpeed = P.horizontalSpeed
     P.setCrouching(false)
+
+    // Bunny-Hop: Leertaste kurz vor der Landung (Puffer) bzw. zu spät.
+    // Nach jeder Landung zurück auf die freie Fläche, Schwung bleibt.
+    const hops = (count, { sprint = false, lateFrames = 0, crouchAtEnd = false } = {}) => {
+      place(0, 4, Math.PI)
+      P.setSprinting(sprint)
+      P.setMoveInput(0, 1)
+      run(30)
+      P.jump()
+      const speeds = []
+      let landings = 0
+      let lateCounter = -1
+      // Gepufferter Sprung hebt im selben Frame wieder ab -> über onLand zählen
+      const onLand = P.onLand
+      P.onLand = () => {
+        landings++
+        if (lateFrames) lateCounter = lateFrames
+      }
+      for (let f = 0; f < count * 80 && landings < count; f++) {
+        if (landings === count - 1 && crouchAtEnd) P.setCrouching(true)
+        if (!P.isOnGround && P.velocity.y < 0 && P.bodyY < 0.4 && !lateFrames && landings < count - 1) P.jump()
+        const before = landings
+        P.update(DT)
+        if (landings > before) {
+          speeds.push(P.horizontalSpeed)
+          cam.position.z = 4
+        }
+        if (lateCounter > 0 && --lateCounter === 0 && landings < count) P.jump()
+      }
+      P.onLand = onLand
+      run(5)
+      const res = { speeds, sliding: P.isSliding }
+      run(60)
+      res.after = P.horizontalSpeed
+      P.setCrouching(false)
+      P.setSprinting(false)
+      return res
+    }
+    out.walkHops = hops(7)
+    out.sprintHops = hops(12, { sprint: true })
+    out.lateHops = hops(4, { lateFrames: 15 })
+    out.hopIntoSlide = hops(4, { sprint: true, crouchAtEnd: true })
+
+    // Schwung in der Luft: Taste im Sprung loslassen, man fliegt weiter
+    place(0, 4, Math.PI)
+    P.setSprinting(true)
+    P.setMoveInput(0, 1)
+    run(30)
+    P.jump()
+    run(2)
+    P.setMoveInput(0, 0)
+    P.setSprinting(false)
+    const z0 = cam.position.z
+    let airFrames = 0
+    while (!P.isOnGround && airFrames < 120) {
+      P.update(DT)
+      airFrames++
+    }
+    out.airCarry = cam.position.z - z0
+    run(30)
+    out.stopAfterLanding = P.horizontalSpeed
+
+    // Normales Gehen unverändert: sofort volles Tempo, sofort Stillstand
+    place(0, 4, Math.PI)
+    P.setMoveInput(0, 1)
+    run(1)
+    out.walkStart = P.horizontalSpeed
+    P.setMoveInput(0, 0)
+    run(1)
+    out.walkStop = P.horizontalSpeed
+
+    // Aus dem Rutschen springen: Tempo des Rutschens bleibt in der Luft
+    place(0, 4, Math.PI)
+    P.setSprinting(true)
+    P.setMoveInput(0, 1)
+    run(20)
+    P.setCrouching(true)
+    run(3)
+    const slideSpeed = P.horizontalSpeed
+    P.jump()
+    run(20)
+    out.slideJump = { slideSpeed, air: P.horizontalSpeed, onGround: P.isOnGround }
+    P.setCrouching(false)
+    P.setSprinting(false)
+    run(60)
     return out
   })
 
@@ -172,6 +257,17 @@ try {
   check('Loslassen beendet Rutschen', r.slideRelease.slideFrames === 10, `${r.slideRelease.slideFrames} Frames`)
   check('Duck-Spam: Abklingzeit', r.spamSlides <= 2, `${r.spamSlides} Rutscher in 1,7 s`)
   check('Rutschen gegen Wand: bleibt drin, Schwung weg', r.wallZ < 21 && r.wallSpeed < 0.01, `z ${f(r.wallZ)}, ${f(r.wallSpeed)} m/s`)
+  const sp = (list) => list.map(f).join(' ')
+  const walkLast = r.walkHops.speeds.at(-2)
+  check('Bunny-Hop: getimte Sprünge werden schneller', walkLast > 6 * 1.3, sp(r.walkHops.speeds))
+  check('Bunny-Hop: Deckel bei 12 m/s', Math.max(...r.sprintHops.speeds) <= 12.001 && Math.max(...r.sprintHops.speeds) > 11.9, sp(r.sprintHops.speeds))
+  check('Bunny-Hop: nach letzter Landung wieder Lauftempo', Math.abs(r.walkHops.after - 6) < 0.01, `${f(r.walkHops.after)} m/s`)
+  check('zu spät gesprungen: kein Zuwachs', Math.max(...r.lateHops.speeds) <= 6.001, sp(r.lateHops.speeds))
+  check('Hop mit Ducken landen: rutscht weiter', r.hopIntoSlide.sliding)
+  check('Schwung bleibt in der Luft (Taste losgelassen)', r.airCarry > 5, `${f(r.airCarry)} m geflogen`)
+  check('nach der Landung ohne Eingabe Stillstand', r.stopAfterLanding < 0.01, `${f(r.stopAfterLanding)} m/s`)
+  check('normales Gehen unverändert (sofort 6 m/s, sofort 0)', Math.abs(r.walkStart - 6) < 0.01 && r.walkStop === 0, `${f(r.walkStart)} / ${f(r.walkStop)}`)
+  check('Sprung aus dem Rutschen behält Tempo', !r.slideJump.onGround && r.slideJump.air > 10.5, `${f(r.slideJump.slideSpeed)} -> ${f(r.slideJump.air)} m/s`)
 } finally {
   await browser.close()
   servers.stop()

@@ -57,6 +57,7 @@ zuverlässiger als reines Feature-Sniffing):
 - Maus: Umschauen (Klick auf den Startbildschirm aktiviert die Maussteuerung)
 - `Leertaste`: Springen
 - `Shift`: Sprinten, `Strg`/`C`: Ducken, beides zusammen: Rutschen
+- Bunny-Hop: bei der Landung sofort wieder springen (Leertaste darf kurz vorher gedrückt werden) hält den Schwung und macht schneller (bis 12 m/s)
 - `ESC`: Maussteuerung freigeben (Menü)
 - `Tab` (halten): Punktetabelle
 - `M`: Ton an/aus

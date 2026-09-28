@@ -43,6 +43,20 @@ const SLIDE_MAX_SPEED = 13
 const SLIDE_FRICTION = 10 // m/s²
 // Sonst ließe sich durch Duck-Spam dauerhaft schneller als im Sprint laufen
 const SLIDE_COOLDOWN = 0.6
+// Bunny-Hop: Schwung über dem Lauftempo bleibt in der Luft erhalten und
+// verfällt am Boden erst nach BHOP_WINDOW. Wer direkt bei der Landung
+// wieder springt, behält ihn und bekommt etwas dazu (bis BHOP_MAX_SPEED).
+const BHOP_WINDOW = 0.12
+const BHOP_BOOST = 1.08
+const BHOP_MAX_SPEED = 12
+// Leertaste kurz vor der Landung zählt als Sprung bei der Landung
+const JUMP_BUFFER = 0.15
+const MIN_HOP_FALL_SPEED = 2
+const GROUND_FRICTION = 25 // m/s², nur auf den Überschuss über dem Lauftempo
+// Lenkrate (1/s), mit der die Geschwindigkeit der Eingabe folgt, sobald
+// man schneller als das Lauftempo ist
+const GROUND_CONTROL = 15
+const AIR_CONTROL = 8
 // Längere Schritte werden unterteilt, damit man bei hohem Tempo und
 // niedriger Bildrate nicht durch dünne Wände rutscht
 const MAX_MOVE_STEP = 0.25
@@ -81,6 +95,8 @@ export class Player implements Damageable {
   private sliding = false
   private slideCooldown = 0
   private crouchPressed = false
+  private groundTime = Infinity // seit der letzten Landung
+  private jumpBuffer = 0
   onSlide?: () => void
   private onGround = true
   onJump?: () => void
@@ -135,6 +151,8 @@ export class Player implements Damageable {
     this.sliding = false
     this.slideCooldown = 0
     this.crouchPressed = false
+    this.groundTime = Infinity
+    this.jumpBuffer = 0
     this.vitals.health = MAX_HEALTH
     this.respawnRemaining = 0
     this.wantsToCrouch = false
@@ -239,11 +257,20 @@ export class Player implements Damageable {
   }
 
   jump() {
-    if (this.onGround && this.isAlive) {
-      this.velocity.y = JUMP_SPEED
-      this.onGround = false
-      this.onJump?.()
+    if (!this.isAlive) return
+    if (!this.onGround) {
+      this.jumpBuffer = JUMP_BUFFER
+      return
     }
+    const speed = this.horizontalVelocity.length()
+    if (this.groundTime <= BHOP_WINDOW && speed > this.crouchSpeed()) {
+      this.horizontalVelocity.multiplyScalar(Math.max(1, Math.min(BHOP_MAX_SPEED, speed * BHOP_BOOST) / speed))
+    }
+    this.velocity.y = JUMP_SPEED
+    this.onGround = false
+    this.sliding = false
+    this.jumpBuffer = 0
+    this.onJump?.()
   }
 
   update(deltaSeconds: number) {
@@ -257,8 +284,9 @@ export class Player implements Damageable {
 
     // isSprinting stammt hier noch vom letzten Frame
     this.slideCooldown = Math.max(0, this.slideCooldown - deltaSeconds)
+    this.jumpBuffer = Math.max(0, this.jumpBuffer - deltaSeconds)
     if (this.crouchPressed && this.onGround && this.isSprinting && this.slideCooldown === 0) {
-      this.startSlide()
+      this.startSlide(SLIDE_BOOST)
     }
     this.crouchPressed = false
 
@@ -305,12 +333,8 @@ export class Player implements Damageable {
 
     this.velocity.y -= GRAVITY * deltaSeconds
 
-    if (this.sliding) {
-      this.updateSlide(deltaSeconds)
-    } else {
-      const desired = this.desiredVelocity()
-      this.horizontalVelocity.set(desired.x, desired.z)
-    }
+    if (this.sliding) this.updateSlide(deltaSeconds)
+    if (!this.sliding) this.updateMomentum(deltaSeconds)
     this.moveHorizontally(deltaSeconds)
 
     // Fuß-Höhe vor dem Fallen als Referenz: nach schnellem Fall liegt bodyY
@@ -322,10 +346,13 @@ export class Player implements Damageable {
     const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z, feetBefore)
 
     if (this.bodyY <= groundHeight) {
-      if (!this.onGround) this.onLand?.(-this.velocity.y)
+      const landed = !this.onGround
+      const fallSpeed = -this.velocity.y
+      if (landed) this.onLand?.(fallSpeed)
       this.bodyY = groundHeight
       this.velocity.y = 0
       this.onGround = true
+      if (landed) this.handleLanding(fallSpeed)
     } else {
       this.onGround = false
     }
@@ -362,13 +389,56 @@ export class Player implements Damageable {
     if (moveDirection.length() > 1) {
       moveDirection.normalize()
     }
-    let speed = MOVE_SPEED * WEAPONS[this.weapon].moveSpeed
-    if (this.isCrouching) {
-      speed *= CROUCH_SPEED_MULTIPLIER
-    } else if (this.isSprinting) {
-      speed *= SPRINT_SPEED_MULTIPLIER
+    return moveDirection.multiplyScalar(this.stanceSpeed())
+  }
+
+  // Volles Tempo der aktuellen Haltung (Gehen/Sprint/Ducken)
+  private stanceSpeed(): number {
+    const speed = MOVE_SPEED * WEAPONS[this.weapon].moveSpeed
+    if (this.isCrouching) return speed * CROUCH_SPEED_MULTIPLIER
+    return this.isSprinting ? speed * SPRINT_SPEED_MULTIPLIER : speed
+  }
+
+  // Ohne Überschuss über dem Haltungstempo folgt man der Eingabe sofort
+  // (wie ohne Schwung); darüber wird gelenkt und am Boden abgebremst
+  private updateMomentum(deltaSeconds: number) {
+    const desired3 = this.desiredVelocity()
+    const desired = new THREE.Vector2(desired3.x, desired3.z)
+    const velocity = this.horizontalVelocity
+    const desiredSpeed = desired.length()
+    let speed = velocity.length()
+
+    if (this.onGround) {
+      this.groundTime += deltaSeconds
+      if (speed <= this.stanceSpeed() + 1e-3) {
+        velocity.copy(desired)
+        return
+      }
+      if (this.groundTime > BHOP_WINDOW) speed = Math.max(desiredSpeed, speed - GROUND_FRICTION * deltaSeconds)
+      this.steer(desired, speed, GROUND_CONTROL * deltaSeconds)
+    } else if (desiredSpeed > 0) {
+      this.steer(desired, Math.max(speed, desiredSpeed), AIR_CONTROL * deltaSeconds)
     }
-    return moveDirection.multiplyScalar(speed)
+  }
+
+  private steer(desired: THREE.Vector2, speed: number, amount: number) {
+    const velocity = this.horizontalVelocity
+    const direction = desired.lengthSq() > 0 ? desired.clone() : velocity.clone()
+    if (direction.lengthSq() === 0) return
+    velocity.lerp(direction.setLength(speed), Math.min(1, amount))
+  }
+
+  private handleLanding(fallSpeed: number) {
+    // Rampe hinab "landet" man jeden Frame minimal - das ist kein Hop
+    if (fallSpeed > MIN_HOP_FALL_SPEED) this.groundTime = 0
+    if (this.jumpBuffer > 0) {
+      this.jump()
+      return
+    }
+    // Mit gehaltenem Ducken und Schwung landen = weiterrutschen (ohne Schub)
+    if (this.wantsToCrouch && this.slideCooldown === 0 && this.horizontalVelocity.length() > MOVE_SPEED * WEAPONS[this.weapon].moveSpeed) {
+      this.startSlide(1)
+    }
   }
 
   private crouchSpeed(): number {
@@ -377,10 +447,10 @@ export class Player implements Damageable {
 
   // Richtung = aktuelle Laufrichtung (nicht Blick), damit seitliches
   // Rutschen aus dem Strafe-Sprint heraus geht
-  private startSlide() {
+  private startSlide(boost: number) {
     const speed = this.horizontalVelocity.length()
     if (speed < this.crouchSpeed()) return
-    this.horizontalVelocity.multiplyScalar(Math.min(SLIDE_MAX_SPEED, speed * SLIDE_BOOST) / speed)
+    this.horizontalVelocity.multiplyScalar(Math.max(1, Math.min(SLIDE_MAX_SPEED, speed * boost) / speed))
     this.sliding = true
     this.isSprinting = false
     this.onSlide?.()
@@ -389,10 +459,9 @@ export class Player implements Damageable {
   private updateSlide(deltaSeconds: number) {
     const speed = this.horizontalVelocity.length() - SLIDE_FRICTION * deltaSeconds
     if (!this.wantsToCrouch || !this.onGround || speed <= this.crouchSpeed()) {
+      // Restschwung übernimmt updateMomentum()
       this.sliding = false
       this.slideCooldown = SLIDE_COOLDOWN
-      const desired = this.desiredVelocity()
-      this.horizontalVelocity.set(desired.x, desired.z)
       return
     }
     this.horizontalVelocity.multiplyScalar(speed / this.horizontalVelocity.length())
