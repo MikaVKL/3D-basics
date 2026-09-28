@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { Palette } from './palette'
+import { createCrateTexture, createPanelTexture, worldBox, CRATE_TILE, PANEL_TILE } from './surfaceTextures'
 import {
   MAIN_ROOM_WIDTH,
   MAIN_ROOM_DEPTH,
@@ -87,8 +88,20 @@ function createWedgeGeometry(length: number, width: number, height: number): THR
     ...triangle(low1, bottomFar1, topFar1), // Seitendreieck rechts
   ]
 
+  // Texturkoordinaten in Feldern (wie worldBox): Boden/Schräge aus x/z,
+  // Rückseite aus z/y, Seitendreiecke aus x/y
+  const uvs: number[] = []
+  for (let i = 0; i < positions.length; i += 3) {
+    const [x, y, z] = [positions[i], positions[i + 1], positions[i + 2]]
+    const vertex = i / 3
+    if (vertex < 6 || (vertex >= 12 && vertex < 18)) uvs.push(x / PANEL_TILE, z / PANEL_TILE)
+    else if (vertex < 12) uvs.push(z / PANEL_TILE, y / PANEL_TILE)
+    else uvs.push(x / PANEL_TILE, y / PANEL_TILE)
+  }
+
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
   geometry.computeVertexNormals()
   return geometry
 }
@@ -147,6 +160,7 @@ export function buildArena(): ArenaResult {
   // --- Umgebende Wände ---
   const wallMaterial = new THREE.MeshStandardMaterial({
     color: Palette.wall,
+    map: createPanelTexture(),
     roughness: 0.8,
     metalness: 0.1,
   })
@@ -214,7 +228,7 @@ export function buildArena(): ArenaResult {
   ]
 
   for (const def of wallDefs) {
-    const wallGeometry = new THREE.BoxGeometry(def.w, WALL_HEIGHT, def.d)
+    const wallGeometry = worldBox(def.w, WALL_HEIGHT, def.d)
     const wall = new THREE.Mesh(wallGeometry, wallMaterial)
     wall.position.set(def.x, WALL_HEIGHT / 2, def.z)
     addEdgeOutline(wall)
@@ -222,7 +236,7 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: wall, box: new THREE.Box3().setFromObject(wall) })
 
     // Leuchtender Neon-Streifen oben (emissive, ohne echte Lichtquelle)
-    const stripeGeometry = new THREE.BoxGeometry(
+    const stripeGeometry = worldBox(
       def.w * 0.98,
       0.1,
       def.d * 0.98 + (def.d === WALL_THICKNESS ? 0.1 : 0)
@@ -239,7 +253,7 @@ export function buildArena(): ArenaResult {
 
   // --- Erhöhter Durchgang: Sockel bis Plattformhöhe, darüber die Öffnung, dann Sturz ---
   const doorwaySillMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(WALL_THICKNESS, WEST_PLATFORM_HEIGHT, DOORWAY_Z_MAX - DOORWAY_Z_MIN),
+    worldBox(WALL_THICKNESS, WEST_PLATFORM_HEIGHT, DOORWAY_Z_MAX - DOORWAY_Z_MIN),
     wallMaterial
   )
   doorwaySillMesh.position.set(DIVIDER_X, WEST_PLATFORM_HEIGHT / 2, WEST_PLATFORM_CENTER_Z)
@@ -249,7 +263,7 @@ export function buildArena(): ArenaResult {
 
   const doorwayLintelHeight = WALL_HEIGHT - DOORWAY_TOP
   const doorwayLintelMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(WALL_THICKNESS, doorwayLintelHeight, DOORWAY_Z_MAX - DOORWAY_Z_MIN),
+    worldBox(WALL_THICKNESS, doorwayLintelHeight, DOORWAY_Z_MAX - DOORWAY_Z_MIN),
     wallMaterial
   )
   doorwayLintelMesh.position.set(DIVIDER_X, DOORWAY_TOP + doorwayLintelHeight / 2, WEST_PLATFORM_CENTER_Z)
@@ -269,7 +283,7 @@ export function buildArena(): ArenaResult {
 
     function addPiece(offsetX: number, width: number, bottomY: number, topY: number) {
       const height = topY - bottomY
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, THICKNESS), wallMaterial)
+      const mesh = new THREE.Mesh(worldBox(width, height, THICKNESS), wallMaterial)
       mesh.position.set(centerX + offsetX, bottomY + height / 2, centerZ)
       addEdgeOutline(mesh)
       group.add(mesh)
@@ -296,7 +310,7 @@ export function buildArena(): ArenaResult {
     armZDir: 1 | -1
   ) {
     const armAlongX = new THREE.Mesh(
-      new THREE.BoxGeometry(armLength, height, thickness),
+      worldBox(armLength, height, thickness),
       boxMaterial
     )
     armAlongX.position.set(
@@ -309,7 +323,7 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: armAlongX, box: new THREE.Box3().setFromObject(armAlongX) })
 
     const armAlongZ = new THREE.Mesh(
-      new THREE.BoxGeometry(thickness, height, armLength),
+      worldBox(thickness, height, armLength),
       boxMaterial
     )
     armAlongZ.position.set(
@@ -325,6 +339,7 @@ export function buildArena(): ArenaResult {
   // --- Deckungs-Kisten ---
   const boxMaterial = new THREE.MeshStandardMaterial({
     color: Palette.crate,
+    map: createCrateTexture(),
     roughness: 0.6,
     metalness: 0.15,
   })
@@ -352,7 +367,7 @@ export function buildArena(): ArenaResult {
   ]
 
   for (const [x, z, width, depth, height] of coverPositions) {
-    const boxGeometry = new THREE.BoxGeometry(width, height, depth)
+    const boxGeometry = worldBox(width, height, depth, CRATE_TILE)
     const box = new THREE.Mesh(boxGeometry, boxMaterial)
     box.position.set(x, height / 2, z)
     addEdgeOutline(box)
@@ -384,7 +399,7 @@ export function buildArena(): ArenaResult {
     const lateralOffset = options.lateralOffset ?? 0
     const rampCenterX = rampAxis === 'z' ? centerX + lateralOffset : centerX
     const rampCenterZ = rampAxis === 'x' ? centerZ + lateralOffset : centerZ
-    const platformGeometry = new THREE.BoxGeometry(platformSize, platformHeight, platformSize)
+    const platformGeometry = worldBox(platformSize, platformHeight, platformSize)
     const platform = new THREE.Mesh(platformGeometry, wallMaterial)
     platform.position.set(centerX, platformHeight / 2, centerZ)
     addEdgeOutline(platform)
@@ -438,8 +453,8 @@ export function buildArena(): ArenaResult {
       if (side === options.omitCurbSide) continue
       const curbGeometry =
         rampAxis === 'x'
-          ? new THREE.BoxGeometry(curbLength, curbHeight, curbThickness)
-          : new THREE.BoxGeometry(curbThickness, curbHeight, curbLength)
+          ? worldBox(curbLength, curbHeight, curbThickness)
+          : worldBox(curbThickness, curbHeight, curbLength)
       const curb = new THREE.Mesh(curbGeometry, wallMaterial)
       const outwardOffset = rampWidth / 2 + curbThickness / 2
       if (rampAxis === 'x') {

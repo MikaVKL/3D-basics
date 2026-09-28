@@ -56,6 +56,8 @@ Weiterarbeiten wissen muss.
   und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
 - `src/weaponIcons.ts` – Waffen-Umrisse (SVG) für Kill-Feed und Waffenfeld
 - `src/sky.ts` – Abendhimmel-Kuppel (Farbverlauf), folgt der Kamera
+- `src/surfaceTextures.ts` – Kisten-/Plattenmuster (Canvas, Graustufen x
+  Palettenfarbe); `worldBox()` statt BoxGeometry, damit Muster nicht verzerren
 - `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` (Körper-Kapsel)
   und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
