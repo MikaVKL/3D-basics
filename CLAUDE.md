@@ -105,7 +105,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Spiel läuft weiter
 - `npm run test:hud` – HUD: Lebensanzeige (Werte, Aufblitzen bei Schaden,
   Pulsieren ab 30 Leben, nicht bei Tod/Respawn), Waffenfeld (Nachlade-Balken,
-  leeres Magazin)
+  leeres Magazin), Fadenkreuz (Lücke = echte Streuung, Messer-Ring)
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -135,6 +135,8 @@ Stolperfallen bei Headless-Tests:
 - Zeiten: Menü/Hintergrund → nach 20 s raus, eingefrorener Tab → 15 s,
   AFK → 90 s. Runde: erstes Team mit 20 Kills, 6 s Pause.
 - Treffer: "was der Schütze sah, zählt" (keine Server-Sichtlinienprüfung).
+- Fadenkreuz zeigt nur echte Streuung (Sturmgewehr-Dauerfeuer), nicht Laufen/
+  Springen - die beeinflussen die Treffsicherheit nicht.
 - Kopftreffer = 2× Schaden; Schadenszahlen bei jedem Treffer (Kopf rot),
   Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
 - Waffen (abgestimmt): 1 Pistole (20, 5/s, 12er, Tempo 100 %),

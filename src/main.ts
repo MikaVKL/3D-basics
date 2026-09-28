@@ -473,6 +473,18 @@ const slotElements = WEAPON_SLOTS.map((id, index) => {
 })
 let shownWeapon: WeaponId | null = null
 
+const crosshair = document.querySelector<HTMLDivElement>('#crosshair')!
+const CROSSHAIR_BASE_GAP = 4 // px
+// Lücke = echte Streuung als Bildschirmabstand (Winkel -> Pixel über das FOV)
+function updateCrosshair() {
+  const melee = weapon.isMelee
+  crosshair.classList.toggle('melee', melee)
+  crosshair.classList.toggle('in-range', melee && player.isAlive && weapon.meleeTargetInRange())
+  const pixelsPerRadian = window.innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+  const gap = CROSSHAIR_BASE_GAP + Math.tan(weapon.currentSpread) * pixelsPerRadian
+  crosshair.style.setProperty('--gap', `${gap.toFixed(1)}px`)
+}
+
 function updateAmmoHud() {
   const ammo = weapon.getAmmoState()
   if (shownWeapon !== ammo.weapon) {
@@ -568,6 +580,7 @@ function animate() {
   hitFeedback.update()
   scoreTable.render(network.roster, network.localId)
   updateAmmoHud()
+  updateCrosshair()
   updateHealthHud()
   updateShieldAndStaminaHud()
   updateScoreboardHud()

@@ -35,39 +35,78 @@ body {
   display: block;
 }
 
-/* Fadenkreuz */
+/* Fadenkreuz: 4 Striche, Lücke (--gap) folgt der echten Streuung.
+   Messer: Punkt + Ring, leuchtet bei Gegner in Reichweite. */
 #crosshair {
+  --gap: 4px;
   position: fixed;
   top: 50%;
   left: 50%;
-  width: 18px;
-  height: 18px;
-  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
   pointer-events: none;
   z-index: 5;
 }
 
-#crosshair::before,
-#crosshair::after {
-  content: '';
+#crosshair i {
   position: absolute;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
 }
 
-#crosshair::before {
-  left: 50%;
-  top: 0;
+#crosshair .top,
+#crosshair .bottom {
+  left: -1px;
   width: 2px;
-  height: 100%;
-  transform: translateX(-50%);
+  height: 7px;
 }
 
-#crosshair::after {
-  top: 50%;
-  left: 0;
-  width: 100%;
+#crosshair .left,
+#crosshair .right {
+  top: -1px;
+  width: 7px;
   height: 2px;
-  transform: translateY(-50%);
+}
+
+#crosshair .top {
+  bottom: var(--gap);
+}
+
+#crosshair .bottom {
+  top: var(--gap);
+}
+
+#crosshair .left {
+  right: var(--gap);
+}
+
+#crosshair .right {
+  left: var(--gap);
+}
+
+#crosshair b {
+  display: none;
+  position: absolute;
+  left: -9px;
+  top: -9px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 2px, transparent 2.5px);
+}
+
+#crosshair.melee i {
+  display: none;
+}
+
+#crosshair.melee b {
+  display: block;
+}
+
+#crosshair.melee.in-range b {
+  border-color: var(--c-neon);
+  box-shadow: 0 0 8px rgba(51, 230, 204, 0.8);
 }
 
 /* Hitmarker: gedrehtes Kreuz, Mitte per Maske ausgespart */

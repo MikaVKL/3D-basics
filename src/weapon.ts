@@ -303,9 +303,29 @@ export class Weapon {
     }
   }
 
+  // Streuung (rad), die der nächste Schuss hätte - auch fürs Fadenkreuz
+  get currentSpread(): number {
+    return Math.min(this.stats.maxSpread, Math.max(0, this.heat - PRECISE_SHOTS) * this.stats.spreadPerHeat)
+  }
+
+  get isMelee(): boolean {
+    return isMelee(this.weaponId)
+  }
+
+  // Fürs Fadenkreuz: träfe ein Stich jetzt einen Gegner?
+  meleeTargetInRange(): boolean {
+    if (!this.isMelee) return false
+    this.camera.updateMatrixWorld()
+    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
+    this.raycaster.far = this.stats.range
+    const hit = this.raycaster.intersectObjects(this.shootables, false).find((h) => h.object.visible)
+    const damageable = hit?.object.userData.damageable as Damageable | undefined
+    return !!damageable && damageable.isAlive && !damageable.invulnerable && hit!.object.userData.team !== this.shooterTeam
+  }
+
   // Zufällige Abweichung im Kegel, abhängig von der Hitze
   private applySpread() {
-    const spread = Math.min(this.stats.maxSpread, Math.max(0, this.heat - PRECISE_SHOTS) * this.stats.spreadPerHeat)
+    const spread = this.currentSpread
     if (spread <= 0) return
     const quaternion = this.camera.getWorldQuaternion(new THREE.Quaternion())
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion)

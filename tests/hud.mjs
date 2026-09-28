@@ -104,6 +104,59 @@ try {
   await wait(700)
   const done = await weaponHud()
   check('nach dem Nachladen: Balken weg, 12 / 12', !done.reloadVisible && !done.empty && done.ammo === '12 / 12', JSON.stringify(done))
+  // Fadenkreuz folgt der echten Streuung
+  const cross = () =>
+    page.evaluate(() => {
+      const element = document.querySelector('#crosshair')
+      return {
+        gap: parseFloat(element.style.getPropertyValue('--gap')),
+        melee: element.classList.contains('melee'),
+        inRange: element.classList.contains('in-range'),
+        // erwartete Lücke aus Streuung und Sichtfeld
+        expected: 4 + Math.tan(__dusk.weapon.currentSpread) * (innerHeight / 2) / Math.tan((__dusk.camera.fov / 2) * Math.PI / 180),
+      }
+    })
+  await page.evaluate(() => __dusk.player.spawn({ x: 0, y: 1.7, z: 12, clone() { return this } }))
+  await wait(300)
+  const pistolCross = await cross()
+  check('Pistole: normales Kreuz (Lücke 4 px)', !pistolCross.melee && Math.abs(pistolCross.gap - 4) < 0.1, JSON.stringify(pistolCross))
+  await page.evaluate(() => {
+    const W = __dusk.weapon
+    W.switchTo('rifle')
+    W.switchRemaining = 0
+    __dusk.camera.lookAt(0, 1.7, 30)
+    for (let i = 0; i < 12; i++) {
+      W.cooldownRemaining = 0
+      W.ammo = 30
+      W.tryShoot()
+    }
+  })
+  await wait(50)
+  const hot = await cross()
+  check('Dauerfeuer: Lücke = echte Streuung', hot.gap > 8 && Math.abs(hot.gap - hot.expected) < 1.5, `${hot.gap.toFixed(1)} px, erwartet ${hot.expected.toFixed(1)}`)
+  await wait(3000)
+  const cooled = await cross()
+  check('danach wieder eng', Math.abs(cooled.gap - 4) < 0.1, `${cooled.gap} px`)
+
+  // Messer: Punkt; Ring leuchtet nur mit Gegner (Dummy bei 3, 0.8, -6) in Reichweite
+  const aimAtDummy = (z) =>
+    page.evaluate((zz) => {
+      __dusk.player.spawn({ x: 3, y: 1.7, z: zz, clone() { return this } })
+      __dusk.camera.lookAt(3, 0.8, -6)
+      __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
+    }, z)
+  await page.evaluate(() => {
+    __dusk.weapon.switchTo('knife')
+    __dusk.weapon.switchRemaining = 0
+  })
+  await aimAtDummy(-2)
+  await wait(300)
+  const far = await cross()
+  await aimAtDummy(-4)
+  await wait(300)
+  const near = await cross()
+  check('Messer: Punkt statt Kreuz', far.melee && near.melee)
+  check('Messer: Ring leuchtet nur in Reichweite (2 m ja, 4 m nein)', near.inRange && !far.inRange, `4 m: ${far.inRange}, 2 m: ${near.inRange}`)
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()
