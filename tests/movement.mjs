@@ -301,6 +301,16 @@ try {
     P.setMoveInput(0, 0)
     out.noClimb = P.bodyY
 
+    // Südseite: Plattform -> Brücke nach Süden -> Steg bis an die Ostwand
+    place(15, 0, Math.PI)
+    walkTo(Math.PI, 200)
+    out.southCatwalk = { y: P.bodyY, z: cam.position.z }
+    walkTo(EAST, 200)
+    out.southEast = { y: P.bodyY, x: cam.position.x }
+    placeOnFloor(-9, 10)
+    walkTo(Math.PI, 140)
+    out.walkUnderSouth = { y: P.bodyY, z: cam.position.z }
+
     return out
   })
 
@@ -319,6 +329,9 @@ try {
   check('obere Ebene: Steg entlang nach Westen', Math.abs(r.upperWest.y - 2.8) < 0.01 && r.upperWest.x < -17, `Höhe ${f2(r.upperWest.y)}, x ${f2(r.upperWest.x)}`)
   check('Geländer hält (kein Absturz)', Math.abs(r.railing.y - 2.8) < 0.01 && r.railing.z < -17.3, `Höhe ${f2(r.railing.y)}, z ${f2(r.railing.z)}`)
   check('Lücke im Geländer: hinunterspringen', r.dropDown.y < 0.01 && r.dropDown.z > -17, `Höhe ${f2(r.dropDown.y)}, z ${f2(r.dropDown.z)}`)
+  check('obere Ebene: Brücke nach Süden auf den Südsteg', Math.abs(r.southCatwalk.y - 2.8) < 0.01 && r.southCatwalk.z > 18.5, `Höhe ${f2(r.southCatwalk.y)}, z ${f2(r.southCatwalk.z)}`)
+  check('obere Ebene: Südsteg bis an die Ostwand', Math.abs(r.southEast.y - 2.8) < 0.01 && r.southEast.x > 28.5, `Höhe ${f2(r.southEast.y)}, x ${f2(r.southEast.x)}`)
+  check('unter den Südsteg bis an die Wand laufen', r.walkUnderSouth.y < 0.01 && r.walkUnderSouth.z > 19.5, `z ${f2(r.walkUnderSouth.z)}`)
   check('unter dem Steg: Sprung stößt an (Kopf <= 2,5 m)', r.underCatwalk.maxHead <= 2.51 && r.underCatwalk.landed < 0.01, `Kopf max ${f2(r.underCatwalk.maxHead)}`)
   check('unter den Steg bis an die Wand laufen', r.walkUnder.y < 0.01 && r.walkUnder.z < -19.5, `z ${f2(r.walkUnder.z)}`)
   check('vom Boden nicht auf den Steg springen', r.noClimb < 0.01, `Höhe ${f2(r.noClimb)}`)

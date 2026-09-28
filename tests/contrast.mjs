@@ -13,7 +13,9 @@ const servers = await startServers({ gameServer: false })
 const browser = await launchBrowser()
 const scenes = [
   ['Kiste', [-2, 1.5, 9], [-2, 0, 3.2]],
-  ['Wand', [8, 1.5, 12], [8, 0, 18.5]],
+  // Ostwand des Flankenraums (an Nord-/Südwand stehen jetzt die Laufstege)
+  ['Wand', [44, 1.5, 5], [50.5, 0, 5]],
+  ['Steg-Unterseite', [-6, 1.5, 12], [-6, 0, 19.5]],
   ['Boden', [10, 6, -2], [10, 0, -6]],
   // Nicht bei x = 0: dort steht die Deckung vor dem Nord-Spawn
   ['Weite', [12, 1.7, -19], [18, 0, -11]],

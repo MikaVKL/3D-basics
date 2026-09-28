@@ -355,7 +355,7 @@ export function buildArena(): ArenaResult {
     [4, 9, 5, 2, 1.4],
     [-2, 0, 4, 4, 2.4],
     [24, -14, 1.5, 4, 1.4], // nicht unter den Nord-Laufsteg (dort kein Platz zum Stehen)
-    [22, 16, 2.6, 2.6, 2.8],
+    [22, 16, 2.6, 2.6, 2.8], // endet bündig am Süd-Geländer (kein Klemmspalt)
     // West-Zone
     [-28, -9, 4.5, 1.8, 2.4],
     [-27, 8, 3, 3, 2.8],
@@ -534,6 +534,7 @@ export function buildArena(): ArenaResult {
     addBlock(PLATFORM_A_X + BRIDGE_WIDTH / 2 - 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
   }
   buildUpperSide(-1)
+  buildUpperSide(1)
 
   // West-Plattform (Rampe B): Plattform und Rampe liegen bündig an der
   // Trennwand (kein körperbreiter Spalt), die Wand ersetzt dort das Bord.
