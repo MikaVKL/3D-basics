@@ -60,7 +60,8 @@ try {
   await wait(1500 + LAG * 2)
   const a0 = await state(A)
   const b0 = await state(B)
-  check('beide beigetreten', (await hud(A)).startsWith('Online · 2/8'), await hud(A))
+  // Schmales Testfenster: kompakter Status "2/8 · Team ..."
+  check('beide beigetreten', (await hud(A)).startsWith('2/8'), await hud(A))
   check('verschiedene Teams', a0.team !== b0.team, `${a0.team}/${b0.team}`)
   check('Namen in der Tabelle', a0.roster.join() === 'Anna:0/0,Ben:0/0', a0.roster.join())
 
@@ -114,7 +115,7 @@ try {
     check('A nach 20s im Menü ausgetreten', (await state(B)).roster.join() === 'Ben:0/1', (await state(B)).roster.join())
     await play(A)
     await wait(1500 + LAG * 2)
-    check('A per Klick wieder beigetreten', (await hud(A)).startsWith('Online · 2/8'), await hud(A))
+    check('A per Klick wieder beigetreten', (await hud(A)).startsWith('2/8'), await hud(A))
 
     // Eingefrorener Tab: Verbindung steht, aber es kommen keine Zustände mehr
     const ghost = new WebSocket(SERVER_URL)

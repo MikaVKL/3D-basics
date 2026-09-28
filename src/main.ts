@@ -435,7 +435,11 @@ function updateNetStatusHud() {
     offline: trying,
     idle: network.hasServer ? 'Nicht im Spiel · „Spielen“ tritt bei' : trying,
     connecting: trying,
-    online: `Online · ${network.playerCount}/${MAX_PLAYERS} Spieler · Team ${TeamLabel[player.team]}`,
+    // Kleine Bildschirme: kurz, sonst stößt der Status an den Punktestand
+    online:
+      window.innerWidth < 760
+        ? `${network.playerCount}/${MAX_PLAYERS} · Team ${TeamLabel[player.team]}`
+        : `Online · ${network.playerCount}/${MAX_PLAYERS} Spieler · Team ${TeamLabel[player.team]}`,
     full: 'Server voll · Singleplayer',
     outdated: 'Veraltete Version · bitte neu laden',
   }

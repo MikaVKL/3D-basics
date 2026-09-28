@@ -106,6 +106,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:hud` – HUD: Lebensanzeige (Werte, Aufblitzen bei Schaden,
   Pulsieren ab 30 Leben, nicht bei Tod/Respawn), Waffenfeld (Nachlade-Balken,
   leeres Magazin), Fadenkreuz (Lücke = echte Streuung, Messer-Ring)
+- `npm run test:layout` – keine HUD-Überlappungen in 6 Bildschirmgrößen
+  (Rechner bis kleines Handy quer, online mit langem Status/Kill-Feed),
+  Handy hochkant zeigt "Gerät drehen". Nach jeder HUD-Änderung laufen lassen.
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -137,6 +140,7 @@ Stolperfallen bei Headless-Tests:
 - Treffer: "was der Schütze sah, zählt" (keine Server-Sichtlinienprüfung).
 - Fadenkreuz zeigt nur echte Streuung (Sturmgewehr-Dauerfeuer), nicht Laufen/
   Springen - die beeinflussen die Treffsicherheit nicht.
+- Handy hochkant: nur Hinweis "Gerät drehen" (Buttons + HUD passen nicht).
 - Kopftreffer = 2× Schaden; Schadenszahlen bei jedem Treffer (Kopf rot),
   Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
 - Waffen (abgestimmt): 1 Pistole (20, 5/s, 12er, Tempo 100 %),

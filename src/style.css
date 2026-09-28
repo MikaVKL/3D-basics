@@ -239,12 +239,14 @@ body {
   z-index: 5;
 }
 
-/* Touch: unten rechts liegen die Buttons */
+/* Touch: unten rechts liegen die Buttons, unten mittig ist es auf kleinen
+   Handys zu eng - oben links ist auf allen Touch-Layouts frei */
 @media (pointer: coarse) {
   #weapon-hud {
+    top: var(--edge-top);
+    bottom: auto;
     right: auto;
-    left: 50%;
-    transform: translateX(-50%);
+    left: var(--edge-left);
   }
 }
 
@@ -385,7 +387,7 @@ body {
 
 #connection-warning {
   position: fixed;
-  top: 96px;
+  top: calc(50% - 64px);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
@@ -581,6 +583,72 @@ body {
 
 #score-table.hidden {
   display: none;
+}
+
+/* Kleine Bildschirme (Handy quer): oberer Rand kompakter */
+@media (max-width: 760px), (max-height: 420px) {
+  #kill-feed {
+    font-size: 0.72rem;
+    max-width: 38vw;
+  }
+
+  .kill-entry {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kill-entry:nth-child(n + 4) {
+    display: none;
+  }
+
+  #score-goal {
+    font-size: 0.62rem;
+  }
+
+  #net-status {
+    font-size: 0.72rem;
+  }
+}
+
+/* Sehr wenig Höhe (kleine Handys quer): nur die 2 neuesten Kills */
+@media (max-height: 400px) {
+  .kill-entry:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+/* Handy hochkant: Buttons und HUD passen nicht nebeneinander */
+#rotate-hint {
+  display: none;
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  #rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    color: var(--c-text);
+    background: rgba(12, 17, 26, 0.94);
+  }
+
+  #rotate-hint strong {
+    font-size: 1.2rem;
+    color: var(--c-neon);
+  }
+
+  #rotate-hint span {
+    font-size: 2.6rem;
+  }
 }
 
 /* Schmale Bildschirme (Handy hochkant): Teams untereinander */
