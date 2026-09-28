@@ -13,6 +13,7 @@ import {
   type KickReason,
 } from './shared/protocol'
 import type { Team } from './team'
+import type { WeaponId } from './shared/weapons'
 
 // idle = Server vorhanden, aber nicht beigetreten (Startbildschirm/Menü)
 export type ConnectionStatus = 'offline' | 'idle' | 'connecting' | 'online' | 'full' | 'outdated'
@@ -35,11 +36,11 @@ export interface NetworkHandlers {
   // Snapshot ohne den eigenen Eintrag
   onSnapshot: (players: SnapshotEntry[]) => void
   onOwnVitals: (health: number, shield: number, spawnProtected: boolean) => void
-  onKill: (killer: PlayerId, victim: PlayerId, scores: Scores, headshot: boolean) => void
+  onKill: (killer: PlayerId, victim: PlayerId, scores: Scores, headshot: boolean, weapon: WeaponId) => void
   onRespawn: (id: PlayerId, spawnIndex: number, team: Team) => void
   onRoundEnd: (winner: Team, nextRoundIn: number) => void
   onRoundStart: (scores: Scores) => void
-  onRemoteShot: (from: Vec3, to: Vec3, hit: boolean) => void
+  onRemoteShot: (from: Vec3, to: Vec3, hit: boolean, weapon: WeaponId) => void
   onHurt: (by: PlayerId) => void
   // Zurück in den Singleplayer
   onDisconnect: () => void
@@ -196,7 +197,7 @@ export class NetworkClient {
         break
       }
       case 'kill':
-        this.handlers.onKill(message.killer, message.victim, message.scores, message.headshot)
+        this.handlers.onKill(message.killer, message.victim, message.scores, message.headshot, message.weapon)
         break
       case 'respawn':
         if (message.id === this.localId) this.life = message.life
@@ -209,7 +210,7 @@ export class NetworkClient {
         this.handlers.onRoundStart(message.scores)
         break
       case 'shot':
-        this.handlers.onRemoteShot(message.from, message.to, message.hit)
+        this.handlers.onRemoteShot(message.from, message.to, message.hit, message.weapon)
         break
       case 'hurt':
         this.handlers.onHurt(message.by)

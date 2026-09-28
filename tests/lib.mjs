@@ -126,3 +126,16 @@ export function createChecks() {
     },
   }
 }
+
+// Kill-Feed als Text, Waffensymbol als " [waffe] ", Einträge mit " | " getrennt
+export function killFeedText(page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll('.kill-entry')]
+      .map((entry) =>
+        [...entry.childNodes]
+          .map((node) => (node.classList?.contains('weapon-icon') ? ` [${node.dataset.weapon}] ` : node.textContent))
+          .join('')
+      )
+      .join(' | ')
+  )
+}

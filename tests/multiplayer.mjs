@@ -17,6 +17,7 @@ import {
   createChecks,
   SERVER_URL,
   SERVER_PORT,
+  killFeedText,
 } from './lib.mjs'
 
 const LONG = process.argv.includes('--long')
@@ -49,7 +50,6 @@ try {
       alive: __dusk.player.isAlive,
       roster: [...__dusk.network.roster.values()].map((r) => `${r.name}:${r.kills}/${r.deaths}`).sort(),
       score: `${document.querySelector('#score-red').textContent}:${document.querySelector('#score-blue').textContent}`,
-      feed: document.querySelector('#kill-feed').textContent,
     }))
 
   await wait(1000)
@@ -99,7 +99,9 @@ try {
   const a2 = await state(A)
   const b2 = await state(B)
   check('7 Treffer -> B tot', !b2.alive)
-  check('Kill-Feed mit Namen', b2.feed.includes('Anna ✕ Du') && a2.feed.includes('Du ✕ Ben'), `${a2.feed} | ${b2.feed}`)
+  const feedA = await killFeedText(A)
+  const feedB = await killFeedText(B)
+  check('Kill-Feed mit Namen und Waffe', feedB.includes('Anna [pistol] Du') && feedA.includes('Du [pistol] Ben'), `${feedA} | ${feedB}`)
   check('Punktestand + Tabelle', a2.roster.join() === 'Anna:1/0,Ben:0/1', `${a2.score} ${a2.roster.join()}`)
   await wait(3300 + LAG * 2)
   const b3 = await state(B)

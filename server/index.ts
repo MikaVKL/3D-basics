@@ -486,7 +486,7 @@ function handleHit(shooter: Client, targetId: unknown, headshot: boolean) {
     scores[shooter.team] += 1
     shooter.kills += 1
     target.deaths += 1
-    broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores, headshot })
+    broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores, headshot, weapon: shooter.state.weapon })
     broadcastRoster()
     if (scores[shooter.team] >= KILLS_TO_WIN_ACTIVE) endRound(shooter.team, now)
     console.log(`Spieler ${shooter.id} hat Spieler ${target.id} eliminiert (${scores.red}:${scores.blue})`)
@@ -503,7 +503,8 @@ function sanitizeVec3(raw: unknown): Vec3 | null {
 const MAX_MUZZLE_OFFSET = 3
 const MAX_TRACER_LENGTH = 120
 
-// Reine Optik, trotzdem gefiltert (sonst beliebige Spuren bei allen)
+// Reine Optik/Ton (beim Messer nur der Stich), trotzdem gefiltert (sonst
+// beliebige Spuren bei allen)
 function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown, hit: unknown) {
   const from = sanitizeVec3(rawFrom)
   const to = sanitizeVec3(rawTo)
@@ -517,7 +518,7 @@ function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown, hit: unkn
   shooter.lastActivityAt = now
   shooter.protectedUntil = 0
 
-  broadcast({ t: 'shot', id: shooter.id, from, to, hit: hit === true }, shooter.id)
+  broadcast({ t: 'shot', id: shooter.id, from, to, hit: hit === true, weapon: shooter.state.weapon }, shooter.id)
 }
 
 let lastTickAt = performance.now()

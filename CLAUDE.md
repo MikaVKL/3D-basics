@@ -84,7 +84,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Ton, Kill-Feed-Markierung und -Dauer
 - `npm run test:weapons` – Wechsel (1/2/3, Mausrad, Q), Munition je Waffe,
   Nachladen, Dauerfeuer, Streuung, Tempo, Messer-Reichweite, Respawn,
-  Server-Schaden/Ratenlimit/Reichweite
+  Server-Schaden/Ratenlimit/Reichweite, Waffe/Töne bei anderen, Kill-Feed-Symbol
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -119,8 +119,7 @@ Stolperfallen bei Headless-Tests:
 ## Offene Ideen / nächste Schritte
 
 - Reihenfolge (mit Nutzer abgestimmt): Sound, Spielermodell, Effekte,
-  Kopftreffer (erledigt) -> Waffen (Pistole/Sturmgewehr/Messer erledigt;
-  offen: Waffe an fremder Figur + Sounds je Waffe + Kill-Feed-Symbol) -> Rutschen/Bunny-Hop -> Ping ->
+  Kopftreffer, Waffen (erledigt) -> Rutschen/Bunny-Hop -> Ping ->
   Arena/Optik/HUD -> Raum-Codes -> Hintergrund-Tab -> Server-Prüfung.
 - Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
 - Noch zu entscheiden: Kollision zwischen Spielern?

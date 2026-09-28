@@ -2,7 +2,7 @@
 // Kopf treffbar, Schadenszahlen (weiß/rot), eigener Ton, Kill-Feed-Markierung.
 //
 //   node tests/headshot.mjs
-import { startServers, launchBrowser, openGame, play, shootAt, teleport, wait, createChecks } from './lib.mjs'
+import { startServers, launchBrowser, openGame, play, shootAt, teleport, wait, createChecks, killFeedText } from './lib.mjs'
 
 const { check, finish } = createChecks()
 const servers = await startServers()
@@ -79,14 +79,9 @@ try {
   await shootAt(A, [0, 1.7, 5])
   await wait(600)
   check('B tot nach insgesamt 1 Körper- + 3 Kopftreffern', !(await B.evaluate(() => __dusk.player.isAlive)))
-  const feed = () =>
-    Promise.all(
-      [A, B].map((page) =>
-        page.evaluate(() => [...document.querySelectorAll('.kill-entry')].map((e) => e.textContent).join(' | '))
-      )
-    )
+  const feed = () => Promise.all([A, B].map(killFeedText))
   const [feedA, feedB] = await feed()
-  check('Kill-Feed markiert Kopftreffer (beide Seiten)', feedA === 'Du ✕ BenKopftreffer' && feedB === 'Anna ✕ DuKopftreffer', `${feedA} / ${feedB}`)
+  check('Kill-Feed markiert Kopftreffer (beide Seiten)', feedA === 'Du [pistol] BenKopftreffer' && feedB === 'Anna [pistol] DuKopftreffer', `${feedA} / ${feedB}`)
 
   await wait(4500)
   check('Kill-Feed nach 5 s noch sichtbar', (await feed())[0] !== '')
@@ -103,7 +98,7 @@ try {
     await wait(150)
   }
   await wait(600)
-  check('Körper-Kill ohne Markierung', (await feed())[0] === 'Du ✕ Ben', (await feed())[0])
+  check('Körper-Kill ohne Markierung', (await feed())[0] === 'Du [pistol] Ben', (await feed())[0])
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

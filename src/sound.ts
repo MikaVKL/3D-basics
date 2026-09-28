@@ -63,6 +63,11 @@ export const SYNTHS = {
     tone(ctx, out, 'sawtooth', 1400, 180, 0.35, 0.14)
     noiseBurst(ctx, out, noise, 'highpass', 2500, 0.2, 0.05)
   },
+  // Sturmgewehr: kürzer, tiefer und kerniger als die Pistole (Dauerfeuer)
+  rifleShot: (ctx, out, noise) => {
+    tone(ctx, out, 'square', 700, 120, 0.22, 0.09)
+    noiseBurst(ctx, out, noise, 'bandpass', 1400, 0.35, 0.07)
+  },
   reload: (ctx, out, noise) => {
     noiseBurst(ctx, out, noise, 'bandpass', 3000, 0.4, 0.04)
     noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.4, 0.05, 0.45)

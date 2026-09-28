@@ -93,7 +93,7 @@ export class WeaponView {
 
   private buildKnife(body: THREE.Material, accent: THREE.Material): Model {
     const group = new THREE.Group()
-    const blade = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, roughness: 0.25, metalness: 0.8 })
+    const blade = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, roughness: 0.35, metalness: 0.2 })
     part(group, body, [0.04, 0.045, 0.12], [0, 0, 0.02]) // Griff
     part(group, accent, [0.045, 0.09, 0.02], [0, 0.01, -0.05]) // Parierstange
     part(group, blade, [0.012, 0.065, 0.22], [0, 0.01, -0.17])

@@ -4,7 +4,7 @@ import type { Team } from '../team.ts'
 import type { WeaponId } from './weapons.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 14
+export const PROTOCOL_VERSION = 15
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -82,13 +82,13 @@ export type ServerMessage =
   | { t: 'roster'; players: RosterEntry[] }
   | { t: 'rejected'; reason: RejectReason }
   | { t: 'kicked'; reason: KickReason }
-  | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores; headshot: boolean }
+  | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores; headshot: boolean; weapon: WeaponId }
   // team ändert sich beim Team-Ausgleich
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number; team: Team }
   | { t: 'roundEnd'; winner: Team; nextRoundIn: number }
   | { t: 'roundStart'; scores: Scores }
   // hit: Schuss hat etwas getroffen (Einschlagfunken statt Schuss ins Leere)
-  | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3; hit: boolean }
+  | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3; hit: boolean; weapon: WeaponId }
   // Nur an den Getroffenen (Richtungsanzeiger)
   | { t: 'hurt'; by: PlayerId }
   | { t: 'snapshot'; players: SnapshotEntry[] }

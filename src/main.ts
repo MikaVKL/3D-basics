@@ -137,6 +137,7 @@ const scoreGoal = document.querySelector<HTMLDivElement>('#score-goal')!
 let nextRoundAt: number | null = null
 
 const sound = new SoundFx()
+const SHOT_SOUNDS = { pistol: 'shot', rifle: 'rifleShot', knife: 'knife' } as const
 const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#hitmarker')!,
   document.querySelector<HTMLDivElement>('#damage-indicators')!,
@@ -181,7 +182,7 @@ const network: NetworkClient = new NetworkClient({
   onSnapshot: (entries) => remotePlayers.applySnapshot(entries),
   onOwnVitals: (health, shield, spawnProtected) =>
     player.applyServerVitals(health, shield, spawnProtected),
-  onKill: (killer, victim, scores, headshot) => {
+  onKill: (killer, victim, scores, headshot, killWeapon) => {
     if (victim === network.localId) {
       cameraShake.shake(0.18, 0.45)
     } else {
@@ -194,7 +195,7 @@ const network: NetworkClient = new NetworkClient({
       hitFeedback.showHit(true)
       sound.play('kill')
     }
-    killFeed.add(killer, victim, headshot, network.localId, (id) => network.nameOf(id))
+    killFeed.add(killer, victim, killWeapon, headshot, network.localId, (id) => network.nameOf(id))
   },
   onRespawn: (id, spawnIndex, team) => {
     if (id === network.localId) {
@@ -215,8 +216,12 @@ const network: NetworkClient = new NetworkClient({
     nextRoundAt = null
     roundBanner.classList.add('hidden')
   },
-  onRemoteShot: (from, to, hit) => {
-    sound.playAt('shot', from, 0.8)
+  onRemoteShot: (from, to, hit, shotWeapon) => {
+    if (shotWeapon === 'knife') {
+      sound.playAt('knife', from, 0.8)
+      return
+    }
+    sound.playAt(SHOT_SOUNDS[shotWeapon], from, 0.8)
     effects.muzzleFlash(new THREE.Vector3(from.x, from.y, from.z))
     if (hit) effects.impactSparks(new THREE.Vector3(to.x, to.y, to.z))
     weapon.showRemoteTracer(
@@ -247,7 +252,7 @@ const network: NetworkClient = new NetworkClient({
 
 weapon.onShot = (from, to, hit) => {
   network.sendShot(from, to, hit)
-  sound.play('shot', 0.7)
+  sound.play(SHOT_SOUNDS[weapon.current], 0.7)
   effects.muzzleFlash(from)
   if (hit) effects.impactSparks(to)
 }
@@ -257,7 +262,11 @@ weapon.onEnemyHit = (kill, point, damage, headshot) => {
   sound.play(kill ? 'kill' : headshot ? 'headshot' : 'hit')
 }
 weapon.onReload = () => sound.play('reload', 0.6)
-weapon.onSwing = () => sound.play('knife', 0.7)
+weapon.onSwing = () => {
+  sound.play('knife', 0.7)
+  // Für den Ton bei den anderen (keine Leuchtspur)
+  network.sendShot(camera.position, camera.position, false)
+}
 weapon.onSwitch = (id) => {
   player.weapon = id
 }

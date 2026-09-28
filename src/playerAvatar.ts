@@ -3,6 +3,7 @@ import { EYE_HEIGHT, CROUCH_EYE_HEIGHT } from './player'
 import type { PlayerNetworkState } from './shared/protocol'
 import { Palette } from './palette'
 import { TeamColor, type Team } from './team'
+import { DEFAULT_WEAPON, type WeaponId } from './shared/weapons'
 
 // Spieler-Figur im Low-Poly-Stil, gesteuert nur über applyState(). Optik
 // und Trefferfläche sind getrennt: "mesh" (Körper-Kapsel) und "headMesh"
@@ -46,6 +47,9 @@ export class PlayerAvatar {
   private readonly teamDarkMaterial = new THREE.MeshStandardMaterial({ roughness: 0.7 })
   private readonly materials: THREE.MeshStandardMaterial[]
   private team: Team
+  // Gehaltene Waffe, je eine Gruppe (nur die aktive sichtbar)
+  private readonly weaponModels: Record<WeaponId, THREE.Group>
+  heldWeapon: WeaponId = DEFAULT_WEAPON
   private hitFlashRemaining = 0
   private walkPhase = 0
   private readonly lastPosition = new THREE.Vector3()
@@ -95,12 +99,37 @@ export class PlayerAvatar {
     // Waffe rechts: rechte Hand am Griff, linke greift quer an den Lauf
     leftArm.rotation.set(1.25, 0, 0.76)
     rightArm.rotation.set(1.25, 0, -0.37)
-    const gun = box(0.1, 0.14, 0.55, gunMaterial)
-    gun.position.set(0.18, 1.28, -0.6)
-    const gunStripe = box(0.11, 0.03, 0.4, visorMaterial)
-    gunStripe.position.set(0.18, 1.36, -0.6)
-    this.upperBody.add(torso, head, visor, leftArm, rightArm, gun, gunStripe)
+    this.upperBody.add(torso, head, visor, leftArm, rightArm)
     this.root.add(this.upperBody)
+
+    const bladeMaterial = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, roughness: 0.35, metalness: 0.2 })
+    this.materials.push(bladeMaterial)
+    const model = (parts: [THREE.Material, [number, number, number], [number, number, number]][]) => {
+      const group = new THREE.Group()
+      for (const [material, size, position] of parts) {
+        const mesh = box(...size, material)
+        mesh.position.set(...position)
+        group.add(mesh)
+      }
+      this.upperBody.add(group)
+      return group
+    }
+    this.weaponModels = {
+      pistol: model([
+        [gunMaterial, [0.09, 0.13, 0.3], [0.18, 1.3, -0.55]],
+        [visorMaterial, [0.1, 0.03, 0.12], [0.18, 1.37, -0.52]],
+      ]),
+      rifle: model([
+        [gunMaterial, [0.1, 0.14, 0.75], [0.18, 1.28, -0.55]],
+        [gunMaterial, [0.07, 0.18, 0.09], [0.18, 1.15, -0.62]],
+        [visorMaterial, [0.11, 0.03, 0.5], [0.18, 1.36, -0.6]],
+      ]),
+      knife: model([
+        [gunMaterial, [0.06, 0.07, 0.14], [0.18, 1.28, -0.48]],
+        [bladeMaterial, [0.03, 0.09, 0.3], [0.18, 1.28, -0.7]],
+      ]),
+    }
+    this.setWeapon(DEFAULT_WEAPON)
 
     this.team = team
     this.setTeam(team)
@@ -116,6 +145,11 @@ export class PlayerAvatar {
     this.headMesh.userData.team = team
   }
 
+  setWeapon(weapon: WeaponId) {
+    this.heldWeapon = weapon
+    for (const [id, group] of Object.entries(this.weaponModels)) group.visible = id === weapon
+  }
+
   // Körpermitte in Weltkoordinaten (z.B. Richtung für den Schadensanzeiger)
   get centerPosition(): THREE.Vector3 {
     return this.mesh.getWorldPosition(new THREE.Vector3())
@@ -124,6 +158,7 @@ export class PlayerAvatar {
   // Nur Yaw - sonst kippt die Figur beim Hoch-/Runterschauen
   applyState(state: PlayerNetworkState) {
     if (this.team !== state.team) this.setTeam(state.team)
+    if (this.heldWeapon !== state.weapon) this.setWeapon(state.weapon)
 
     const eyeHeight = state.crouching ? CROUCH_EYE_HEIGHT : EYE_HEIGHT
     this.root.position.set(state.position.x, state.position.y - eyeHeight, state.position.z)

@@ -348,6 +348,13 @@ body {
   color: #ff6b3d;
 }
 
+.weapon-icon {
+  display: inline-block;
+  margin: 0 6px;
+  vertical-align: middle;
+  line-height: 0;
+}
+
 .headshot-badge {
   margin-left: 6px;
   padding: 0 4px;

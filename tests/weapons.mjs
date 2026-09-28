@@ -3,7 +3,7 @@
 // samt Feuerraten-Begrenzung.
 //
 //   node tests/weapons.mjs
-import { startServers, launchBrowser, openGame, play, shootAt, teleport, wait, createChecks } from './lib.mjs'
+import { startServers, launchBrowser, openGame, play, shootAt, teleport, wait, createChecks, killFeedText } from './lib.mjs'
 
 const { check, finish } = createChecks()
 const servers = await startServers()
@@ -197,15 +197,31 @@ try {
   await play(B)
   await wait(3800)
   const vitals = () => B.evaluate(() => ({ ...__dusk.player.vitals }))
+  const aId = await A.evaluate(() => __dusk.network.localId)
+  const heldByA = () => B.evaluate((id) => __dusk.remotePlayers.players.get(id).avatar.heldWeapon, aId)
+  // B protokolliert räumliche Töne
+  await B.evaluate(() => {
+    window.__sounds = []
+    const playAt = __dusk.sound.playAt.bind(__dusk.sound)
+    __dusk.sound.playAt = (name, position, volume) => {
+      window.__sounds.push(name)
+      playAt(name, position, volume)
+    }
+  })
+  const takeSounds = () => B.evaluate(() => window.__sounds.splice(0).filter((s) => s !== 'step').join())
   await teleport(B, 0, 1.7, 5)
   await teleport(A, 0, 1.7, 10)
+  check('B sieht A mit Pistole', (await heldByA()) === 'pistol')
   await A.keyboard.press('Digit2')
   await wait(700)
+  check('B sieht A mit Sturmgewehr', (await heldByA()) === 'rifle')
+  await takeSounds()
   await shootAt(A, [0, 0.9, 5])
   await wait(300)
   await shootAt(A, [0, 1.7, 5])
   await wait(500)
   const afterRifle = await vitals()
+  check('B hört Gewehr-Schüsse', (await takeSounds()) === 'rifleShot,rifleShot')
   // 12 + 24 = 36: Schild 25 weg, 11 aufs Leben
   check('Sturmgewehr: 12 Körper + 24 Kopf', afterRifle.shield === 0 && afterRifle.health === 89, JSON.stringify(afterRifle))
 
@@ -223,6 +239,7 @@ try {
   // Messer: gefälschter Stich aus 5 m zählt nicht, echter aus 2 m tötet (50 > 29)
   await A.keyboard.press('Digit3')
   await wait(600)
+  check('B sieht A mit Messer', (await heldByA()) === 'knife')
   await A.evaluate(() => __dusk.network.sendHit([...__dusk.network.remotePlayers][0], false))
   await wait(400)
   check('Server lehnt Messer aus 5 m ab', (await vitals()).health === 29)
@@ -231,6 +248,9 @@ try {
   await shootAt(A, [0, 0.9, 5])
   await wait(500)
   check('Messerstich aus 2 m tötet', !(await B.evaluate(() => __dusk.player.isAlive)))
+  check('B hört den Stich', (await takeSounds()) === 'knife')
+  const feeds = [await killFeedText(A), await killFeedText(B)]
+  check('Kill-Feed zeigt Messer-Symbol', feeds[0] === 'Du [knife] Ben' && feeds[1] === 'Anna [knife] Du', feeds.join(' / '))
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()
