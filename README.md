@@ -56,6 +56,7 @@ zuverlässiger als reines Feature-Sniffing):
 - `W A S D`: Bewegen
 - Maus: Umschauen (Klick auf den Startbildschirm aktiviert die Maussteuerung)
 - `Leertaste`: Springen
+- `Shift`: Sprinten, `Strg`/`C`: Ducken, beides zusammen: Rutschen
 - `ESC`: Maussteuerung freigeben (Menü)
 - `Tab` (halten): Punktetabelle
 - `M`: Ton an/aus

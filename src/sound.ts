@@ -108,6 +108,24 @@ export const SYNTHS = {
   jump: (ctx, out) => tone(ctx, out, 'sine', 220, 440, 0.12, 0.1),
   land: (ctx, out, noise) => noiseBurst(ctx, out, noise, 'lowpass', 400, 0.9, 0.12),
   step: (ctx, out, noise) => noiseBurst(ctx, out, noise, 'lowpass', 700, 0.7, 0.07),
+  // Rutschen: abfallendes Schleifen über den Boden
+  slide: (ctx, out, noise) => {
+    const source = ctx.createBufferSource()
+    source.buffer = noise
+    source.loop = true
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    const t = ctx.currentTime
+    filter.frequency.setValueAtTime(1800, t)
+    filter.frequency.exponentialRampToValueAtTime(300, t + 0.6)
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.0001, t)
+    gain.gain.exponentialRampToValueAtTime(0.5, t + 0.03)
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6)
+    source.connect(filter).connect(gain).connect(out)
+    source.start(t)
+    source.stop(t + 0.62)
+  },
 } satisfies Record<string, Synth>
 
 export type SoundName = keyof typeof SYNTHS

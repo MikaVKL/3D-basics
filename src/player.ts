@@ -36,6 +36,17 @@ const STAMINA_REGEN_RATE = 15
 // bei fast leerem Vorrat); einmal gestartet, läuft er bis 0
 const MIN_STAMINA_TO_START_SPRINT = 15
 
+// Rutschen: Ducken aus dem Sprint heraus gibt einen Schub in Laufrichtung,
+// der dann bis aufs Duck-Tempo ausläuft (~0,8 s, ~6 m)
+const SLIDE_BOOST = 1.25
+const SLIDE_MAX_SPEED = 13
+const SLIDE_FRICTION = 10 // m/s²
+// Sonst ließe sich durch Duck-Spam dauerhaft schneller als im Sprint laufen
+const SLIDE_COOLDOWN = 0.6
+// Längere Schritte werden unterteilt, damit man bei hohem Tempo und
+// niedriger Bildrate nicht durch dünne Wände rutscht
+const MAX_MOVE_STEP = 0.25
+
 
 // Die untersten Zentimeter des Körpers kollidieren nicht seitlich - sonst
 // hängt man an der Oberkante der Kiste fest, auf der man steht.
@@ -65,6 +76,12 @@ export type { PlayerNetworkState } from './shared/protocol'
 
 export class Player implements Damageable {
   private velocity = new THREE.Vector3()
+  // Horizontal in m/s (velocity.y bleibt die Fallgeschwindigkeit)
+  private horizontalVelocity = new THREE.Vector2()
+  private sliding = false
+  private slideCooldown = 0
+  private crouchPressed = false
+  onSlide?: () => void
   private onGround = true
   onJump?: () => void
   // fallSpeed in m/s beim Aufsetzen
@@ -114,6 +131,10 @@ export class Player implements Damageable {
     this.spawnPoint.copy(position)
     this.camera.position.copy(position)
     this.velocity.set(0, 0, 0)
+    this.horizontalVelocity.set(0, 0)
+    this.sliding = false
+    this.slideCooldown = 0
+    this.crouchPressed = false
     this.vitals.health = MAX_HEALTH
     this.respawnRemaining = 0
     this.wantsToCrouch = false
@@ -129,6 +150,14 @@ export class Player implements Damageable {
 
   get isOnGround(): boolean {
     return this.onGround
+  }
+
+  get isSliding(): boolean {
+    return this.sliding
+  }
+
+  get horizontalSpeed(): number {
+    return this.horizontalVelocity.length()
   }
 
   get isAlive(): boolean {
@@ -191,6 +220,8 @@ export class Player implements Damageable {
   private die() {
     this.respawnRemaining = RESPAWN_DELAY
     this.velocity.set(0, 0, 0)
+    this.horizontalVelocity.set(0, 0)
+    this.sliding = false
   }
 
   setMoveInput(x: number, z: number) {
@@ -199,6 +230,7 @@ export class Player implements Damageable {
   }
 
   setCrouching(crouching: boolean) {
+    if (crouching && !this.wantsToCrouch) this.crouchPressed = true
     this.wantsToCrouch = crouching
   }
 
@@ -222,6 +254,13 @@ export class Player implements Damageable {
       }
       return
     }
+
+    // isSprinting stammt hier noch vom letzten Frame
+    this.slideCooldown = Math.max(0, this.slideCooldown - deltaSeconds)
+    if (this.crouchPressed && this.onGround && this.isSprinting && this.slideCooldown === 0) {
+      this.startSlide()
+    }
+    this.crouchPressed = false
 
     // Ducken geht sofort, Aufstehen nur mit Kopffreiheit. Vor der Kollision,
     // damit tryMove() die richtige Körpergröße nutzt.
@@ -266,35 +305,13 @@ export class Player implements Damageable {
 
     this.velocity.y -= GRAVITY * deltaSeconds
 
-    if (this.moveInputX !== 0 || this.moveInputZ !== 0) {
-      const moveDirection = new THREE.Vector3()
-
-      const forward = new THREE.Vector3()
-      this.camera.getWorldDirection(forward)
-      forward.y = 0
-      forward.normalize()
-
-      // cross(forward, up) ist in Three.js bereits "rechts" (kein negate)
-      const right = new THREE.Vector3().crossVectors(forward, this.camera.up)
-
-      moveDirection.addScaledVector(forward, this.moveInputZ)
-      moveDirection.addScaledVector(right, this.moveInputX)
-
-      // Nur kürzen (Diagonale), nicht verlängern - der Touch-Joystick liefert
-      // bewusst auch kurze Werte für langsames Gehen
-      if (moveDirection.length() > 1) {
-        moveDirection.normalize()
-      }
-      let speed = MOVE_SPEED * WEAPONS[this.weapon].moveSpeed
-      if (this.isCrouching) {
-        speed *= CROUCH_SPEED_MULTIPLIER
-      } else if (this.isSprinting) {
-        speed *= SPRINT_SPEED_MULTIPLIER
-      }
-      moveDirection.multiplyScalar(speed * deltaSeconds)
-
-      this.tryMove(moveDirection)
+    if (this.sliding) {
+      this.updateSlide(deltaSeconds)
+    } else {
+      const desired = this.desiredVelocity()
+      this.horizontalVelocity.set(desired.x, desired.z)
     }
+    this.moveHorizontally(deltaSeconds)
 
     // Fuß-Höhe vor dem Fallen als Referenz: nach schnellem Fall liegt bodyY
     // schon unter der Kante, auf der man landen soll
@@ -322,6 +339,87 @@ export class Player implements Damageable {
     if (this.eyeHeight > headroom) this.eyeHeight = Math.max(CROUCH_EYE_HEIGHT, headroom)
 
     this.camera.position.y = this.bodyY + this.eyeHeight
+  }
+
+  // Gewünschte Geschwindigkeit aus Eingabe, Blickrichtung und Tempo-Stufe
+  private desiredVelocity(): THREE.Vector3 {
+    const moveDirection = new THREE.Vector3()
+    if (this.moveInputX === 0 && this.moveInputZ === 0) return moveDirection
+
+    const forward = new THREE.Vector3()
+    this.camera.getWorldDirection(forward)
+    forward.y = 0
+    forward.normalize()
+
+    // cross(forward, up) ist in Three.js bereits "rechts" (kein negate)
+    const right = new THREE.Vector3().crossVectors(forward, this.camera.up)
+
+    moveDirection.addScaledVector(forward, this.moveInputZ)
+    moveDirection.addScaledVector(right, this.moveInputX)
+
+    // Nur kürzen (Diagonale), nicht verlängern - der Touch-Joystick liefert
+    // bewusst auch kurze Werte für langsames Gehen
+    if (moveDirection.length() > 1) {
+      moveDirection.normalize()
+    }
+    let speed = MOVE_SPEED * WEAPONS[this.weapon].moveSpeed
+    if (this.isCrouching) {
+      speed *= CROUCH_SPEED_MULTIPLIER
+    } else if (this.isSprinting) {
+      speed *= SPRINT_SPEED_MULTIPLIER
+    }
+    return moveDirection.multiplyScalar(speed)
+  }
+
+  private crouchSpeed(): number {
+    return MOVE_SPEED * WEAPONS[this.weapon].moveSpeed * CROUCH_SPEED_MULTIPLIER
+  }
+
+  // Richtung = aktuelle Laufrichtung (nicht Blick), damit seitliches
+  // Rutschen aus dem Strafe-Sprint heraus geht
+  private startSlide() {
+    const speed = this.horizontalVelocity.length()
+    if (speed < this.crouchSpeed()) return
+    this.horizontalVelocity.multiplyScalar(Math.min(SLIDE_MAX_SPEED, speed * SLIDE_BOOST) / speed)
+    this.sliding = true
+    this.isSprinting = false
+    this.onSlide?.()
+  }
+
+  private updateSlide(deltaSeconds: number) {
+    const speed = this.horizontalVelocity.length() - SLIDE_FRICTION * deltaSeconds
+    if (!this.wantsToCrouch || !this.onGround || speed <= this.crouchSpeed()) {
+      this.sliding = false
+      this.slideCooldown = SLIDE_COOLDOWN
+      const desired = this.desiredVelocity()
+      this.horizontalVelocity.set(desired.x, desired.z)
+      return
+    }
+    this.horizontalVelocity.multiplyScalar(speed / this.horizontalVelocity.length())
+  }
+
+  // Wird eine Achse blockiert (Wand), verfällt dort auch der Schwung
+  private moveHorizontally(deltaSeconds: number) {
+    const dx = this.horizontalVelocity.x * deltaSeconds
+    const dz = this.horizontalVelocity.y * deltaSeconds
+    const length = Math.hypot(dx, dz)
+    if (length === 0) return
+    const steps = Math.ceil(length / MAX_MOVE_STEP)
+    const position = this.camera.position
+    const step = new THREE.Vector3(dx / steps, 0, dz / steps)
+    for (let i = 0; i < steps; i++) {
+      const beforeX = position.x
+      const beforeZ = position.z
+      this.tryMove(step)
+      if (Math.abs(position.x - beforeX) < Math.abs(step.x) - 1e-6) {
+        this.horizontalVelocity.x = 0
+        step.x = 0
+      }
+      if (Math.abs(position.z - beforeZ) < Math.abs(step.z) - 1e-6) {
+        this.horizontalVelocity.y = 0
+        step.z = 0
+      }
+    }
   }
 
   // Kopf stößt beim Hochspringen an

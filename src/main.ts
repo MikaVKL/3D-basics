@@ -272,6 +272,7 @@ weapon.onSwitch = (id) => {
 }
 remotePlayers.onFootstep = (position) => sound.playAt('step', position, 0.8)
 player.onJump = () => sound.play('jump', 0.5)
+player.onSlide = () => sound.play('slide', 0.6)
 // Kleine Höhenwechsel (Rampe runter) sind keine Landung
 player.onLand = (fallSpeed) => {
   if (fallSpeed > 3) sound.play('land', Math.min(1, fallSpeed / 10))

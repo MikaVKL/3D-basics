@@ -98,6 +98,58 @@ try {
     }
     out.windowCrouch = windowAttempt(true)
     out.windowStanding = windowAttempt(false)
+
+    // Rutschen: offene Fläche im Süden, Blick nach +z (yaw PI)
+    const slideRun = (crouchFrame, sprint, releaseAt = Infinity) => {
+      place(0, 4, Math.PI)
+      P.setSprinting(sprint)
+      P.setMoveInput(0, 1)
+      const startZ = cam.position.z
+      let maxSpeed = 0
+      let slideFrames = 0
+      let startedSlide = 0
+      run(90, (f) => {
+        if (f === crouchFrame) P.setCrouching(true)
+        if (f === releaseAt) P.setCrouching(false)
+        if (P.isSliding) {
+          slideFrames++
+          if (!startedSlide) startedSlide = f
+        }
+        maxSpeed = Math.max(maxSpeed, P.horizontalSpeed)
+      })
+      const res = { dist: cam.position.z - startZ, maxSpeed, slideFrames, endSpeed: P.horizontalSpeed, eye: cam.position.y - P.bodyY }
+      P.setCrouching(false)
+      P.setSprinting(false)
+      return res
+    }
+    out.slide = slideRun(20, true)
+    out.sprintOnly = slideRun(Infinity, true)
+    out.crouchWalk = slideRun(20, false)
+    out.slideRelease = slideRun(20, true, 30)
+
+    // Cooldown: sofort erneut ducken rutscht nicht gleich wieder
+    place(0, 4, Math.PI)
+    P.setSprinting(true)
+    P.setMoveInput(0, 1)
+    let slides = 0
+    let wasSliding = false
+    run(120, (f) => {
+      P.setCrouching(f >= 20 && f % 12 < 6)
+      if (P.isSliding && !wasSliding) slides++
+      wasSliding = P.isSliding
+    })
+    out.spamSlides = slides
+
+    // Gegen die Außenwand rutschen: Schwung verfällt, kein Durchrutschen
+    place(0, 20, Math.PI)
+    P.setSprinting(true)
+    P.setMoveInput(0, 1)
+    run(20)
+    P.setCrouching(true)
+    run(40)
+    out.wallZ = cam.position.z
+    out.wallSpeed = P.horizontalSpeed
+    P.setCrouching(false)
     return out
   })
 
@@ -110,6 +162,16 @@ try {
   check('durch erhöhten Durchgang in den Hauptraum', r.throughDoorwayX > -19.5, `x ${r.throughDoorwayX.toFixed(2)}`)
   check('Fenster: Duck-Sprung kommt durch', r.windowCrouch)
   check('Fenster: stehend springen kommt nicht durch', !r.windowStanding)
+  const f = (n) => n.toFixed(2)
+  check('Rutschen startet aus dem Sprint', r.slide.slideFrames > 20, `${r.slide.slideFrames} Frames, max ${f(r.slide.maxSpeed)} m/s`)
+  check('Rutschen schneller als Sprint', r.slide.maxSpeed > r.sprintOnly.maxSpeed * 1.2, `${f(r.slide.maxSpeed)} vs ${f(r.sprintOnly.maxSpeed)} m/s`)
+  check('Rutschen weiter als Ducken ohne Rutschen', r.slide.dist > r.crouchWalk.dist + 2, `${f(r.slide.dist)} vs ${f(r.crouchWalk.dist)} m`)
+  check('Rutschen läuft aus (Duck-Tempo)', r.slide.slideFrames < 70 && r.slide.endSpeed < 4, `Ende ${f(r.slide.endSpeed)} m/s`)
+  check('beim Rutschen geduckt', Math.abs(r.slide.eye - 1.0) < 0.01, `Augenhöhe ${f(r.slide.eye)}`)
+  check('ohne Sprint kein Rutschen', r.crouchWalk.slideFrames === 0)
+  check('Loslassen beendet Rutschen', r.slideRelease.slideFrames === 10, `${r.slideRelease.slideFrames} Frames`)
+  check('Duck-Spam: Abklingzeit', r.spamSlides <= 2, `${r.spamSlides} Rutscher in 1,7 s`)
+  check('Rutschen gegen Wand: bleibt drin, Schwung weg', r.wallZ < 21 && r.wallSpeed < 0.01, `z ${f(r.wallZ)}, ${f(r.wallSpeed)} m/s`)
 } finally {
   await browser.close()
   servers.stop()
