@@ -3,7 +3,8 @@ import type { LookControl } from '../lookControl'
 import type { Weapon } from '../weapon'
 
 // Touch: links schwebender Joystick, rechts Wischen zum Umschauen, Buttons.
-// Ducken ist ein Umschalter (Halten + Joystick ist unpraktisch). Jede Zone
+// Ducken wird gehalten wie am Rechner (Wunsch: nur so lange rutschen, wie
+// der Finger drauf ist). Jede Zone
 // verfolgt ihren eigenen Finger (Laufen und Umschauen gleichzeitig).
 
 const JOYSTICK_RADIUS = 45 // Pixel
@@ -32,7 +33,6 @@ export class TouchInput {
   private player: Player
   private lookControl: LookControl
   private weapon: Weapon
-  private isCrouching = false
 
   constructor(elements: TouchElements, player: Player, lookControl: LookControl, weapon: Weapon) {
     this.elements = elements
@@ -79,13 +79,19 @@ export class TouchInput {
       this.weapon.reload()
     })
 
+    // Halten wie am Rechner: Rutschen/Ducken nur solange der Finger drauf ist
     crouchButton.addEventListener('touchstart', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      this.isCrouching = !this.isCrouching
-      this.player.setCrouching(this.isCrouching)
-      crouchButton.classList.toggle('active', this.isCrouching)
+      this.setCrouching(true)
     })
+    crouchButton.addEventListener('touchend', () => this.setCrouching(false))
+    crouchButton.addEventListener('touchcancel', () => this.setCrouching(false))
+  }
+
+  private setCrouching(crouching: boolean) {
+    this.player.setCrouching(crouching)
+    this.elements.crouchButton.classList.toggle('active', crouching)
   }
 
   private onMoveStart(e: TouchEvent) {

@@ -94,6 +94,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   kaputten Nachrichten; prüft Invarianten (Leben/Munition/Tempo, Punkte und
   Tabelle bei allen gleich, Positionen, Sichtbarkeit, Steckenbleiben,
   Speicher, Server-Fehler). Auch mit Ping laufen lassen.
+- `npm run test:touch` – Touch-Steuerung (Handy-Emulation): Ducken-Button
+  halten = ducken/rutschen, loslassen = aufstehen
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -116,6 +118,8 @@ Stolperfallen bei Headless-Tests:
 - Fenster-Deckungswand ist per **Duck-Sprung durchkletterbar** (gewollter
   Trick-Weg, Öffnung 1,4 m); stehend passt man nicht durch.
 - Rampe B liegt bündig an der Trennwand (kein Bord auf der Wandseite).
+- Ducken wird überall gehalten, auch auf Touch (Nutzerwunsch, kein Umschalter):
+  Rutschen nur, solange gehalten.
 - Punktetabelle per Tab gedrückt halten bzw. Tippen auf den Punktestand –
   so lassen.
 - Zeiten: Menü/Hintergrund → nach 20 s raus, eingefrorener Tab → 15 s,
