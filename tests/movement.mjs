@@ -31,8 +31,8 @@ try {
     }
     const out = {}
 
-    // Kisten: 1.4m bei (15,-8) erkletterbar, 2.4m bei (3,-9) nicht
-    place(15, -5, 0)
+    // Kisten: 1.4m bei (19,-8) erkletterbar, 2.4m bei (3,-9) nicht
+    place(19, -5, 0)
     P.setMoveInput(0, 1)
     run(12)
     P.jump()
@@ -253,6 +253,54 @@ try {
     P.setCrouching(false)
     P.setSprinting(false)
     run(60)
+    // --- Obere Ebene: Rampe A -> Plattform -> Brücke -> Nord-Laufsteg ---
+    const EAST = -Math.PI / 2
+    const WEST = Math.PI / 2
+    const walkTo = (yaw, frames) => {
+      cam.rotation.set(0, yaw, 0, 'YXZ')
+      P.setMoveInput(0, 1)
+      run(frames)
+      P.setMoveInput(0, 0)
+      run(10)
+    }
+    place(-2, 0, EAST)
+    walkTo(EAST, 150) // Rampe A hoch bis auf die Plattform (x ~15)
+    out.upperPlatform = { y: P.bodyY, x: cam.position.x }
+    cam.position.x = 15 // Brückenmitte (Brücke x 13,75..16,25)
+    walkTo(0, 200) // nach Norden über die Brücke bis an die Wand
+    out.upperCatwalk = { y: P.bodyY, z: cam.position.z }
+    walkTo(WEST, 360) // am Geländer entlang nach Westen
+    out.upperWest = { y: P.bodyY, x: cam.position.x }
+    // Geländer hält: nach Süden laufen (keine Lücke bei x ~-17)
+    const beforeRail = cam.position.z
+    walkTo(Math.PI, 60)
+    out.railing = { y: P.bodyY, z: cam.position.z, before: beforeRail }
+    // Lücke im Geländer (x -16..-14): hier geht es hinunter
+    cam.position.x = -15
+    walkTo(Math.PI, 80)
+    out.dropDown = { y: P.bodyY, z: cam.position.z }
+
+    // Unter dem Steg (place() würde auf den Steg setzen: Boden direkt)
+    const placeOnFloor = (x, z) => {
+      place(x, z, 0)
+      P.spawn({ x, y: 1.7, z, clone() { return this } })
+    }
+    placeOnFloor(-9, -19)
+    let maxHead = 0
+    P.jump()
+    run(60, () => (maxHead = Math.max(maxHead, P.bodyY + 2.0)))
+    out.underCatwalk = { maxHead, landed: P.bodyY }
+    placeOnFloor(-9, -10)
+    walkTo(0, 140) // von der Raummitte unter den Steg bis an die Wand
+    out.walkUnder = { y: P.bodyY, z: cam.position.z }
+    // Vom Boden aus kommt man nicht hoch (2,8 m > Sprunghöhe)
+    placeOnFloor(-9, -15.5)
+    P.setMoveInput(0, 1)
+    P.jump()
+    run(60)
+    P.setMoveInput(0, 0)
+    out.noClimb = P.bodyY
+
     return out
   })
 
@@ -265,6 +313,15 @@ try {
   check('durch erhöhten Durchgang in den Hauptraum', r.throughDoorwayX > -19.5, `x ${r.throughDoorwayX.toFixed(2)}`)
   check('Fenster: Duck-Sprung kommt durch', r.windowCrouch)
   check('Fenster: stehend springen kommt nicht durch', !r.windowStanding)
+  const f2 = (n) => n.toFixed(2)
+  check('obere Ebene: Rampe A auf die Plattform', Math.abs(r.upperPlatform.y - 2.8) < 0.01, `Höhe ${f2(r.upperPlatform.y)}, x ${f2(r.upperPlatform.x)}`)
+  check('obere Ebene: über die Brücke auf den Nordsteg', Math.abs(r.upperCatwalk.y - 2.8) < 0.01 && r.upperCatwalk.z < -18.5, `Höhe ${f2(r.upperCatwalk.y)}, z ${f2(r.upperCatwalk.z)}`)
+  check('obere Ebene: Steg entlang nach Westen', Math.abs(r.upperWest.y - 2.8) < 0.01 && r.upperWest.x < -17, `Höhe ${f2(r.upperWest.y)}, x ${f2(r.upperWest.x)}`)
+  check('Geländer hält (kein Absturz)', Math.abs(r.railing.y - 2.8) < 0.01 && r.railing.z < -17.3, `Höhe ${f2(r.railing.y)}, z ${f2(r.railing.z)}`)
+  check('Lücke im Geländer: hinunterspringen', r.dropDown.y < 0.01 && r.dropDown.z > -17, `Höhe ${f2(r.dropDown.y)}, z ${f2(r.dropDown.z)}`)
+  check('unter dem Steg: Sprung stößt an (Kopf <= 2,5 m)', r.underCatwalk.maxHead <= 2.51 && r.underCatwalk.landed < 0.01, `Kopf max ${f2(r.underCatwalk.maxHead)}`)
+  check('unter den Steg bis an die Wand laufen', r.walkUnder.y < 0.01 && r.walkUnder.z < -19.5, `z ${f2(r.walkUnder.z)}`)
+  check('vom Boden nicht auf den Steg springen', r.noClimb < 0.01, `Höhe ${f2(r.noClimb)}`)
   const f = (n) => n.toFixed(2)
   check('Rutschen startet aus dem Sprint', r.slide.slideFrames > 20, `${r.slide.slideFrames} Frames, max ${f(r.slide.maxSpeed)} m/s`)
   check('Rutschen schneller als Sprint', r.slide.maxSpeed > r.sprintOnly.maxSpeed * 1.2, `${f(r.slide.maxSpeed)} vs ${f(r.sprintOnly.maxSpeed)} m/s`)

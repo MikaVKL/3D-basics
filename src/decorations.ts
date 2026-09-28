@@ -4,7 +4,7 @@ import { Palette } from './palette'
 // Reine Optik: keine Kollision, nicht beschießbar (nicht in solids/shootables).
 // Wandlampen ohne echte Lichtquelle (Leuchten per Sprite), Rampen-Schilder.
 
-const LAMP_HEIGHT = 4.2
+const LAMP_HEIGHT = 5.2 // über Kopfhöhe auf den Laufstegen (2,8 m)
 const LAMP_COLOR = 0xffc98a
 
 function glowTexture(): THREE.Texture {

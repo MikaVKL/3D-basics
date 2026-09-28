@@ -354,13 +354,13 @@ export function buildArena(): ArenaResult {
     [3, -9, 2.6, 2.6, 2.4],
     [4, 9, 5, 2, 1.4],
     [-2, 0, 4, 4, 2.4],
-    [24, -16, 1.5, 4, 1.4],
+    [24, -14, 1.5, 4, 1.4], // nicht unter den Nord-Laufsteg (dort kein Platz zum Stehen)
     [22, 16, 2.6, 2.6, 2.8],
     // West-Zone
     [-28, -9, 4.5, 1.8, 2.4],
     [-27, 8, 3, 3, 2.8],
     [-24, -16, 3, 2, 2.4],
-    [15, -8, 2, 2, 1.4],
+    [19, -8, 2, 2, 1.4], // neben statt unter der Nord-Brücke
     // Deckung vor den mittleren Spawns (0, ±18): dort wurde man im Bot-Test
     // oft direkt nach dem Spawn getroffen (50-62 % statt 3-9 %)
     [1.7, -14, 4, 1, 2.4],
@@ -477,7 +477,63 @@ export function buildArena(): ArenaResult {
 
   const shootableExtras: THREE.Object3D[] = []
 
-  const rampToMainPlatform = buildPlatformWithRamp(15, 0, 6, 2.8, 10, 4, 'x', true)
+  const PLATFORM_A_X = 15
+  const PLATFORM_A_SIZE = 6
+  const UPPER_TOP = 2.8 // obere Ebene = Höhe von Plattform A
+  const rampToMainPlatform = buildPlatformWithRamp(PLATFORM_A_X, 0, PLATFORM_A_SIZE, UPPER_TOP, 10, 4, 'x', true)
+
+  // --- Obere Ebene: Laufsteg an der Wand, Brücke von Plattform A dorthin ---
+  // Unterkante 2,5 m: stehend passt man darunter (Kopf 2,0 m), im Sprung
+  // stößt man an (Deckenkollision). Hoch kommt man nur über Rampe A.
+  const UPPER_THICKNESS = 0.3
+  const CATWALK_DEPTH = 3
+  const BRIDGE_WIDTH = 2.5
+  const RAILING_HEIGHT = 1
+  const RAILING_THICKNESS = 0.2
+  const upperBottom = UPPER_TOP - UPPER_THICKNESS
+
+  function addBlock(x: number, z: number, width: number, depth: number, bottom: number, top: number) {
+    const mesh = new THREE.Mesh(worldBox(width, top - bottom, depth), wallMaterial)
+    mesh.position.set(x, (bottom + top) / 2, z)
+    addEdgeOutline(mesh)
+    group.add(mesh)
+    solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh) })
+  }
+
+  // side: -1 = Nordwand, 1 = Südwand
+  function buildUpperSide(side: -1 | 1) {
+    const wallFace = side * (MAIN_HALF_D - WALL_THICKNESS / 2)
+    const edge = wallFace - side * CATWALK_DEPTH
+    const westEnd = DIVIDER_X + WALL_THICKNESS / 2
+    const eastEnd = MAIN_HALF_W - WALL_THICKNESS / 2
+    // Laufsteg über die ganze Hauptraum-Breite (Trennwand bis Ostwand)
+    addBlock((westEnd + eastEnd) / 2, (wallFace + edge) / 2, eastEnd - westEnd, CATWALK_DEPTH, upperBottom, UPPER_TOP)
+
+    // Brücke von der Plattformkante bis zur Stegkante
+    const platformEdge = side * (PLATFORM_A_SIZE / 2)
+    addBlock(PLATFORM_A_X, (platformEdge + edge) / 2, BRIDGE_WIDTH, Math.abs(edge - platformEdge), upperBottom, UPPER_TOP)
+
+    // Geländer an der Stegkante (Deckung), Lücken: Brücke und zwei Absprünge
+    const railZ = edge + side * (RAILING_THICKNESS / 2)
+    const gaps: [number, number][] = [
+      [-16, -14],
+      [PLATFORM_A_X - BRIDGE_WIDTH / 2, PLATFORM_A_X + BRIDGE_WIDTH / 2],
+      [26, 28],
+    ]
+    let from = westEnd
+    for (const [gapStart, gapEnd] of [...gaps, [eastEnd, eastEnd]]) {
+      if (gapStart > from) addBlock((from + gapStart) / 2, railZ, gapStart - from, RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
+      from = gapEnd
+    }
+
+    // Stützen unter der Stegkante (nicht auf den Spawns bei x = 0)
+    for (const x of [-12, -3, 8, 24]) {
+      addBlock(x, edge + side * 0.2, 0.4, 0.4, 0, upperBottom)
+    }
+    addBlock(PLATFORM_A_X - BRIDGE_WIDTH / 2 + 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
+    addBlock(PLATFORM_A_X + BRIDGE_WIDTH / 2 - 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
+  }
+  buildUpperSide(-1)
 
   // West-Plattform (Rampe B): Plattform und Rampe liegen bündig an der
   // Trennwand (kein körperbreiter Spalt), die Wand ersetzt dort das Bord.
