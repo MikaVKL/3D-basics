@@ -86,6 +86,12 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:weapons` – Wechsel (1/2/3, Mausrad, Q), Munition je Waffe,
   Nachladen, Dauerfeuer, Streuung, Tempo, Messer-Reichweite, Respawn,
   Server-Schaden/Ratenlimit/Reichweite, Waffe/Töne bei anderen, Kill-Feed-Symbol
+- `npm run test:bots -- [bots=4] [sekunden=180]` – Bot-Dauertest zur
+  Fehlersuche (nicht in `npm test`): Bots spielen gegeneinander, dazu
+  Störungen (Menü, Neuladen, Hintergrund, eingefroren) und ein Fuzz-Bot mit
+  kaputten Nachrichten; prüft Invarianten (Leben/Munition/Tempo, Punkte und
+  Tabelle bei allen gleich, Positionen, Sichtbarkeit, Steckenbleiben,
+  Speicher, Server-Fehler). Auch mit Ping laufen lassen.
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -97,6 +103,9 @@ Stolperfallen bei Headless-Tests:
   mitsetzen und im selben `evaluate` schießen (siehe `shootAt` in `tests/lib.mjs`).
 - `Escape` gibt den Pointer Lock headless nicht frei → `document.exitPointerLock()`.
 - Frisch beigetretene Spieler haben 2 s Spawn-Schutz – vor Treffer-Tests warten.
+- Bei mehr als ~4 Browsern sinkt die Bildrate auf 4–10 FPS; fremde Spieler
+  erscheinen dann entsprechend später (bei 33 FPS ~150 ms, bei 5 FPS ~600 ms).
+  Der Bot-Test rechnet das ein (Weg mit Zeitstempeln) – kein Spielfehler.
 - Der Container wird gelegentlich neu gestartet; manuell gestartete
   Dev-Server laufen dann nicht mehr.
 

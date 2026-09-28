@@ -91,9 +91,18 @@ try {
   const burst = await page.evaluate(async () => {
     const W = __dusk.weapon
     W.ammo = 30
+    // Bildrate mitmessen: unter ~4 FPS holt das Nachholen nicht alle Schüsse auf
+    const start = performance.now()
+    let frames = 0
+    const countFrame = () => {
+      frames++
+      if (performance.now() - start < 1000) requestAnimationFrame(countFrame)
+    }
+    requestAnimationFrame(countFrame)
     W.setTrigger(true)
     await new Promise((r) => setTimeout(r, 1000))
     W.setTrigger(false)
+    const fps = (frames * 1000) / (performance.now() - start)
     const rifleShots = 30 - W.ammo
     W.switchTo('pistol')
     W.switchRemaining = 0
@@ -101,9 +110,11 @@ try {
     W.setTrigger(true)
     await new Promise((r) => setTimeout(r, 600))
     W.setTrigger(false)
-    return { rifleShots, pistolShots: 12 - W.ammo }
+    return { rifleShots, fps, pistolShots: 12 - W.ammo }
   })
-  check('Sturmgewehr: ~10 Schuss/s bei gehaltener Taste', burst.rifleShots >= 9 && burst.rifleShots <= 12, `${burst.rifleShots} Schuss`)
+  // Pro Bild höchstens 2 Schuss (Nachhol-Grenze 0,1 s)
+  const minShots = Math.min(9, Math.floor(burst.fps * 2))
+  check('Sturmgewehr: ~10 Schuss/s bei gehaltener Taste', burst.rifleShots >= minShots && burst.rifleShots <= 12, `${burst.rifleShots} Schuss bei ${burst.fps.toFixed(0)} FPS`)
   check('Pistole: gehaltene Taste = ein Schuss', burst.pistolShots === 1, `${burst.pistolShots} Schuss`)
 
   // Streuung: 15 Schüsse ohne Pause an die Wand, Winkel zur Blickrichtung

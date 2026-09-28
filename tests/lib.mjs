@@ -40,16 +40,23 @@ export async function startServers({ gameServer = true, serverEnv = {} } = {}) {
     const server = spawn('node', ['server/index.ts'], {
       cwd: ROOT,
       env: { ...process.env, PORT: String(SERVER_PORT), ...serverEnv },
-      stdio: ['ignore', 'pipe', 'inherit'],
+      stdio: ['ignore', 'pipe', 'pipe'],
     })
     server.log = ''
+    server.errors = ''
     server.stdout.on('data', (chunk) => (server.log += chunk))
+    server.stderr.on('data', (chunk) => {
+      server.errors += chunk
+      process.stderr.write(chunk)
+    })
     children.push(server)
   }
   await waitForHttp(GAME_URL)
   if (gameServer) await waitForHttp(`http://localhost:${SERVER_PORT}`)
   return {
     serverLog: () => children[1]?.log ?? '',
+    serverErrors: () => children[1]?.errors ?? '',
+    serverExitCode: () => children[1]?.exitCode ?? null,
     stop: () => children.forEach((child) => child.kill()),
   }
 }
