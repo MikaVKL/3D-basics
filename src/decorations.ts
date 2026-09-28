@@ -30,37 +30,45 @@ export interface LampRow {
   normal: THREE.Vector3
 }
 
+// Alle Lampen gebündelt: Gehäuse und Leuchtstreifen je ein InstancedMesh,
+// alle Leuchtpunkte eine Punktwolke - 3 Draw Calls statt 3 pro Lampe
 export function addWallLamps(group: THREE.Group, rows: LampRow[]) {
-  const housing = new THREE.MeshStandardMaterial({ color: 0x1a202b, roughness: 0.6 })
-  const light = new THREE.MeshStandardMaterial({ color: LAMP_COLOR, emissive: LAMP_COLOR, emissiveIntensity: 1.6 })
-  const glow = new THREE.SpriteMaterial({
-    map: glowTexture(),
-    color: LAMP_COLOR,
-    transparent: true,
-    opacity: 0.45,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  })
-  const housingGeometry = new THREE.BoxGeometry(0.7, 0.2, 0.14)
-  const lightGeometry = new THREE.BoxGeometry(0.55, 0.08, 0.04)
+  const placements: THREE.Matrix4[] = []
   for (const row of rows) {
     for (let i = 0; i < row.count; i++) {
       const t = row.count === 1 ? 0.5 : i / (row.count - 1)
-      const position = row.from.clone().lerp(row.to, t).setY(LAMP_HEIGHT)
-      const lamp = new THREE.Group()
-      lamp.position.copy(position).addScaledVector(row.normal, 0.07)
-      lamp.rotation.y = Math.atan2(row.normal.x, row.normal.z)
-      const box = new THREE.Mesh(housingGeometry, housing)
-      const strip = new THREE.Mesh(lightGeometry, light)
-      strip.position.set(0, -0.07, 0.06)
-      lamp.add(box, strip)
-      const sprite = new THREE.Sprite(glow)
-      sprite.scale.setScalar(1.8)
-      sprite.position.set(0, -0.1, 0.35)
-      lamp.add(sprite)
-      group.add(lamp)
+      const position = row.from.clone().lerp(row.to, t).setY(LAMP_HEIGHT).addScaledVector(row.normal, 0.07)
+      const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(row.normal.x, row.normal.z))
+      placements.push(new THREE.Matrix4().compose(position, rotation, new THREE.Vector3(1, 1, 1)))
     }
   }
+  const instanced = (geometry: THREE.BufferGeometry, material: THREE.Material, offset: THREE.Vector3) => {
+    const mesh = new THREE.InstancedMesh(geometry, material, placements.length)
+    const local = new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z)
+    placements.forEach((matrix, i) => mesh.setMatrixAt(i, matrix.clone().multiply(local)))
+    group.add(mesh)
+  }
+  instanced(new THREE.BoxGeometry(0.7, 0.2, 0.14), new THREE.MeshStandardMaterial({ color: 0x1a202b, roughness: 0.6 }), new THREE.Vector3())
+  instanced(
+    new THREE.BoxGeometry(0.55, 0.08, 0.04),
+    new THREE.MeshStandardMaterial({ color: LAMP_COLOR, emissive: LAMP_COLOR, emissiveIntensity: 1.6 }),
+    new THREE.Vector3(0, -0.07, 0.06)
+  )
+
+  const glowPositions = placements.map((matrix) => new THREE.Vector3(0, -0.1, 0.35).applyMatrix4(matrix))
+  const glow = new THREE.Points(
+    new THREE.BufferGeometry().setFromPoints(glowPositions),
+    new THREE.PointsMaterial({
+      map: glowTexture(),
+      color: LAMP_COLOR,
+      size: 1.8,
+      transparent: true,
+      opacity: 0.45,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  )
+  group.add(glow)
 }
 
 // Großer Buchstabe als Schild (Ansagen im Team: "Gegner auf A")

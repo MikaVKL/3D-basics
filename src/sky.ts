@@ -34,7 +34,10 @@ export function createSky(): THREE.Mesh {
       }`,
   })
   const sky = new THREE.Mesh(new THREE.SphereGeometry(SKY_RADIUS, 32, 16), material)
-  sky.renderOrder = -1
+  // Zuletzt zeichnen (mit Tiefentest): dann rechnet die Grafikkarte nur die
+  // Pixel, an denen der Himmel wirklich zu sehen ist - zuerst gezeichnet
+  // wurde der ganze Bildschirm berechnet und dann meist übermalt
+  sky.renderOrder = 1
   sky.frustumCulled = false
   return sky
 }

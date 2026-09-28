@@ -19,7 +19,7 @@ function canvasTexture(draw: (g: CanvasRenderingContext2D) => void): THREE.Textu
   texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = THREE.RepeatWrapping
   texture.wrapT = THREE.RepeatWrapping
-  texture.anisotropy = 4
+  texture.anisotropy = 2
   return texture
 }
 
