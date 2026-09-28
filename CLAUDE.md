@@ -67,7 +67,8 @@ Weiterarbeiten wissen muss.
   Kollision: Boden über die ganze Standfläche, Deckenkollision, "nur tiefer
   hinein blockiert"), `src/arena.ts` (Level-Geometrie).
 - Nur im Dev-Build: `window.__dusk` (player, network, remotePlayers, camera,
-  weapon, arena, lookControl, hitFeedback) für Browser-Tests.
+  weapon, arena, lookControl, hitFeedback, renderer, ...) für Browser-Tests;
+  `renderer.info.render.calls` = Draw Calls (Leistung).
 
 ## Tests
 
@@ -132,6 +133,10 @@ Stolperfallen bei Headless-Tests:
 - Bei mehr als ~4 Browsern sinkt die Bildrate auf 4–10 FPS; fremde Spieler
   erscheinen dann entsprechend später (bei 33 FPS ~150 ms, bei 5 FPS ~600 ms).
   Der Bot-Test rechnet das ein (Weg mit Zeitstempeln) – kein Spielfehler.
+- Läuft auf 5199/8099 schon etwas, bricht `startServers` mit Meldung ab
+  (früher testete man unbemerkt gegen einen verwaisten Vite). Aufräumen mit
+  `pkill -f "[v]ite.js --port 5199"` (das `[v]` verhindert, dass pkill die
+  eigene Shell trifft).
 - Der Container wird gelegentlich neu gestartet; manuell gestartete
   Dev-Server laufen dann nicht mehr.
 

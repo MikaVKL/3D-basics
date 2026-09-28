@@ -29,9 +29,23 @@ async function waitForHttp(url, timeoutMs = 30000) {
 }
 
 // serverEnv z.B. { KILLS_TO_WIN: '2', SIMULATED_LATENCY_MS: '150' }
+// Läuft auf dem Port schon etwas (z.B. ein verwaister Vite eines
+// abgebrochenen Laufs), testet man sonst unbemerkt fremden/alten Code
+async function assertPortFree(url) {
+  try {
+    await fetch(url)
+  } catch {
+    return
+  }
+  throw new Error(`${url} ist schon belegt - alten Dev-Server beenden (z.B. pkill -f "vite --port ${VITE_PORT}")`)
+}
+
 export async function startServers({ gameServer = true, serverEnv = {} } = {}) {
+  await assertPortFree(GAME_URL)
+  if (gameServer) await assertPortFree(`http://localhost:${SERVER_PORT}`)
   const children = []
-  const vite = spawn('npx', ['vite', '--port', String(VITE_PORT), '--strictPort'], {
+  // Direkt über Node statt npx: sonst beendet stop() nur npx, Vite läuft verwaist weiter
+  const vite = spawn(process.execPath, [path.join(ROOT, 'node_modules/vite/bin/vite.js'), '--port', String(VITE_PORT), '--strictPort'], {
     cwd: ROOT,
     stdio: 'ignore',
   })
