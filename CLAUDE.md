@@ -69,7 +69,7 @@ getrennt vom Hauptprojekt, damit das Hosting keine Browser-Pakete lädt).
 Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 
 - `npm run test:movement` – Kisten, Rampen, Durchgang, Fenster-Duck-Sprung,
-  Rutschen, Bunny-Hop, Schwung in der Luft
+  Rutschen, Bunny-Hop (+5 %), Schwung in der Luft, kein Nachgleiten
 - `npm run test:stuck -- [spieler] [sekunden] [seed] [duckanteil]` –
   Fuzz-Test gegen Steckenbleiben (deterministisch pro Seed). Nach jeder
   Änderung an Kollision oder Level-Geometrie laufen lassen, mehrere Seeds.
@@ -130,7 +130,9 @@ Stolperfallen bei Headless-Tests:
   nur der Überschuss wird gelenkt/abgebremst. Rutschen = Ducken im Sprint
   (1,25x, max. 13 m/s, läuft mit 10 m/s² aus, 0,6 s Abklingzeit).
   Bunny-Hop: Sprung bis 0,12 s nach der Landung (oder 0,15 s vorher
-  gedrückt) +8 %, Deckel 12 m/s; mit Ducken landen = weiterrutschen.
+  gedrückt) +5 % (Nutzerwunsch, vorher 8 %), Deckel 12 m/s; mit Ducken
+  landen = weiterrutschen. Als Schwung zählt nur Tempo über dem Sprint-
+  (geduckt: Duck-)Tempo; darunter folgt man der Eingabe sofort.
   Leertaste halten hüpft per Tasten-Wiederholung automatisch weiter.
 
 ## Offene Ideen / nächste Schritte

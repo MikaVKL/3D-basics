@@ -221,6 +221,22 @@ try {
     run(1)
     out.walkStop = P.horizontalSpeed
 
+    // Sprint loslassen (Shift weiter gehalten): sofort stehen, kein Nachgleiten
+    // (Bug: Sprint-Tempo galt als Schwung, man glitt bis 4,5 m weiter)
+    const coast = (sprintFrames) => {
+      place(0, 4, Math.PI)
+      P.setSprinting(true)
+      P.setMoveInput(0, 1)
+      run(sprintFrames)
+      P.setMoveInput(0, 0)
+      const z0 = cam.position.z
+      run(60)
+      P.setSprinting(false)
+      return cam.position.z - z0
+    }
+    out.coastTap = coast(6)
+    out.coastSprint = coast(60)
+
     // Aus dem Rutschen springen: Tempo des Rutschens bleibt in der Luft
     place(0, 4, Math.PI)
     P.setSprinting(true)
@@ -259,13 +275,16 @@ try {
   check('Rutschen gegen Wand: bleibt drin, Schwung weg', r.wallZ < 21 && r.wallSpeed < 0.01, `z ${f(r.wallZ)}, ${f(r.wallSpeed)} m/s`)
   const sp = (list) => list.map(f).join(' ')
   const walkLast = r.walkHops.speeds.at(-2)
-  check('Bunny-Hop: getimte Sprünge werden schneller', walkLast > 6 * 1.3, sp(r.walkHops.speeds))
+  // +5 % pro getimtem Hop
+  const hopGain = r.walkHops.speeds[1] / r.walkHops.speeds[0]
+  check('Bunny-Hop: getimte Sprünge +5 %', walkLast > 6 * 1.2 && Math.abs(hopGain - 1.05) < 0.005, `${sp(r.walkHops.speeds)} (x${hopGain.toFixed(3)})`)
   check('Bunny-Hop: Deckel bei 12 m/s', Math.max(...r.sprintHops.speeds) <= 12.001 && Math.max(...r.sprintHops.speeds) > 11.9, sp(r.sprintHops.speeds))
   check('Bunny-Hop: nach letzter Landung wieder Lauftempo', Math.abs(r.walkHops.after - 6) < 0.01, `${f(r.walkHops.after)} m/s`)
   check('zu spät gesprungen: kein Zuwachs', Math.max(...r.lateHops.speeds) <= 6.001, sp(r.lateHops.speeds))
   check('Hop mit Ducken landen: rutscht weiter', r.hopIntoSlide.sliding)
   check('Schwung bleibt in der Luft (Taste losgelassen)', r.airCarry > 5, `${f(r.airCarry)} m geflogen`)
   check('nach der Landung ohne Eingabe Stillstand', r.stopAfterLanding < 0.01, `${f(r.stopAfterLanding)} m/s`)
+  check('Sprint loslassen: kein Nachgleiten', r.coastTap < 0.01 && r.coastSprint < 0.01, `nach Tippen ${f(r.coastTap)} m, nach 1 s ${f(r.coastSprint)} m`)
   check('normales Gehen unverändert (sofort 6 m/s, sofort 0)', Math.abs(r.walkStart - 6) < 0.01 && r.walkStop === 0, `${f(r.walkStart)} / ${f(r.walkStop)}`)
   check('Sprung aus dem Rutschen behält Tempo', !r.slideJump.onGround && r.slideJump.air > 10.5, `${f(r.slideJump.slideSpeed)} -> ${f(r.slideJump.air)} m/s`)
 } finally {

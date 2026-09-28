@@ -47,12 +47,12 @@ const SLIDE_COOLDOWN = 0.6
 // verfällt am Boden erst nach BHOP_WINDOW. Wer direkt bei der Landung
 // wieder springt, behält ihn und bekommt etwas dazu (bis BHOP_MAX_SPEED).
 const BHOP_WINDOW = 0.12
-const BHOP_BOOST = 1.08
+const BHOP_BOOST = 1.05
 const BHOP_MAX_SPEED = 12
 // Leertaste kurz vor der Landung zählt als Sprung bei der Landung
 const JUMP_BUFFER = 0.15
 const MIN_HOP_FALL_SPEED = 2
-const GROUND_FRICTION = 25 // m/s², nur auf den Überschuss über dem Lauftempo
+const GROUND_FRICTION = 25 // m/s², nur auf Schwung über dem Sprint-Tempo
 // Lenkrate (1/s), mit der die Geschwindigkeit der Eingabe folgt, sobald
 // man schneller als das Lauftempo ist
 const GROUND_CONTROL = 15
@@ -399,8 +399,10 @@ export class Player implements Damageable {
     return this.isSprinting ? speed * SPRINT_SPEED_MULTIPLIER : speed
   }
 
-  // Ohne Überschuss über dem Haltungstempo folgt man der Eingabe sofort
-  // (wie ohne Schwung); darüber wird gelenkt und am Boden abgebremst
+  // Bis zum normalen Höchsttempo (Sprint, geduckt: Duck-Tempo) folgt man der
+  // Eingabe sofort, auch beim Anhalten. Nur Schwung darüber (Rutschen,
+  // Bunny-Hop) wird gelenkt und am Boden abgebremst. Früher galt schon das
+  // Sprint-Tempo nach dem Loslassen als Schwung - man glitt meterweit nach.
   private updateMomentum(deltaSeconds: number) {
     const desired3 = this.desiredVelocity()
     const desired = new THREE.Vector2(desired3.x, desired3.z)
@@ -410,12 +412,15 @@ export class Player implements Damageable {
 
     if (this.onGround) {
       this.groundTime += deltaSeconds
-      if (speed <= this.stanceSpeed() + 1e-3) {
+      const normalMax = this.isCrouching ? this.stanceSpeed() : this.sprintSpeed()
+      if (this.groundTime > BHOP_WINDOW) speed = Math.max(0, speed - GROUND_FRICTION * deltaSeconds)
+      if (speed <= normalMax + 1e-3) {
         velocity.copy(desired)
         return
       }
-      if (this.groundTime > BHOP_WINDOW) speed = Math.max(desiredSpeed, speed - GROUND_FRICTION * deltaSeconds)
-      this.steer(desired, speed, GROUND_CONTROL * deltaSeconds)
+      // Bremse direkt aufs Tempo (über die Lenkung wirkte sie nur zu einem Bruchteil)
+      velocity.setLength(speed)
+      this.steer(desired, Math.max(speed, desiredSpeed), GROUND_CONTROL * deltaSeconds)
     } else if (desiredSpeed > 0) {
       this.steer(desired, Math.max(speed, desiredSpeed), AIR_CONTROL * deltaSeconds)
     }
@@ -439,6 +444,10 @@ export class Player implements Damageable {
     if (this.wantsToCrouch && this.slideCooldown === 0 && this.horizontalVelocity.length() > MOVE_SPEED * WEAPONS[this.weapon].moveSpeed) {
       this.startSlide(1)
     }
+  }
+
+  private sprintSpeed(): number {
+    return MOVE_SPEED * WEAPONS[this.weapon].moveSpeed * SPRINT_SPEED_MULTIPLIER
   }
 
   private crouchSpeed(): number {
