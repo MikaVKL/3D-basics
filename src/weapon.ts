@@ -56,7 +56,7 @@ export class Weapon {
   shooterTeam: Team
   private onKill?: (killerTeam: Team) => void
   // Jeder Schuss (Mündung -> Einschlag), für die Leuchtspur bei anderen
-  onShot?: (from: THREE.Vector3, to: THREE.Vector3) => void
+  onShot?: (from: THREE.Vector3, to: THREE.Vector3, hit: boolean) => void
   // Für den Hitmarker; kill nur lokal erkannt (Dummies), online meldet der Server
   onEnemyHit?: (kill: boolean) => void
   onReload?: () => void
@@ -152,13 +152,13 @@ export class Weapon {
         this.spawnImpactMarker(hits[0])
       }
       this.spawnTracer(muzzlePosition, hits[0].point)
-      this.onShot?.(muzzlePosition, hits[0].point)
+      this.onShot?.(muzzlePosition, hits[0].point, true)
     } else {
       const missEnd = this.raycaster.ray.origin
         .clone()
         .addScaledVector(this.raycaster.ray.direction, TRACER_MAX_DISTANCE)
       this.spawnTracer(muzzlePosition, missEnd)
-      this.onShot?.(muzzlePosition, missEnd)
+      this.onShot?.(muzzlePosition, missEnd, false)
     }
 
     if (this.ammo === 0) {

@@ -403,7 +403,7 @@ wss.on('connection', (socket) => {
     } else if (message.t === 'hit') {
       handleHit(client, message.target)
     } else if (message.t === 'shot') {
-      handleShot(client, message.from, message.to)
+      handleShot(client, message.from, message.to, message.hit)
     } else if (message.t === 'setName') {
       client.name = sanitizeName(message.name, client.id)
       broadcastRoster()
@@ -486,7 +486,7 @@ const MAX_MUZZLE_OFFSET = 3
 const MAX_TRACER_LENGTH = 120
 
 // Reine Optik, trotzdem gefiltert (sonst beliebige Spuren bei allen)
-function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown) {
+function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown, hit: unknown) {
   const from = sanitizeVec3(rawFrom)
   const to = sanitizeVec3(rawTo)
   if (!from || !to || !shooter.state || !isAlive(shooter)) return
@@ -500,7 +500,7 @@ function handleShot(shooter: Client, rawFrom: unknown, rawTo: unknown) {
   shooter.lastActivityAt = now
   shooter.protectedUntil = 0
 
-  broadcast({ t: 'shot', id: shooter.id, from, to }, shooter.id)
+  broadcast({ t: 'shot', id: shooter.id, from, to, hit: hit === true }, shooter.id)
 }
 
 let lastTickAt = performance.now()

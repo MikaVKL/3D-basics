@@ -39,7 +39,7 @@ export interface NetworkHandlers {
   onRespawn: (id: PlayerId, spawnIndex: number, team: Team) => void
   onRoundEnd: (winner: Team, nextRoundIn: number) => void
   onRoundStart: (scores: Scores) => void
-  onRemoteShot: (from: Vec3, to: Vec3) => void
+  onRemoteShot: (from: Vec3, to: Vec3, hit: boolean) => void
   onHurt: (by: PlayerId) => void
   // Zurück in den Singleplayer
   onDisconnect: () => void
@@ -209,7 +209,7 @@ export class NetworkClient {
         this.handlers.onRoundStart(message.scores)
         break
       case 'shot':
-        this.handlers.onRemoteShot(message.from, message.to)
+        this.handlers.onRemoteShot(message.from, message.to, message.hit)
         break
       case 'hurt':
         this.handlers.onHurt(message.by)
@@ -229,9 +229,9 @@ export class NetworkClient {
     this.send({ t: 'hit', target })
   }
 
-  sendShot(from: Vec3, to: Vec3) {
+  sendShot(from: Vec3, to: Vec3, hit: boolean) {
     const r = (v: Vec3) => ({ x: round(v.x), y: round(v.y), z: round(v.z) })
-    this.send({ t: 'shot', from: r(from), to: r(to) })
+    this.send({ t: 'shot', from: r(from), to: r(to), hit })
   }
 
   private send(message: ClientMessage) {

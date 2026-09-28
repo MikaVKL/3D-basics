@@ -14,11 +14,12 @@ import { Scoreboard } from './scoreboard'
 import { NetworkClient } from './network'
 import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
-import { TeamLabel, type Team } from './team'
+import { TeamColor, TeamLabel, type Team } from './team'
 import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
 import { SoundFx } from './sound'
+import { Effects, CameraShake } from './effects'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
 
@@ -76,9 +77,12 @@ const targets = [
   new Target(new THREE.Vector3(3, 0.8, -6)),
   new Target(new THREE.Vector3(-3, 0.8, 6)),
 ]
+const effects = new Effects(scene)
+const cameraShake = new CameraShake()
 for (const target of targets) {
   scene.add(target.mesh)
   arena.shootables.push(target.mesh)
+  target.onDeath = (position) => effects.deathBurst(position, position.y - 0.8, TeamColor.red)
 }
 
 // --- Spieler (unabhängig von der Eingabequelle, siehe input/) ---
@@ -175,6 +179,13 @@ const network: NetworkClient = new NetworkClient({
   onOwnVitals: (health, shield, spawnProtected) =>
     player.applyServerVitals(health, shield, spawnProtected),
   onKill: (killer, victim, scores) => {
+    if (victim === network.localId) {
+      cameraShake.shake(0.18, 0.45)
+    } else {
+      const ground = remotePlayers.getGroundPosition(victim)
+      const team = network.roster.get(victim)?.team
+      if (ground && team) effects.deathBurst(ground, ground.y, TeamColor[team])
+    }
     scoreboard.setScores(scores)
     if (killer === network.localId) {
       hitFeedback.showHit(true)
@@ -201,8 +212,10 @@ const network: NetworkClient = new NetworkClient({
     nextRoundAt = null
     roundBanner.classList.add('hidden')
   },
-  onRemoteShot: (from, to) => {
+  onRemoteShot: (from, to, hit) => {
     sound.playAt('shot', from, 0.8)
+    effects.muzzleFlash(new THREE.Vector3(from.x, from.y, from.z))
+    if (hit) effects.impactSparks(new THREE.Vector3(to.x, to.y, to.z))
     weapon.showRemoteTracer(
       new THREE.Vector3(from.x, from.y, from.z),
       new THREE.Vector3(to.x, to.y, to.z)
@@ -211,6 +224,7 @@ const network: NetworkClient = new NetworkClient({
   onHurt: (by) => {
     hitFeedback.showDamageFrom(remotePlayers.getPosition(by), camera)
     sound.play('hurt')
+    cameraShake.shake(0.06, 0.18)
   },
   onKicked: () => {
     // Zurück auf den Startbildschirm; erneuter Klick tritt wieder bei
@@ -228,9 +242,11 @@ const network: NetworkClient = new NetworkClient({
   },
 })
 
-weapon.onShot = (from, to) => {
-  network.sendShot(from, to)
+weapon.onShot = (from, to, hit) => {
+  network.sendShot(from, to, hit)
   sound.play('shot', 0.7)
+  effects.muzzleFlash(from)
+  if (hit) effects.impactSparks(to)
 }
 weapon.onEnemyHit = (kill) => {
   hitFeedback.showHit(kill)
@@ -251,7 +267,7 @@ window.addEventListener('keydown', (event) => {
 
 // Nur im Dev-Build: Zugriff für die Browser-Tests (tests/)
 if (import.meta.env.DEV) {
-  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound } })
+  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake } })
 }
 
 // --- Eingabe ---
@@ -480,7 +496,10 @@ function animate() {
   updateNetStatusHud()
   updateRoundHud()
 
+  effects.update(deltaSeconds)
+  cameraShake.apply(camera, deltaSeconds)
   renderer.render(scene, camera)
+  cameraShake.restore(camera)
 }
 
 animate()

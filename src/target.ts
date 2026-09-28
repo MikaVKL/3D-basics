@@ -18,6 +18,7 @@ const SHIELD_BAR_Y_OFFSET = HEALTH_BAR_Y_OFFSET + HEALTH_BAR_HEIGHT + 0.03
 export class Target implements Damageable {
   readonly mesh: THREE.Mesh
   readonly team: Team = 'red'
+  onDeath?: (position: THREE.Vector3) => void
   private vitals: Vitals = { health: MAX_HEALTH, shield: MAX_SHIELD, shieldRegenCooldown: 0 }
   private respawnRemaining = 0
   private hitFlashRemaining = 0
@@ -86,6 +87,7 @@ export class Target implements Damageable {
     this.hitFlashRemaining = HIT_FLASH_DURATION
     if (applyDamage(this.vitals, amount)) {
       this.mesh.visible = false
+      this.onDeath?.(this.mesh.position)
       this.respawnRemaining = RESPAWN_DELAY
     }
   }

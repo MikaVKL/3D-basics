@@ -3,7 +3,7 @@
 import type { Team } from '../team.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 11
+export const PROTOCOL_VERSION = 12
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -61,7 +61,7 @@ export type ClientMessage =
   | { t: 'state'; state: PlayerNetworkState; time: number; life: number }
   | { t: 'hit'; target: PlayerId }
   // Nur für die Leuchtspur bei den anderen
-  | { t: 'shot'; from: Vec3; to: Vec3 }
+  | { t: 'shot'; from: Vec3; to: Vec3; hit: boolean }
 
 export type RejectReason = 'full' | 'version'
 
@@ -85,7 +85,8 @@ export type ServerMessage =
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number; team: Team }
   | { t: 'roundEnd'; winner: Team; nextRoundIn: number }
   | { t: 'roundStart'; scores: Scores }
-  | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3 }
+  // hit: Schuss hat etwas getroffen (Einschlagfunken statt Schuss ins Leere)
+  | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3; hit: boolean }
   // Nur an den Getroffenen (Richtungsanzeiger)
   | { t: 'hurt'; by: PlayerId }
   | { t: 'snapshot'; players: SnapshotEntry[] }

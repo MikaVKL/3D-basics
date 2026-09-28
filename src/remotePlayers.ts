@@ -144,6 +144,11 @@ export class RemotePlayers {
     }
   }
 
+  // Fußpunkt der Figur (Boden)
+  getGroundPosition(id: PlayerId): THREE.Vector3 | null {
+    return this.players.get(id)?.avatar.root.position.clone() ?? null
+  }
+
   getPosition(id: PlayerId): THREE.Vector3 | null {
     return this.players.get(id)?.avatar.centerPosition ?? null
   }
