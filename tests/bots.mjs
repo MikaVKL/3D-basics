@@ -193,6 +193,9 @@ const GARBAGE = [
   JSON.stringify({ t: 'hello', version: PROTOCOL_VERSION, name: 'nochmal' }),
   JSON.stringify({ t: '__proto__', constructor: { prototype: { x: 1 } } }),
   JSON.stringify({ t: 'unbekannt' }),
+  JSON.stringify({ t: 'ping' }),
+  JSON.stringify({ t: 'ping', time: 'jetzt' }),
+  JSON.stringify({ t: 'ping', time: 1e308 }),
 ]
 async function fuzzServer(seconds) {
   const socket = new WebSocket(SERVER_URL, { headers: { Origin: 'http://localhost:5199' } })

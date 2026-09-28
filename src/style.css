@@ -312,6 +312,18 @@ body {
   text-shadow: 0 0 8px rgba(51, 230, 204, 0.5);
 }
 
+#net-ping[data-quality='good'] {
+  color: #33e6cc;
+}
+
+#net-ping[data-quality='ok'] {
+  color: #ffd166;
+}
+
+#net-ping[data-quality='bad'] {
+  color: #ff6b3d;
+}
+
 #net-status[data-status='full'],
 #net-status[data-status='outdated'] {
   color: #ff6b3d;

@@ -48,6 +48,8 @@ export interface NetworkHandlers {
   onKicked: (reason: KickReason) => void
 }
 
+const PING_INTERVAL_MS = 1000
+const PING_SAMPLES = 5
 const RECONNECT_MIN_MS = 2000
 const RECONNECT_MAX_MS = 15000
 
@@ -62,6 +64,9 @@ export class NetworkClient {
   readonly remotePlayers = new Set<PlayerId>()
   // Alle Spieler inkl. uns selbst
   readonly roster = new Map<PlayerId, RosterEntry>()
+  // Hin und zurück in ms (Median der letzten Messungen), null = unbekannt
+  ping: number | null = null
+  private pingSamples: number[] = []
 
   private readonly url: string | null
   private socket: WebSocket | null = null
@@ -87,6 +92,9 @@ export class NetworkClient {
         life: this.life,
       })
     }, 1000 / TICK_RATE)
+    setInterval(() => {
+      if (this.status === 'online') this.send({ t: 'ping', time: performance.now() })
+    }, PING_INTERVAL_MS)
   }
 
   get playerCount(): number {
@@ -145,6 +153,7 @@ export class NetworkClient {
       this.localId = null
       this.remotePlayers.clear()
       this.roster.clear()
+      this.resetPing()
       // "Veraltet": Neuverbinden sinnlos; "voll": langsam weiter probieren
       if (this.status === 'outdated') return
       if (!this.wantOnline) {
@@ -170,6 +179,7 @@ export class NetworkClient {
         this.reconnectDelay = RECONNECT_MIN_MS
         this.localId = message.id
         this.life = 0
+        this.resetPing()
         this.handlers.onWelcome(message.team, message.spawnIndex, message.scores, message.killsToWin)
         break
       case 'roster':
@@ -215,6 +225,9 @@ export class NetworkClient {
       case 'hurt':
         this.handlers.onHurt(message.by)
         break
+      case 'pong':
+        this.addPingSample(performance.now() - message.time)
+        break
     }
   }
 
@@ -224,6 +237,20 @@ export class NetworkClient {
 
   sendName(name: string) {
     this.send({ t: 'setName', name })
+  }
+
+  // Median statt Mittelwert: einzelne Ausreißer (Ruckler) verfälschen nichts
+  private addPingSample(sample: number) {
+    if (!(sample >= 0)) return
+    this.pingSamples.push(sample)
+    if (this.pingSamples.length > PING_SAMPLES) this.pingSamples.shift()
+    const sorted = [...this.pingSamples].sort((a, b) => a - b)
+    this.ping = Math.round(sorted[sorted.length >> 1])
+  }
+
+  private resetPing() {
+    this.pingSamples = []
+    this.ping = null
   }
 
   sendHit(target: PlayerId, headshot: boolean) {

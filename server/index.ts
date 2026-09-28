@@ -417,6 +417,9 @@ wss.on('connection', (socket) => {
         client.state = state
         client.stateTime = message.time
       }
+    } else if (message.t === 'ping') {
+      // Zählt bewusst nicht als Aktivität (AFK-Erkennung)
+      if (isFiniteNumber(message.time)) send(socket, { t: 'pong', time: message.time })
     } else if (message.t === 'hit') {
       handleHit(client, message.target, message.headshot === true)
     } else if (message.t === 'shot') {

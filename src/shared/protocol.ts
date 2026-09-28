@@ -65,6 +65,8 @@ export type ClientMessage =
   // life = Nummer des Lebens; Zustände aus früheren Leben verwirft der Server
   | { t: 'state'; state: PlayerNetworkState; time: number; life: number }
   | { t: 'hit'; target: PlayerId; headshot: boolean }
+  // Laufzeitmessung: Server schickt time unverändert als 'pong' zurück
+  | { t: 'ping'; time: number }
   // Nur für die Leuchtspur bei den anderen
   | { t: 'shot'; from: Vec3; to: Vec3; hit: boolean }
 
@@ -94,4 +96,5 @@ export type ServerMessage =
   | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3; hit: boolean; weapon: WeaponId }
   // Nur an den Getroffenen (Richtungsanzeiger)
   | { t: 'hurt'; by: PlayerId }
+  | { t: 'pong'; time: number }
   | { t: 'snapshot'; players: SnapshotEntry[] }

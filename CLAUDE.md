@@ -96,6 +96,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Speicher, Server-Fehler). Auch mit Ping laufen lassen.
 - `npm run test:touch` – Touch-Steuerung (Handy-Emulation): Ducken-Button
   halten = ducken/rutschen, loslassen = aufstehen
+- `npm run test:ping` – Ping-Anzeige: Messwert (auch mit 200 ms simuliert),
+  Farbe, ausgeblendet ohne Verbindung
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:

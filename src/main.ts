@@ -387,6 +387,8 @@ const scoreBlue = document.querySelector<HTMLSpanElement>('#score-blue')!
 const shieldBarFill = document.querySelector<HTMLDivElement>('#shield-bar-fill')!
 const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill')!
 const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
+const netText = document.querySelector<HTMLSpanElement>('#net-text')!
+const netPing = document.querySelector<HTMLSpanElement>('#net-ping')!
 const spawnProtectionHud = document.querySelector<HTMLDivElement>('#spawn-protection')!
 const scoreTable = new ScoreTable(document.querySelector<HTMLDivElement>('#score-table')!)
 
@@ -426,8 +428,11 @@ function updateNetStatusHud() {
     full: 'Server voll · Singleplayer',
     outdated: 'Veraltete Version · bitte neu laden',
   }
-  netStatus.textContent = labels[network.status]
+  netText.textContent = labels[network.status]
   netStatus.dataset.status = network.status
+  const ping = network.status === 'online' ? network.ping : null
+  netPing.textContent = ping === null ? '' : ` · ${ping} ms`
+  netPing.dataset.quality = ping === null ? '' : ping < 80 ? 'good' : ping <= 150 ? 'ok' : 'bad'
 }
 
 function updateRoundHud() {
