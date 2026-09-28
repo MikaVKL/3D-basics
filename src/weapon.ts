@@ -3,7 +3,7 @@ import { Palette } from './palette'
 import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
 import type { Team } from './team'
-import { FIRE_COOLDOWN, HIT_DAMAGE } from './shared/gameRules'
+import { FIRE_COOLDOWN, HEADSHOT_MULTIPLIER, HIT_DAMAGE } from './shared/gameRules'
 
 // Hitscan aus der Bildschirmmitte, Munition, Nachladen. Treffer laufen
 // generisch über Damageable (Dummy oder fremder Spieler).
@@ -57,8 +57,8 @@ export class Weapon {
   private onKill?: (killerTeam: Team) => void
   // Jeder Schuss (Mündung -> Einschlag), für die Leuchtspur bei anderen
   onShot?: (from: THREE.Vector3, to: THREE.Vector3, hit: boolean) => void
-  // Für den Hitmarker; kill nur lokal erkannt (Dummies), online meldet der Server
-  onEnemyHit?: (kill: boolean) => void
+  // Für Hitmarker und Schadenszahl; kill nur lokal erkannt (Dummies), online meldet der Server
+  onEnemyHit?: (kill: boolean, point: THREE.Vector3, damage: number, headshot: boolean) => void
   onReload?: () => void
 
   private ammo = MAGAZINE_SIZE
@@ -141,13 +141,15 @@ export class Weapon {
         // Teamkamerad oder Spawn-Schutz: wie ein Wand-Treffer
         this.spawnImpactMarker(hits[0])
       } else if (damageable) {
+        const headshot = hits[0].object.userData.headshot === true
+        const damage = HIT_DAMAGE * (headshot ? HEADSHOT_MULTIPLIER : 1)
         const wasAlive = damageable.isAlive
-        damageable.takeDamage(HIT_DAMAGE)
+        damageable.takeDamage(damage, headshot)
         const killed = wasAlive && !damageable.isAlive
         if (killed) {
           this.onKill?.(this.shooterTeam)
         }
-        this.onEnemyHit?.(killed)
+        this.onEnemyHit?.(killed, hits[0].point, damage, headshot)
       } else {
         this.spawnImpactMarker(hits[0])
       }

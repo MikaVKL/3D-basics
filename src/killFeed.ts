@@ -1,6 +1,6 @@
 import type { PlayerId } from './shared/protocol'
 
-const ENTRY_LIFETIME_MS = 4000
+const ENTRY_LIFETIME_MS = 6000
 const MAX_ENTRIES = 5
 
 // Kill-Anzeige oben rechts, eigene Kills/Tode hervorgehoben
@@ -15,6 +15,7 @@ export class KillFeed {
   add(
     killer: PlayerId,
     victim: PlayerId,
+    headshot: boolean,
     localId: PlayerId | null,
     nameOf: (id: PlayerId) => string
   ) {
@@ -24,6 +25,12 @@ export class KillFeed {
     if (killer === localId) element.classList.add('own-kill')
     if (victim === localId) element.classList.add('own-death')
     element.textContent = `${name(killer)} ✕ ${name(victim)}`
+    if (headshot) {
+      const badge = document.createElement('span')
+      badge.className = 'headshot-badge'
+      badge.textContent = 'Kopftreffer'
+      element.append(badge)
+    }
     this.container.prepend(element)
     this.entries.push({ element, expiresAt: performance.now() + ENTRY_LIFETIME_MS })
 

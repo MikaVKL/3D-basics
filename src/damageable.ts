@@ -4,5 +4,5 @@ export interface Damageable {
   readonly isAlive: boolean
   // z.B. Spawn-Schutz
   readonly invulnerable?: boolean
-  takeDamage(amount: number): void
+  takeDamage(amount: number, headshot: boolean): void
 }

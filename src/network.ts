@@ -35,7 +35,7 @@ export interface NetworkHandlers {
   // Snapshot ohne den eigenen Eintrag
   onSnapshot: (players: SnapshotEntry[]) => void
   onOwnVitals: (health: number, shield: number, spawnProtected: boolean) => void
-  onKill: (killer: PlayerId, victim: PlayerId, scores: Scores) => void
+  onKill: (killer: PlayerId, victim: PlayerId, scores: Scores, headshot: boolean) => void
   onRespawn: (id: PlayerId, spawnIndex: number, team: Team) => void
   onRoundEnd: (winner: Team, nextRoundIn: number) => void
   onRoundStart: (scores: Scores) => void
@@ -196,7 +196,7 @@ export class NetworkClient {
         break
       }
       case 'kill':
-        this.handlers.onKill(message.killer, message.victim, message.scores)
+        this.handlers.onKill(message.killer, message.victim, message.scores, message.headshot)
         break
       case 'respawn':
         if (message.id === this.localId) this.life = message.life
@@ -225,8 +225,8 @@ export class NetworkClient {
     this.send({ t: 'setName', name })
   }
 
-  sendHit(target: PlayerId) {
-    this.send({ t: 'hit', target })
+  sendHit(target: PlayerId, headshot: boolean) {
+    this.send({ t: 'hit', target, headshot })
   }
 
   sendShot(from: Vec3, to: Vec3, hit: boolean) {

@@ -24,6 +24,7 @@ import {
   ROUND_END_PAUSE,
   FIRE_COOLDOWN,
   HIT_DAMAGE,
+  HEADSHOT_MULTIPLIER,
   applyDamage,
   regenerateShield,
   type Vitals,
@@ -401,7 +402,7 @@ wss.on('connection', (socket) => {
         client.stateTime = message.time
       }
     } else if (message.t === 'hit') {
-      handleHit(client, message.target)
+      handleHit(client, message.target, message.headshot === true)
     } else if (message.t === 'shot') {
       handleShot(client, message.from, message.to, message.hit)
     } else if (message.t === 'setName') {
@@ -445,7 +446,7 @@ setInterval(() => {
 // Der Schütze meldet Treffer (er sieht Gegner ~100ms verzögert, eine
 // Server-Berechnung würde echte Treffer ablehnen); geprüft wird nur, was
 // ohne Lag-Ausgleich sicher geht
-function handleHit(shooter: Client, targetId: unknown) {
+function handleHit(shooter: Client, targetId: unknown, headshot: boolean) {
   const target = typeof targetId === 'number' ? clients.get(targetId) : undefined
   if (!target || target === shooter) return
   if (!isAlive(shooter) || !isAlive(target)) return
@@ -461,14 +462,14 @@ function handleHit(shooter: Client, targetId: unknown) {
   if (Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) > MAX_HIT_DISTANCE) return
   shooter.lastHitAt = now
 
-  const killed = applyDamage(target.vitals, HIT_DAMAGE)
+  const killed = applyDamage(target.vitals, HIT_DAMAGE * (headshot ? HEADSHOT_MULTIPLIER : 1))
   send(target.socket, { t: 'hurt', by: shooter.id })
   if (killed) {
     target.respawnAt = now + RESPAWN_DELAY * 1000
     scores[shooter.team] += 1
     shooter.kills += 1
     target.deaths += 1
-    broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores })
+    broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores, headshot })
     broadcastRoster()
     if (scores[shooter.team] >= KILLS_TO_WIN_ACTIVE) endRound(shooter.team, now)
     console.log(`Spieler ${shooter.id} hat Spieler ${target.id} eliminiert (${scores.red}:${scores.blue})`)

@@ -51,8 +51,8 @@ Weiterarbeiten wissen muss.
   AFK/Geister-Entfernung. Läuft direkt als TypeScript (Node ≥ 22.18).
 - `src/sound.ts` – synthetisierte Sounds (Web Audio, keine Dateien)
 - `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall) + Kamera-Ruck
-- `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` unsichtbare
-  Treffer-Kapsel (darauf zielt die Waffe)
+- `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` (Körper-Kapsel)
+  und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
   (Interpolation auf der Uhr des Absenders), `src/player.ts` (Bewegung und
   Kollision: Boden über die ganze Standfläche, Deckenkollision, "nur tiefer
@@ -78,6 +78,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   den richtigen Ereignissen (Schuss, Treffer, Kill, Sprung, Schritte, ...)
 - `npm run test:avatar` – Spielerfigur: Laufanimation, Duck-Pose, Tod
 - `npm run test:effects` – Mündungsleuchten, Funken, Todeseffekt, Kamera-Ruck
+- `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
+  Ton, Kill-Feed-Markierung und -Dauer
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -102,13 +104,15 @@ Stolperfallen bei Headless-Tests:
 - Zeiten: Menü/Hintergrund → nach 20 s raus, eingefrorener Tab → 15 s,
   AFK → 90 s. Runde: erstes Team mit 20 Kills, 6 s Pause.
 - Treffer: "was der Schütze sah, zählt" (keine Server-Sichtlinienprüfung).
+- Kopftreffer = 2× Schaden; Schadenszahlen bei jedem Treffer (Kopf rot),
+  Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
 
 ## Offene Ideen / nächste Schritte
 
-- Reihenfolge (mit Nutzer abgestimmt): Sound, Spielermodell, Effekte
-  (erledigt) -> Kopftreffer -> zweite Waffe -> Rutschen/Bunny-Hop -> Ping ->
+- Reihenfolge (mit Nutzer abgestimmt): Sound, Spielermodell, Effekte,
+  Kopftreffer (erledigt) -> zweite Waffe -> Rutschen/Bunny-Hop -> Ping ->
   Arena/Optik/HUD -> Raum-Codes -> Hintergrund-Tab -> Server-Prüfung.
 - Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
-- Noch zu entscheiden: Kopftreffer-Bonus? Kollision zwischen Spielern?
+- Noch zu entscheiden: Kollision zwischen Spielern?
 - Später: Raum-Codes für private Runden, Ping-Anzeige, strengere
   Bewegungsprüfung auf dem Server, Hintergrund-Tab sendet nur ~1×/s.

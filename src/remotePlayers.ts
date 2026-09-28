@@ -34,12 +34,16 @@ export class RemotePlayers {
 
   private readonly scene: THREE.Scene
   private readonly shootables: THREE.Object3D[]
-  private readonly onHit: (id: PlayerId) => void
+  private readonly onHit: (id: PlayerId, headshot: boolean) => void
   // Schritt eines Gegners (für räumliche Schrittgeräusche)
   onFootstep?: (position: THREE.Vector3) => void
 
   // shootables: Liste der Waffe (Hüllen werden ein-/ausgetragen)
-  constructor(scene: THREE.Scene, shootables: THREE.Object3D[], onHit: (id: PlayerId) => void) {
+  constructor(
+    scene: THREE.Scene,
+    shootables: THREE.Object3D[],
+    onHit: (id: PlayerId, headshot: boolean) => void
+  ) {
     this.scene = scene
     this.shootables = shootables
     this.onHit = onHit
@@ -82,22 +86,25 @@ export class RemotePlayers {
       get invulnerable() {
         return player.spawnProtected
       },
-      takeDamage: () => {
+      takeDamage: (_amount, headshot) => {
         player.avatar.flash()
-        this.onHit(id)
+        this.onHit(id, headshot)
       },
     }
     player.avatar.mesh.userData.damageable = damageable
+    player.avatar.headMesh.userData.damageable = damageable
     this.scene.add(player.avatar.root)
-    this.shootables.push(player.avatar.mesh)
+    this.shootables.push(player.avatar.mesh, player.avatar.headMesh)
     this.players.set(id, player)
     return player
   }
 
   private remove(id: PlayerId, player: RemotePlayer) {
     this.scene.remove(player.avatar.root)
-    const index = this.shootables.indexOf(player.avatar.mesh)
-    if (index !== -1) this.shootables.splice(index, 1)
+    for (const mesh of [player.avatar.mesh, player.avatar.headMesh]) {
+      const index = this.shootables.indexOf(mesh)
+      if (index !== -1) this.shootables.splice(index, 1)
+    }
     player.avatar.dispose()
     this.players.delete(id)
   }

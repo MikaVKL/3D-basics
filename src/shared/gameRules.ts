@@ -12,6 +12,7 @@ export const KILLS_TO_WIN = 20
 export const ROUND_END_PAUSE = 6 // Sekunden
 
 export const HIT_DAMAGE = 15
+export const HEADSHOT_MULTIPLIER = 2
 export const FIRE_COOLDOWN = 0.15 // Sekunden
 
 export interface Vitals {

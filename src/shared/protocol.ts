@@ -3,7 +3,7 @@
 import type { Team } from '../team.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 12
+export const PROTOCOL_VERSION = 13
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -59,7 +59,7 @@ export type ClientMessage =
   | { t: 'setName'; name: string }
   // life = Nummer des Lebens; Zustände aus früheren Leben verwirft der Server
   | { t: 'state'; state: PlayerNetworkState; time: number; life: number }
-  | { t: 'hit'; target: PlayerId }
+  | { t: 'hit'; target: PlayerId; headshot: boolean }
   // Nur für die Leuchtspur bei den anderen
   | { t: 'shot'; from: Vec3; to: Vec3; hit: boolean }
 
@@ -80,7 +80,7 @@ export type ServerMessage =
   | { t: 'roster'; players: RosterEntry[] }
   | { t: 'rejected'; reason: RejectReason }
   | { t: 'kicked'; reason: KickReason }
-  | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores }
+  | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores; headshot: boolean }
   // team ändert sich beim Team-Ausgleich
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number; team: Team }
   | { t: 'roundEnd'; winner: Team; nextRoundIn: number }

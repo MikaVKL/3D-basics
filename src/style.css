@@ -103,6 +103,25 @@ body {
   background: #ff4d5a;
 }
 
+/* Schadenszahl am Treffpunkt, Position per transform aus hitFeedback.ts */
+.damage-number {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 6;
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.damage-number.headshot {
+  font-size: 1.2rem;
+  color: #ff4d5a;
+}
+
 /* Schadens-Richtung: Bogen, per rotate() zum Angreifer gedreht (0 = vorne) */
 #damage-indicators {
   position: fixed;
@@ -307,6 +326,17 @@ body {
 
 .kill-entry.own-death {
   color: #ff6b3d;
+}
+
+.headshot-badge {
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #ff4d5a;
+  color: #ffffff;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 #spawn-protection {

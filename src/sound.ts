@@ -69,6 +69,11 @@ export const SYNTHS = {
     tone(ctx, out, 'square', 500, 900, 0.12, 0.08, 1.05)
   },
   hit: (ctx, out) => tone(ctx, out, 'sine', 1900, 1700, 0.3, 0.06),
+  // Heller Doppel-"Ping", klar vom normalen Treffer unterscheidbar
+  headshot: (ctx, out) => {
+    tone(ctx, out, 'sine', 2600, 2500, 0.3, 0.05)
+    tone(ctx, out, 'triangle', 3400, 3300, 0.25, 0.09, 0.045)
+  },
   kill: (ctx, out) => {
     tone(ctx, out, 'triangle', 880, 880, 0.35, 0.12)
     tone(ctx, out, 'triangle', 1320, 1320, 0.35, 0.22, 0.09)

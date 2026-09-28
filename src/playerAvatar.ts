@@ -5,14 +5,15 @@ import { Palette } from './palette'
 import { TeamColor, type Team } from './team'
 
 // Spieler-Figur im Low-Poly-Stil, gesteuert nur über applyState(). Optik
-// und Trefferfläche sind getrennt: "mesh" ist eine unsichtbare Kapsel, auf
-// die die Waffe zielt (Treffer-Verhalten wie zuvor), "root" die sichtbare
-// Figur. Blickrichtung ist -z (wie die Kamera bei yaw 0).
+// und Trefferfläche sind getrennt: "mesh" (Körper-Kapsel) und "headMesh"
+// (Kopf-Box) sind unsichtbar, auf sie zielt die Waffe; "root" ist die
+// sichtbare Figur. Blickrichtung ist -z (wie die Kamera bei yaw 0).
 
 const HITBOX_RADIUS = 0.35
-const HITBOX_LENGTH = 1.2 // Gesamthöhe = LENGTH + 2*RADIUS = 1.9
-const HITBOX_HEIGHT = HITBOX_LENGTH + 2 * HITBOX_RADIUS
-const CROUCH_HEIGHT = 1.3
+// Körper bis zum Hals, darüber die Kopf-Box (Oberkante 1.9 wie früher die Kapsel)
+const BODY_HEIGHT = 1.45
+const HEAD_HITBOX_SIZE = 0.45
+const HEAD_CENTER_Y = BODY_HEIGHT + HEAD_HITBOX_SIZE / 2
 const CROUCH_DROP = 0.55 // so weit sinkt der Oberkörper im Ducken
 const HIT_FLASH_DURATION = 0.08
 // Leichtes Eigenleuchten in Teamfarbe: auch im Schatten (von hinten) erkennbar
@@ -35,8 +36,9 @@ function limb(width: number, length: number, depth: number, material: THREE.Mate
 
 export class PlayerAvatar {
   readonly root = new THREE.Group()
-  // Unsichtbare Trefferfläche (userData: team, damageable)
+  // Unsichtbare Trefferflächen (userData: team, damageable; Kopf: headshot)
   readonly mesh: THREE.Mesh
+  readonly headMesh: THREE.Mesh
   private readonly upperBody = new THREE.Group()
   private readonly leftLeg: THREE.Group
   private readonly rightLeg: THREE.Group
@@ -59,12 +61,20 @@ export class PlayerAvatar {
     const gunMaterial = new THREE.MeshStandardMaterial({ color: Palette.weaponBody, roughness: 0.5 })
     this.materials = [this.teamMaterial, this.teamDarkMaterial, headMaterial, visorMaterial, gunMaterial]
 
+    const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false })
     this.mesh = new THREE.Mesh(
-      new THREE.CapsuleGeometry(HITBOX_RADIUS, HITBOX_LENGTH, 4, 8),
-      new THREE.MeshBasicMaterial({ visible: false })
+      new THREE.CapsuleGeometry(HITBOX_RADIUS, BODY_HEIGHT - 2 * HITBOX_RADIUS, 4, 8),
+      hitboxMaterial
     )
-    this.mesh.position.y = HITBOX_HEIGHT / 2
+    this.mesh.position.y = BODY_HEIGHT / 2
     this.root.add(this.mesh)
+    this.headMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(HEAD_HITBOX_SIZE, HEAD_HITBOX_SIZE, HEAD_HITBOX_SIZE),
+      hitboxMaterial
+    )
+    this.headMesh.position.y = HEAD_CENTER_Y
+    this.headMesh.userData.headshot = true
+    this.upperBody.add(this.headMesh)
 
     this.leftLeg = limb(0.22, 0.8, 0.26, this.teamDarkMaterial)
     this.rightLeg = limb(0.22, 0.8, 0.26, this.teamDarkMaterial)
@@ -103,6 +113,7 @@ export class PlayerAvatar {
     this.resetGlow()
     // weapon.ts liest das Team am Mesh (Friendly-Fire)
     this.mesh.userData.team = team
+    this.headMesh.userData.team = team
   }
 
   // Körpermitte in Weltkoordinaten (z.B. Richtung für den Schadensanzeiger)
@@ -119,8 +130,8 @@ export class PlayerAvatar {
     this.root.rotation.set(0, state.yaw, 0)
     this.root.updateMatrixWorld()
 
-    const height = state.crouching ? CROUCH_HEIGHT : HITBOX_HEIGHT
-    this.mesh.scale.y = height / HITBOX_HEIGHT
+    const height = state.crouching ? BODY_HEIGHT - CROUCH_DROP : BODY_HEIGHT
+    this.mesh.scale.y = height / BODY_HEIGHT
     this.mesh.position.y = height / 2
     this.upperBody.position.y = state.crouching ? -CROUCH_DROP : 0
     const legScale = state.crouching ? 0.35 : 1
@@ -134,6 +145,7 @@ export class PlayerAvatar {
     this.root.visible = state.isAlive
     // Raycaster prüft "visible" am getroffenen Objekt selbst, nicht am Elternteil
     this.mesh.visible = state.isAlive
+    this.headMesh.visible = state.isAlive
   }
 
   // Beine schwingen passend zur zurückgelegten Strecke am Boden

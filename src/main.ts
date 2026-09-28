@@ -141,7 +141,9 @@ const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#damage-indicators')!,
   document.querySelector<HTMLDivElement>('#damage-vignette')!
 )
-const remotePlayers = new RemotePlayers(scene, arena.shootables, (id) => network.sendHit(id))
+const remotePlayers = new RemotePlayers(scene, arena.shootables, (id, headshot) =>
+  network.sendHit(id, headshot)
+)
 // localStorage kann werfen (privater Modus) - dann ohne gemerkten Namen
 const NAME_STORAGE_KEY = 'duskArena.name'
 const nameInput = document.querySelector<HTMLInputElement>('#name-input')!
@@ -178,7 +180,7 @@ const network: NetworkClient = new NetworkClient({
   onSnapshot: (entries) => remotePlayers.applySnapshot(entries),
   onOwnVitals: (health, shield, spawnProtected) =>
     player.applyServerVitals(health, shield, spawnProtected),
-  onKill: (killer, victim, scores) => {
+  onKill: (killer, victim, scores, headshot) => {
     if (victim === network.localId) {
       cameraShake.shake(0.18, 0.45)
     } else {
@@ -191,7 +193,7 @@ const network: NetworkClient = new NetworkClient({
       hitFeedback.showHit(true)
       sound.play('kill')
     }
-    killFeed.add(killer, victim, network.localId, (id) => network.nameOf(id))
+    killFeed.add(killer, victim, headshot, network.localId, (id) => network.nameOf(id))
   },
   onRespawn: (id, spawnIndex, team) => {
     if (id === network.localId) {
@@ -248,9 +250,10 @@ weapon.onShot = (from, to, hit) => {
   effects.muzzleFlash(from)
   if (hit) effects.impactSparks(to)
 }
-weapon.onEnemyHit = (kill) => {
+weapon.onEnemyHit = (kill, point, damage, headshot) => {
   hitFeedback.showHit(kill)
-  sound.play(kill ? 'kill' : 'hit')
+  hitFeedback.showDamageNumber(point, damage, headshot, camera)
+  sound.play(kill ? 'kill' : headshot ? 'headshot' : 'hit')
 }
 weapon.onReload = () => sound.play('reload', 0.6)
 remotePlayers.onFootstep = (position) => sound.playAt('step', position, 0.8)
