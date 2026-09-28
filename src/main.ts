@@ -257,6 +257,7 @@ weapon.onEnemyHit = (kill, point, damage, headshot) => {
   sound.play(kill ? 'kill' : headshot ? 'headshot' : 'hit')
 }
 weapon.onReload = () => sound.play('reload', 0.6)
+weapon.onSwing = () => sound.play('knife', 0.7)
 weapon.onSwitch = (id) => {
   player.weapon = id
 }
@@ -445,7 +446,8 @@ const slotElements = WEAPON_SLOTS.map((id, index) => {
 function updateAmmoHud() {
   const ammo = weapon.getAmmoState()
   WEAPON_SLOTS.forEach((id, index) => slotElements[index].classList.toggle('active', id === ammo.weapon))
-  ammoHud.textContent = ammo.reloading ? 'Nachladen...' : `${ammo.current} / ${ammo.max}`
+  if (ammo.max === 0) ammoHud.textContent = '—'
+  else ammoHud.textContent = ammo.reloading ? 'Nachladen...' : `${ammo.current} / ${ammo.max}`
   ammoHud.classList.toggle('reloading', ammo.reloading)
 }
 

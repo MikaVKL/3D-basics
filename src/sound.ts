@@ -82,6 +82,24 @@ export const SYNTHS = {
     tone(ctx, out, 'sine', 160, 60, 0.6, 0.18)
     noiseBurst(ctx, out, noise, 'lowpass', 900, 0.3, 0.12)
   },
+  // Messer: kurzes, nach oben gezogenes Zischen
+  knife: (ctx, out, noise) => {
+    const source = ctx.createBufferSource()
+    source.buffer = noise
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.Q.value = 2
+    const t = ctx.currentTime
+    filter.frequency.setValueAtTime(900, t)
+    filter.frequency.exponentialRampToValueAtTime(4500, t + 0.15)
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.0001, t)
+    gain.gain.exponentialRampToValueAtTime(0.6, t + 0.05)
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18)
+    source.connect(filter).connect(gain).connect(out)
+    source.start(t)
+    source.stop(t + 0.2)
+  },
   jump: (ctx, out) => tone(ctx, out, 'sine', 220, 440, 0.12, 0.1),
   land: (ctx, out, noise) => noiseBurst(ctx, out, noise, 'lowpass', 400, 0.9, 0.12),
   step: (ctx, out, noise) => noiseBurst(ctx, out, noise, 'lowpass', 700, 0.7, 0.07),

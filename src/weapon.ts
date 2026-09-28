@@ -4,7 +4,7 @@ import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
 import type { Team } from './team'
 import { HEADSHOT_MULTIPLIER } from './shared/gameRules'
-import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, type WeaponId } from './shared/weapons'
+import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, isMelee, type WeaponId } from './shared/weapons'
 
 // Hitscan aus der Bildschirmmitte, mehrere Waffen mit eigener Munition,
 // Nachladen, Wechsel, Dauerfeuer. Treffer laufen generisch über Damageable
@@ -75,6 +75,8 @@ export class Weapon {
   onEnemyHit?: (kill: boolean, point: THREE.Vector3, damage: number, headshot: boolean) => void
   onReload?: () => void
   onSwitch?: (weapon: WeaponId) => void
+  // Messerstich (getroffen oder nicht), für den Ton
+  onSwing?: () => void
 
   private weaponId: WeaponId = DEFAULT_WEAPON
   private previousWeapon: WeaponId = WEAPON_SLOTS[1]
@@ -207,14 +209,15 @@ export class Weapon {
   // true = Schuss abgegeben
   tryShoot(): boolean {
     if (this.reloadRemaining > 0 || this.switchRemaining > 0) return false
-    if (this.ammo <= 0) {
+    const melee = isMelee(this.weaponId)
+    if (!melee && this.ammo <= 0) {
       this.reload()
       return false
     }
     if (this.cooldownRemaining > 0) return false
 
     this.cooldownRemaining = Math.max(this.cooldownRemaining, -MAX_FIRE_CATCHUP) + this.stats.fireInterval
-    this.ammo -= 1
+    if (!melee) this.ammo -= 1
     this.view.playShootEffect()
 
     // matrixWorld wird sonst erst beim Rendern aktualisiert - ein Schuss
@@ -222,35 +225,25 @@ export class Weapon {
     this.camera.updateMatrixWorld()
 
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
+    this.raycaster.far = this.stats.range
     this.applySpread()
     this.heat += 1
 
-    const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
     // Raycaster ignoriert "visible" nicht - tote Spieler fingen sonst Kugeln ab
     const hits = this.raycaster
       .intersectObjects(this.shootables, false)
       .filter((hit) => hit.object.visible)
 
-    if (hits.length > 0) {
-      const damageable = hits[0].object.userData.damageable as Damageable | undefined
-      const targetTeam = hits[0].object.userData.team as Team | undefined
+    if (melee) {
+      // Keine Leuchtspur, keine Einschlag-Markierung
+      if (hits.length > 0) this.applyHit(hits[0], false)
+      this.onSwing?.()
+      return true
+    }
 
-      if (damageable && (targetTeam === this.shooterTeam || damageable.invulnerable)) {
-        // Teamkamerad oder Spawn-Schutz: wie ein Wand-Treffer
-        this.spawnImpactMarker(hits[0])
-      } else if (damageable) {
-        const headshot = hits[0].object.userData.headshot === true
-        const damage = this.stats.damage * (headshot ? HEADSHOT_MULTIPLIER : 1)
-        const wasAlive = damageable.isAlive
-        damageable.takeDamage(damage, headshot)
-        const killed = wasAlive && !damageable.isAlive
-        if (killed) {
-          this.onKill?.(this.shooterTeam)
-        }
-        this.onEnemyHit?.(killed, hits[0].point, damage, headshot)
-      } else {
-        this.spawnImpactMarker(hits[0])
-      }
+    const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
+    if (hits.length > 0) {
+      this.applyHit(hits[0], true)
       this.spawnTracer(muzzlePosition, hits[0].point)
       this.onShot?.(muzzlePosition, hits[0].point, true)
     } else {
@@ -267,7 +260,30 @@ export class Weapon {
     return true
   }
 
+  private applyHit(hit: THREE.Intersection, markImpact: boolean) {
+    const damageable = hit.object.userData.damageable as Damageable | undefined
+    const targetTeam = hit.object.userData.team as Team | undefined
+
+    if (damageable && (targetTeam === this.shooterTeam || damageable.invulnerable)) {
+      // Teamkamerad oder Spawn-Schutz: wie ein Wand-Treffer
+      if (markImpact) this.spawnImpactMarker(hit)
+    } else if (damageable) {
+      const headshot = hit.object.userData.headshot === true
+      const damage = this.stats.damage * (headshot ? HEADSHOT_MULTIPLIER : 1)
+      const wasAlive = damageable.isAlive
+      damageable.takeDamage(damage, headshot)
+      const killed = wasAlive && !damageable.isAlive
+      if (killed) {
+        this.onKill?.(this.shooterTeam)
+      }
+      this.onEnemyHit?.(killed, hit.point, damage, headshot)
+    } else if (markImpact) {
+      this.spawnImpactMarker(hit)
+    }
+  }
+
   reload() {
+    if (isMelee(this.weaponId)) return
     if (this.reloadRemaining > 0 || this.switchRemaining > 0 || this.ammo === this.stats.magazine) return
     this.reloadRemaining = this.stats.reloadTime
     this.onReload?.()

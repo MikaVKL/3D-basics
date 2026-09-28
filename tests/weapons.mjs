@@ -151,6 +151,31 @@ try {
   const ratio = rifleDistance / pistolDistance
   check('Sturmgewehr läuft 92 % so schnell', Math.abs(ratio - 0.92) < 0.01, ratio.toFixed(3))
 
+  // Messer: Taste 3, keine Munition, Reichweite ~2,5 m, schneller
+  await page.keyboard.press('Digit3')
+  await wait(500)
+  h = await hud(page)
+  check('Taste 3: Messer', h.weapon === 'knife' && h.slot === '3 Messer' && h.ammo === '—', JSON.stringify(h))
+  const knifeRatio = (await distance('knife')) / pistolDistance
+  await page.evaluate(() => (__dusk.player.weapon = __dusk.weapon.current))
+  check('Messer läuft 115 % so schnell', Math.abs(knifeRatio - 1.15) < 0.01, knifeRatio.toFixed(3))
+  await page.evaluate(() => {
+    window.__stabs = []
+    __dusk.weapon.onEnemyHit = (kill, point, damage) => window.__stabs.push(damage)
+    window.__swings = 0
+    __dusk.weapon.onSwing = () => window.__swings++
+  })
+  // Dummy bei (3, 0.8, -6)
+  await teleport(page, 3, 1.7, -2)
+  await wait(200)
+  await shootAt(page, [3, 0.8, -6])
+  await teleport(page, 3, 1.7, -4)
+  await wait(200)
+  await shootAt(page, [3, 0.8, -6])
+  const stabs = await page.evaluate(() => ({ hits: window.__stabs, swings: window.__swings, tracers: __dusk.weapon.tracers.length }))
+  check('Messer: 4 m daneben, 2 m trifft mit 50', stabs.hits.join() === '50' && stabs.swings === 2, JSON.stringify(stabs))
+  check('Messer: keine Leuchtspur', stabs.tracers === 0)
+
   // Respawn: Startwaffe, volle Magazine
   await page.evaluate(() => {
     __dusk.weapon.switchTo('rifle')
@@ -194,6 +219,18 @@ try {
   await wait(500)
   const afterSpam = await vitals()
   check('Server begrenzt Trefferflut (3 x 20)', afterSpam.health === 29, JSON.stringify(afterSpam))
+
+  // Messer: gefälschter Stich aus 5 m zählt nicht, echter aus 2 m tötet (50 > 29)
+  await A.keyboard.press('Digit3')
+  await wait(600)
+  await A.evaluate(() => __dusk.network.sendHit([...__dusk.network.remotePlayers][0], false))
+  await wait(400)
+  check('Server lehnt Messer aus 5 m ab', (await vitals()).health === 29)
+  await teleport(A, 0, 1.7, 7)
+  await wait(400)
+  await shootAt(A, [0, 0.9, 5])
+  await wait(500)
+  check('Messerstich aus 2 m tötet', !(await B.evaluate(() => __dusk.player.isAlive)))
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

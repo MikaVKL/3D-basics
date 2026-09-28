@@ -12,12 +12,16 @@ const SWITCH_DROP = 0.35 // so weit sinkt die Waffe beim Wechseln
 const RECOIL_DURATION = 0.12 // Sekunden
 const RECOIL_KICK_Z = 0.08
 const RECOIL_KICK_ROTATION = 0.12
+const STAB_DURATION = 0.25
+const STAB_REACH = 0.22
 
 interface Model {
   group: THREE.Group
   // Unsichtbarer Punkt am Lauf-Ende (Start der Leuchtspur)
   muzzle: THREE.Object3D
   recoilScale: number
+  // Messer: Stoß nach vorn statt Rückstoß
+  stab: boolean
 }
 
 function part(
@@ -58,6 +62,7 @@ export class WeaponView {
     this.models = {
       pistol: this.buildPistol(body, accent),
       rifle: this.buildRifle(body, accent),
+      knife: this.buildKnife(body, accent),
     }
     this.current = this.models.pistol
     this.setWeapon('pistol')
@@ -86,12 +91,25 @@ export class WeaponView {
     return this.finishModel(group, -0.57, 0.6)
   }
 
-  private finishModel(group: THREE.Group, muzzleZ: number, recoilScale: number): Model {
+  private buildKnife(body: THREE.Material, accent: THREE.Material): Model {
+    const group = new THREE.Group()
+    const blade = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, roughness: 0.25, metalness: 0.8 })
+    part(group, body, [0.04, 0.045, 0.12], [0, 0, 0.02]) // Griff
+    part(group, accent, [0.045, 0.09, 0.02], [0, 0.01, -0.05]) // Parierstange
+    part(group, blade, [0.012, 0.065, 0.22], [0, 0.01, -0.17])
+    part(group, blade, [0.012, 0.035, 0.06], [0, 0.025, -0.3]) // Spitze
+    // Flach zur Kamera gekippt, sonst sieht man nur die Klingenkante
+    group.position.set(-0.03, -0.02, -0.12)
+    group.rotation.set(0.3, 0.35, -1.1)
+    return this.finishModel(group, -0.3, 1, true)
+  }
+
+  private finishModel(group: THREE.Group, muzzleZ: number, recoilScale: number, stab = false): Model {
     const muzzle = new THREE.Object3D()
     muzzle.position.set(0, 0.02, muzzleZ)
     group.add(muzzle)
     this.group.add(group)
-    return { group, muzzle, recoilScale }
+    return { group, muzzle, recoilScale, stab }
   }
 
   setWeapon(id: WeaponId) {
@@ -105,14 +123,24 @@ export class WeaponView {
   }
 
   playShootEffect() {
-    this.recoilRemaining = RECOIL_DURATION
+    this.recoilRemaining = this.current.stab ? STAB_DURATION : RECOIL_DURATION
   }
 
   update(deltaSeconds: number) {
     this.recoilRemaining = Math.max(0, this.recoilRemaining - deltaSeconds)
-    const recoil = (this.recoilRemaining / RECOIL_DURATION) * this.current.recoilScale // 1 -> 0
-    this.group.position.z = REST_POSITION.z + RECOIL_KICK_Z * recoil
     this.group.position.y = REST_POSITION.y - SWITCH_DROP * this.lowered
+    if (this.current.stab) {
+      // Schnell vor, langsamer zurück
+      const t = 1 - this.recoilRemaining / STAB_DURATION // 0 -> 1
+      const thrust = this.recoilRemaining > 0 ? (t < 0.3 ? t / 0.3 : (1 - t) / 0.7) : 0
+      this.group.position.z = REST_POSITION.z - STAB_REACH * thrust
+      this.group.position.x = REST_POSITION.x - 0.12 * thrust
+      this.group.rotation.x = -this.lowered * 0.6
+      return
+    }
+    const recoil = (this.recoilRemaining / RECOIL_DURATION) * this.current.recoilScale // 1 -> 0
+    this.group.position.x = REST_POSITION.x
+    this.group.position.z = REST_POSITION.z + RECOIL_KICK_Z * recoil
     this.group.rotation.x = -RECOIL_KICK_ROTATION * recoil - this.lowered * 0.6
   }
 }

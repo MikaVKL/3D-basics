@@ -94,8 +94,10 @@ function takeRateToken(budget: RateBudget, intervalSeconds: number, now: number)
   budget.tokens -= 1
   return true
 }
-// Arena-Diagonale ~90m
-const MAX_HIT_DISTANCE = 100
+
+// Zuschlag auf die Waffenreichweite: der Schütze sieht das Ziel ~100ms
+// verzögert (Interpolation + Ping), Messer-Ziele können so weiter weg sein
+const HIT_RANGE_TOLERANCE = 2
 
 function isAlive(client: Client): boolean {
   return client.vitals.health > 0
@@ -468,12 +470,14 @@ function handleHit(shooter: Client, targetId: unknown, headshot: boolean) {
   const now = performance.now()
   if (nextRoundAt !== null) return
   if (isProtected(target, now)) return
-  const a = shooter.state.position
-  const b = target.state.position
-  if (Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) > MAX_HIT_DISTANCE) return
   // Waffe laut letztem Zustand: der kommt über dieselbe Verbindung vor dem Treffer an
   const weapon = WEAPONS[shooter.state.weapon]
+  const a = shooter.state.position
+  const b = target.state.position
+  if (Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) > weapon.range + HIT_RANGE_TOLERANCE) return
   if (!takeRateToken(shooter.hitBudget, weapon.fireInterval, now)) return
+  // Angreifen beendet den eigenen Spawn-Schutz (Messer schickt keinen "shot")
+  shooter.protectedUntil = 0
 
   const killed = applyDamage(target.vitals, weapon.damage * (headshot ? HEADSHOT_MULTIPLIER : 1))
   send(target.socket, { t: 'hurt', by: shooter.id })
