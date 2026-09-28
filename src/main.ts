@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import './style.css'
 import { Palette } from './palette'
+import { createSky } from './sky'
 import { buildArena } from './arena'
 import { Player } from './player'
 import { LookControl } from './lookControl'
@@ -27,6 +28,8 @@ import { weaponIcon } from './weaponIcons'
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color(Palette.sky)
+const sky = createSky()
+scene.add(sky)
 scene.fog = new THREE.Fog(Palette.fog, 15, 45)
 
 const camera = new THREE.PerspectiveCamera(
@@ -49,8 +52,10 @@ appElement.appendChild(renderer.domElement)
 // --- Beleuchtung ---
 // Grundhelligkeit + gerichtetes Abendlicht; so hell, dass Kanten im
 // Dämmerlicht noch gut erkennbar sind
-const ambientLight = new THREE.AmbientLight(Palette.ambientLight, 1.8)
+const ambientLight = new THREE.AmbientLight(Palette.ambientLight, 1.0)
 scene.add(ambientLight)
+const skyLight = new THREE.HemisphereLight(0x9fb4d8, 0x1a1f2e, 1.4)
+scene.add(skyLight)
 
 const sunLight = new THREE.DirectionalLight(Palette.sunLight, 2.8)
 sunLight.position.set(-15, 20, 10)
@@ -592,6 +597,7 @@ function animate() {
   updateRoundHud()
 
   effects.update(deltaSeconds)
+  sky.position.copy(camera.position)
   cameraShake.apply(camera, deltaSeconds)
   slideView.apply(camera, player.isSliding && player.isAlive, deltaSeconds)
   weapon.slideAmount = slideView.amount

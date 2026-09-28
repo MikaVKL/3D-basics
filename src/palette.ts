@@ -2,13 +2,19 @@
 
 export const Palette = {
   sky: 0x1a1f2e,
+  // Abendhimmel-Verlauf (sky.ts): über den Wänden sichtbar
+  skyHorizon: 0x3a2b46,
+  skyTop: 0x0b0f1c,
 
   ground: 0x25384a,
 
   wall: 0x2f4356,
 
-  // Deckungs-Kisten
+  // Warnfarbe/Akzente (nicht mehr die Kisten: zu nah an Team Rot)
   accentWarm: 0xff6b3d,
+
+  // Deckungs-Kisten: Sandbraun, weit weg von Team Rot und Blau
+  crate: 0xc9975a,
 
   // Leuchtkanten
   accentNeon: 0x33e6cc,

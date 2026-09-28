@@ -55,6 +55,7 @@ Weiterarbeiten wissen muss.
 - `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall), Kamera-Ruck
   und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
 - `src/weaponIcons.ts` – Waffen-Umrisse (SVG) für Kill-Feed und Waffenfeld
+- `src/sky.ts` – Abendhimmel-Kuppel (Farbverlauf), folgt der Kamera
 - `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` (Körper-Kapsel)
   und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
@@ -110,6 +111,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:layout` – keine HUD-Überlappungen in 6 Bildschirmgrößen
   (Rechner bis kleines Handy quer, online mit langem Status/Kill-Feed),
   Handy hochkant zeigt "Gerät drehen". Nach jeder HUD-Änderung laufen lassen.
+- `npm run test:contrast` – Erkennbarkeit: rote/blaue Figur vor Kiste, Wand,
+  Boden, Weite; Farbabstand ΔE (Median >= 28, schwächstes Fünftel >= 20).
+  Nach jeder Änderung an Farben, Licht, Materialien oder Deko laufen lassen.
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -142,6 +146,8 @@ Stolperfallen bei Headless-Tests:
 - Fadenkreuz zeigt nur echte Streuung (Sturmgewehr-Dauerfeuer), nicht Laufen/
   Springen - die beeinflussen die Treffsicherheit nicht.
 - Handy hochkant: nur Hinweis "Gerät drehen" (Buttons + HUD passen nicht).
+- Kisten sandbraun statt orange (zu nah an Team Rot, messbar schlechter
+  erkennbar). Farben in `src/palette.ts`.
 - Kopftreffer = 2× Schaden; Schadenszahlen bei jedem Treffer (Kopf rot),
   Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
 - Waffen (abgestimmt): 1 Pistole (20, 5/s, 12er, Tempo 100 %),

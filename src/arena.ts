@@ -322,9 +322,9 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: armAlongZ, box: new THREE.Box3().setFromObject(armAlongZ) })
   }
 
-  // --- Deckungs-Kisten (warme Akzentfarbe) ---
+  // --- Deckungs-Kisten ---
   const boxMaterial = new THREE.MeshStandardMaterial({
-    color: Palette.accentWarm,
+    color: Palette.crate,
     roughness: 0.6,
     metalness: 0.15,
   })
