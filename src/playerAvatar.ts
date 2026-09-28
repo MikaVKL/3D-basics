@@ -78,17 +78,17 @@ export class PlayerAvatar {
     head.position.y = 1.67
     const visor = box(0.34, 0.09, 0.03, visorMaterial)
     visor.position.set(0, 1.7, -0.22)
-    // Arme nach vorne, halten die Waffe
     const leftArm = limb(0.15, 0.55, 0.17, this.teamMaterial)
     const rightArm = limb(0.15, 0.55, 0.17, this.teamMaterial)
     leftArm.position.set(-0.38, 1.4, 0)
     rightArm.position.set(0.38, 1.4, 0)
-    leftArm.rotation.set(1.25, 0, 0.5)
-    rightArm.rotation.set(1.25, 0, -0.5)
+    // Waffe rechts: rechte Hand am Griff, linke greift quer an den Lauf
+    leftArm.rotation.set(1.25, 0, 0.76)
+    rightArm.rotation.set(1.25, 0, -0.37)
     const gun = box(0.1, 0.14, 0.55, gunMaterial)
-    gun.position.set(0, 1.28, -0.62)
+    gun.position.set(0.18, 1.28, -0.6)
     const gunStripe = box(0.11, 0.03, 0.4, visorMaterial)
-    gunStripe.position.set(0, 1.36, -0.62)
+    gunStripe.position.set(0.18, 1.36, -0.6)
     this.upperBody.add(torso, head, visor, leftArm, rightArm, gun, gunStripe)
     this.root.add(this.upperBody)
 
