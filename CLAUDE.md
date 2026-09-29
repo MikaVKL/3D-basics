@@ -61,7 +61,8 @@ Weiterarbeiten wissen muss.
 - `src/decorations.ts` – Wandlampen, Rampen-Schilder A/B (reine Optik: nicht
   in solids/shootables, Schüsse gehen durch)
 - `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` (Körper-Kapsel)
-  und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen
+  und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen.
+  Look: fast schwarze Rüstung (Weste, Helm) mit Leuchtteilen in Teamfarbe
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
   (Interpolation auf der Uhr des Absenders), `src/player.ts` (Bewegung und
   Kollision: Boden über die ganze Standfläche, Deckenkollision, "nur tiefer
@@ -247,14 +248,23 @@ Stolperfallen bei Headless-Tests:
   gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
   getestet - Nutzen gering gegen Risiko. Nur nach Absprache.
 
+- **Spielerfigur** (Lasertag-Look, abgestimmt): Weste mit Diagonalgurt vorn und
+  hinten, Leuchtgürtel, Ringe an Armen/Beinen, Helm mit Visier und Antenne,
+  Waffenkante in Teamfarbe. Rüstung ist bewusst *fast* schwarz (Nutzerwunsch),
+  bekommt aber einen Farbschimmer (`ARMOR_GLOW` 0,22) und Leuchtkanten:
+  echtes Schwarz fällt in `test:contrast` durch (schwächstes Fünftel 12-15 ΔE),
+  bei 0,12/0,18 scheitert Blau vor Wand/Boden. Blau ist der knappste Fall
+  (Boden 21,8 bei Schwelle 20). Wer die Rüstung schwärzer will, muss zuerst
+  Kontrast klären.
+- **Keine Kollision zwischen Spielern** (Empfehlung angenommen: Lasertag-
+  üblich, keine Blockade-Streits an Engstellen, Server prüft nicht mehr).
+
 ## Offene Ideen / nächste Schritte
 
 - Reihenfolge (mit Nutzer abgestimmt): Sound, Spielermodell, Effekte,
   Kopftreffer, Waffen, Rutschen/Bunny-Hop (erledigt) -> Ping ->
   Arena/Optik/HUD -> Hintergrund-Tab -> Server-Prüfung -> ganz am Ende
   (Nutzer, nur zurückgestellt): Raum-Codes für private Runden.
-- Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
-- Noch zu entscheiden: Kollision zwischen Spielern?
 - Obere Ebene: Bots nutzen sie nicht (laufen nur geradeaus zum Gegner).
 - Erledigt: Hintergrund-Tab sendet nur ~1×/s (`network.ts`; Austritt nach
   20 s bleibt), Bewegungsprüfung auf dem Server (Stufe 1+2, s. unten).
