@@ -15,6 +15,7 @@ import {
   type RosterEntry,
 } from '../src/shared/protocol.ts'
 import { ARENA_BOUNDS, SPAWN_POINTS } from '../src/shared/arenaLayout.ts'
+import { checkMovement, createMovementCheck, type MovementCheck } from '../src/shared/movementRules.ts'
 import {
   MAX_HEALTH,
   MAX_SHIELD,
@@ -65,6 +66,8 @@ interface Client {
   protectedUntil: number // Spawn-Schutz bis zu diesem performance.now()-Zeitpunkt
   hitBudget: RateBudget
   shotBudget: RateBudget
+  movement: MovementCheck // Basis der Bewegungsprüfung (Spawn-Punkt des Servers)
+  movementViolations: number
   lastStateAt: number
   lastActivityAt: number
   removing: boolean // wird gerade entfernt (Close läuft noch)
@@ -238,6 +241,9 @@ function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
   }
 }
 
+// off: keine Prüfung, log: Verstöße nur melden (Beobachtung), enforce: ablehnen
+const MOVEMENT_MODE = process.env.MOVEMENT_CHECK ?? 'log'
+
 // Schwellen, damit Rundungsrauschen nicht als Aktivität zählt
 function isActivity(before: PlayerNetworkState | null, after: PlayerNetworkState): boolean {
   if (!before) return true
@@ -301,6 +307,7 @@ function respawn(client: Client, now: number) {
   // Sofort am Spawn führen, sonst sehen andere kurz die alte Position
   if (client.state) client.state = { ...client.state, position: { ...SPAWN_POINTS[spawnIndex] } }
   client.life += 1
+  client.movement = createMovementCheck(SPAWN_POINTS[spawnIndex], client.life, now)
   broadcast({ t: 'respawn', id: client.id, spawnIndex, life: client.life, team: client.team })
 }
 
@@ -403,6 +410,8 @@ wss.on('connection', (socket) => {
         protectedUntil: performance.now() + SPAWN_PROTECTION * 1000,
         hitBudget: { tokens: RATE_BURST, updatedAt: performance.now() },
         shotBudget: { tokens: RATE_BURST, updatedAt: performance.now() },
+        movement: createMovementCheck(SPAWN_POINTS[spawnIndex], 0, performance.now()),
+        movementViolations: 0,
         lastStateAt: performance.now(),
         lastActivityAt: performance.now(),
         removing: false,
@@ -434,6 +443,15 @@ wss.on('connection', (socket) => {
       const state = sanitizeState(message.state, client.team)
       if (state) {
         const now = performance.now()
+        if (MOVEMENT_MODE !== 'off' && !checkMovement(client.movement, state.position, now)) {
+          client.movementViolations++
+          // Nicht jeden Zustand melden: nach dem ersten alle 20 Verstöße
+          if (client.movementViolations % 20 === 1) {
+            console.log(
+              `Bewegungsprüfung: Spieler ${client.id} zu weit/zu schnell (${client.movementViolations}. Verstoß, ${MOVEMENT_MODE})`
+            )
+          }
+        }
         client.lastStateAt = now
         if (isActivity(client.state, state)) client.lastActivityAt = now
         client.state = state

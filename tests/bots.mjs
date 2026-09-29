@@ -551,6 +551,8 @@ try {
   if (serverErrors) report('Server-Fehlerausgabe', serverErrors.split('\n').slice(0, 3).join(' | '))
 
   const log = servers.serverLog()
+  const movementViolations = (log.match(/Bewegungsprüfung:/g) ?? []).length
+  if (movementViolations > 0) report('Bewegungsprüfung schlägt an', log.split('\n').filter((l) => l.includes('Bewegungsprüfung:')).slice(0, 3).join(' | '))
   const kills = (log.match(/eliminiert/g) ?? []).length
   const rounds = (log.match(/Runde vorbei/g) ?? []).length
   const events = {}
