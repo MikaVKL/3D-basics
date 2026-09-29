@@ -265,7 +265,10 @@ Stolperfallen bei Headless-Tests:
   Kopftreffer, Waffen, Rutschen/Bunny-Hop (erledigt) -> Ping ->
   Arena/Optik/HUD -> Hintergrund-Tab -> Server-Prüfung -> ganz am Ende
   (Nutzer, nur zurückgestellt): Raum-Codes für private Runden.
-- Obere Ebene: Bots nutzen sie nicht (laufen nur geradeaus zum Gegner).
+- **Leitlinie (Nutzer):** Das Spiel hat keine Bots und bekommt keine. Die Bots
+  in `tests/bots.mjs` sind nur ein Testwerkzeug (Browser-Clients, die wie
+  Spieler agieren) und werden nicht weiterentwickelt. Ab jetzt nur noch
+  Dinge, die die Spielerfahrung verbessern.
 - Erledigt: Hintergrund-Tab sendet nur ~1×/s (`network.ts`; Austritt nach
   20 s bleibt), Bewegungsprüfung auf dem Server (Stufe 1+2, s. unten).
   Stufe 3 (Wand-/Flug-Prüfung mit Arena-Geometrie im Server) bewusst nicht
