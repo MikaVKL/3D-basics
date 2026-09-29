@@ -122,6 +122,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:contrast` – Erkennbarkeit: rote/blaue Figur vor Kiste, Wand,
   Boden, Weite; Farbabstand ΔE (Median >= 28, schwächstes Fünftel >= 20).
   Nach jeder Änderung an Farben, Licht, Materialien oder Deko laufen lassen.
+- `node tests/topdown.mjs [ordner]` – Draufsicht der Arena (Norden oben,
+  Meterraster, Spawns S0..S5) als `topdown.png` und `topdown-unten.png` (ohne
+  obere Ebene). Für Abstimmungen über Kartenänderungen mitschicken.
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:
@@ -199,6 +202,21 @@ Stolperfallen bei Headless-Tests:
   landen = weiterrutschen. Als Schwung zählt nur Tempo über dem Sprint-
   (geduckt: Duck-)Tempo; darunter folgt man der Eingabe sofort.
   Leertaste halten hüpft per Tasten-Wiederholung automatisch weiter.
+
+- **Nordost-Halle** (x 32..52, z -21..-12): Zugang über 8-m-Öffnung
+  (x 38..46) in der Flankenraum-Nordwand. Der Nordsteg läuft durch die
+  Hauptraum-Ostwand (Öffnung z -20,5..-17,5 ab 2,8 m, Sockel darunter) als
+  Regal-Steg bis zur Ostwand, Absprung-Lücke x 47..49. Die Öffnung hat
+  bewusst KEINEN Sturz: mit 2,2 m Kopffreiheit stieß man im Sprung mitten
+  in der Tür an (stuck-fuzz Seed 3). Spawn 5 (49,5 / -19,2) unter dem Steg.
+- **Requisiten** (`arena.ts`, Farben in `palette.ts`): Autowracks (Karosserie
+  0,9 m, Dach 1,4 m), Fässer, Paletten, drei 6-m-Pfeiler. Grau/Oliv/Holz,
+  nie rot/blau. 1,4-m-Kisten sind ohnehin per Sprung erreichbar - Paletten
+  sind Kleindeckung, keine nötigen Stufen. Standort-Falle: x 13,75..16,25
+  liegt unter der Brücke.
+- **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
+  gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
+  getestet - Nutzen gering gegen Risiko. Nur nach Absprache.
 
 ## Offene Ideen / nächste Schritte
 
