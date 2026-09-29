@@ -349,6 +349,23 @@ try {
     placeOnFloor(39, -8)
     walkTo(0, 200)
     out.hallIn = { z: cam.position.z }
+    // Regal-Steg: vom Nordsteg (x 28) nach Osten durch die Wand, Absprung-Lücke bei x 47..49
+    place(28, -19, EAST)
+    walkTo(EAST, 100)
+    out.shelfEnter = { y: P.bodyY, x: cam.position.x }
+    walkTo(EAST, 160)
+    out.shelfEast = { y: P.bodyY, x: cam.position.x }
+    cam.position.x = 48
+    walkTo(Math.PI, 80)
+    out.shelfDrop = { y: P.bodyY, z: cam.position.z }
+    // Vom Boden aus (Öffnung Ostwand unter dem Steg) kommt man nicht durch die Wand
+    placeOnFloor(28, -19)
+    walkTo(EAST, 100)
+    out.shelfWall = { x: cam.position.x }
+    // Unter dem Regal-Steg stehen (Halle)
+    placeOnFloor(44, -14)
+    walkTo(0, 60)
+    out.shelfUnder = { y: P.bodyY, z: cam.position.z }
     placeOnFloor(34, -8)
     walkTo(0, 120)
     out.hallWall = { z: cam.position.z }
@@ -383,6 +400,11 @@ try {
   check('Süd-Spawn: seitlich unter dem Steg raus', r.spawnExit.west < -6 && r.spawnExit.east > 6, `x ${f2(r.spawnExit.west)} / ${f2(r.spawnExit.east)}`)
   check('Nordost-Halle: durch die Öffnung hinein', r.hallIn.z < -19.9, `z ${f2(r.hallIn.z)}`)
   check('Nordost-Halle: Wand neben der Öffnung hält', r.hallWall.z > -11.2, `z ${f2(r.hallWall.z)}`)
+  check('Regal-Steg: durch die Ostwand auf 2,8 m', Math.abs(r.shelfEnter.y - 2.8) < 0.01 && r.shelfEnter.x > 30, `Höhe ${f2(r.shelfEnter.y)}, x ${f2(r.shelfEnter.x)}`)
+  check('Regal-Steg: bis ans Ende in der Halle', Math.abs(r.shelfEast.y - 2.8) < 0.01 && r.shelfEast.x > 50, `Höhe ${f2(r.shelfEast.y)}, x ${f2(r.shelfEast.x)}`)
+  check('Regal-Steg: Lücke im Geländer, hinunterspringen', r.shelfDrop.y < 0.01 && r.shelfDrop.z > -17, `Höhe ${f2(r.shelfDrop.y)}, z ${f2(r.shelfDrop.z)}`)
+  check('unter dem Steg kein Durchgang durch die Ostwand', r.shelfWall.x < 32, `x ${f2(r.shelfWall.x)}`)
+  check('unter dem Regal-Steg stehen', r.shelfUnder.y < 0.01 && r.shelfUnder.z < -17.9, `Höhe ${f2(r.shelfUnder.y)}, z ${f2(r.shelfUnder.z)}`)
   check('Nord-Spawn: seitlich unter dem Steg raus', r.northSpawnExit.west < -6 && r.northSpawnExit.east > 6, `x ${f2(r.northSpawnExit.west)} / ${f2(r.northSpawnExit.east)}`)
   check('unter dem Steg: Sprung stößt an (Kopf <= 2,5 m)', r.underCatwalk.maxHead <= 2.51 && r.underCatwalk.landed < 0.01, `Kopf max ${f2(r.underCatwalk.maxHead)}`)
   check('unter den Steg bis an die Wand laufen', r.walkUnder.y < 0.01 && r.walkUnder.z < -19.5, `x ${f2(r.walkUnder.x)}, z ${f2(r.walkUnder.z)}`)

@@ -219,12 +219,9 @@ export function buildArena(): ArenaResult {
       x: MAIN_HALF_W,
       z: (MAIN_HALF_D + SIDE_HALF_D) / 2,
     },
-    {
-      w: WALL_THICKNESS,
-      d: MAIN_HALF_D - SIDE_HALF_D,
-      x: MAIN_HALF_W,
-      z: -(MAIN_HALF_D + SIDE_HALF_D) / 2,
-    },
+    // Ostwand nördlich der Öffnung: Durchgang für den Regal-Steg (z -20,5..-17,5, siehe unten)
+    { w: WALL_THICKNESS, d: 5.5, x: MAIN_HALF_W, z: -SIDE_HALF_D - 5.5 / 2 },
+    { w: WALL_THICKNESS, d: 0.5, x: MAIN_HALF_W, z: -MAIN_HALF_D + 0.25 },
     // Flankenraum
     { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: SIDE_HALF_D },
     // Nordwand des Flankenraums mit Öffnung zur Halle
@@ -598,6 +595,24 @@ export function buildArena(): ArenaResult {
     addBlock(PLATFORM_A_X + BRIDGE_WIDTH / 2 - 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
     return cornerRamp
   }
+  // --- Nordost-Halle: Regal-Steg auf 2,8 m an der Nordwand, Verlängerung des
+  // Nordstegs durch die Ostwand (Öffnung bis zur Oberkante, darunter Sockel;
+  // ohne Sturz, sonst stößt man im Sprung mitten in der Tür an)
+  const SHELF_Z_MIN = -MAIN_HALF_D + WALL_THICKNESS / 2
+  const SHELF_Z_MAX = SHELF_Z_MIN + CATWALK_DEPTH
+  const SHELF_MAX_X = sideRoomMaxX - WALL_THICKNESS / 2
+  const shelfMinX = MAIN_HALF_W + WALL_THICKNESS / 2
+  const shelfDoorZ = (SHELF_Z_MIN + SHELF_Z_MAX) / 2
+  addBlock(MAIN_HALF_W, shelfDoorZ, WALL_THICKNESS, CATWALK_DEPTH, 0, UPPER_TOP)
+  addBlock((shelfMinX + SHELF_MAX_X) / 2, shelfDoorZ, SHELF_MAX_X - shelfMinX, CATWALK_DEPTH, upperBottom, UPPER_TOP)
+  {
+    const railZ = SHELF_Z_MAX - RAILING_THICKNESS / 2
+    const dropGap: [number, number] = [47, 49]
+    addBlock((shelfMinX + dropGap[0]) / 2, railZ, dropGap[0] - shelfMinX, RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
+    addBlock((dropGap[1] + SHELF_MAX_X) / 2, railZ, SHELF_MAX_X - dropGap[1], RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
+    for (const x of [36, 43, 51]) addBlock(x, SHELF_Z_MAX - 0.2, 0.4, 0.4, 0, upperBottom)
+  }
+
   const rampNorthWest = buildUpperSide(-1, 'west', [26, 28])
   const rampSouthEast = buildUpperSide(1, 'east', [-16, -14])
 
