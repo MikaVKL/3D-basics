@@ -50,6 +50,7 @@ export interface NetworkHandlers {
 
 const PING_INTERVAL_MS = 1000
 const PING_SAMPLES = 5
+const BACKGROUND_STATE_INTERVAL_MS = 1000
 const RECONNECT_MIN_MS = 2000
 const RECONNECT_MAX_MS = 15000
 
@@ -69,6 +70,7 @@ export class NetworkClient {
   // performance.now() der letzten Server-Nachricht (Stillstand erkennen)
   private lastMessageAt = 0
   private pingSamples: number[] = []
+  private lastStateSentAt = 0
 
   private readonly url: string | null
   private socket: WebSocket | null = null
@@ -87,6 +89,11 @@ export class NetworkClient {
     fetch(this.url.replace(/^ws/, 'http'), { mode: 'no-cors' }).catch(() => {})
     setInterval(() => {
       if (this.status !== 'online') return
+      // Im Hintergrund-Tab reicht 1x pro Sekunde (die Browser drosseln die
+      // Timer dort ohnehin, aber nicht alle und nicht gleich)
+      const now = performance.now()
+      if (document.hidden && now - this.lastStateSentAt < BACKGROUND_STATE_INTERVAL_MS) return
+      this.lastStateSentAt = now
       this.send({
         t: 'state',
         state: roundState(this.handlers.getLocalState()),

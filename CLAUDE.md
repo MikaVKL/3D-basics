@@ -109,6 +109,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:ping` – Ping-Anzeige: Messwert (auch mit 200 ms simuliert),
   Farbe, ausgeblendet ohne Verbindung, Ping-Spalte in der Tab-Tabelle,
   Spielerliste bei stabilem Ping selten verschickt
+- `npm run test:background` – Hintergrund-Tab: Zustand versteckt ~1/s statt
+  20/s, danach wieder volle Rate, Spieler bleibt für andere sichtbar
 - `npm run test:connection` – Verbindungswarnung: nie im normalen Spiel (auch
   mit Ping), erscheint bei eingefrorenem Server (SIGSTOP), verschwindet danach,
   Spiel läuft weiter; Server erst später erreichbar bzw. Neustart: Abblenden +
@@ -235,8 +237,8 @@ Stolperfallen bei Headless-Tests:
 - Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
 - Noch zu entscheiden: Kollision zwischen Spielern?
 - Obere Ebene: Bots nutzen sie nicht (laufen nur geradeaus zum Gegner).
-- Später: strengere Bewegungsprüfung auf dem Server, Hintergrund-Tab sendet
-  nur ~1×/s.
+- Später: strengere Bewegungsprüfung auf dem Server. (Hintergrund-Tab
+  sendet nur ~1×/s: erledigt, `network.ts`; Austritt nach 20 s bleibt.)
 - Ganz am Ende, nicht vorher anfangen: Raum-Codes (eigene Räume). Der Server
   hält Spieler, Punkte und Runde global (`clients`, `scores`, `nextRoundAt`
   in `server/index.ts`) - dafür müsste das in eine Raum-Klasse.
