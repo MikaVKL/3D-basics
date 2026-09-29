@@ -240,7 +240,7 @@ const network: NetworkClient = new NetworkClient({
     nextRoundAt = null
     roundBanner.classList.add('hidden')
   },
-  onRemoteShot: (from, to, hit, shotWeapon) => {
+  onRemoteShot: (from, to, hit, shotWeapon, shooter) => {
     if (shotWeapon === 'knife') {
       sound.playAt('knife', from, 0.8)
       return
@@ -250,7 +250,8 @@ const network: NetworkClient = new NetworkClient({
     if (hit) effects.impactSparks(new THREE.Vector3(to.x, to.y, to.z))
     weapon.showRemoteTracer(
       new THREE.Vector3(from.x, from.y, from.z),
-      new THREE.Vector3(to.x, to.y, to.z)
+      new THREE.Vector3(to.x, to.y, to.z),
+      network.roster.get(shooter)?.team ?? 'red'
     )
   },
   onHurt: (by) => {

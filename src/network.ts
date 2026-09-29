@@ -40,7 +40,7 @@ export interface NetworkHandlers {
   onRespawn: (id: PlayerId, spawnIndex: number, team: Team) => void
   onRoundEnd: (winner: Team, nextRoundIn: number) => void
   onRoundStart: (scores: Scores) => void
-  onRemoteShot: (from: Vec3, to: Vec3, hit: boolean, weapon: WeaponId) => void
+  onRemoteShot: (from: Vec3, to: Vec3, hit: boolean, weapon: WeaponId, shooter: PlayerId) => void
   onHurt: (by: PlayerId) => void
   // Zurück in den Singleplayer
   onDisconnect: () => void
@@ -240,7 +240,7 @@ export class NetworkClient {
         this.handlers.onRoundStart(message.scores)
         break
       case 'shot':
-        this.handlers.onRemoteShot(message.from, message.to, message.hit, message.weapon)
+        this.handlers.onRemoteShot(message.from, message.to, message.hit, message.weapon, message.id)
         break
       case 'hurt':
         this.handlers.onHurt(message.by)

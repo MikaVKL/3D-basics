@@ -92,6 +92,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:avatar` – Spielerfigur: Laufanimation, Duck-Pose (weich, bleibt
   am Boden), Rutsch-Pose, eigene Rutsch-Sicht (FOV/Neigung), Tod
 - `npm run test:effects` – Mündungsleuchten, Funken, Todeseffekt, Kamera-Ruck
+- `npm run test:tracer` – Laserstrahl: Kern + Schein in Teamfarbe, 0,2 s mit
+  weichem Ausblenden, aufgeräumt, fremde Strahlen rot/blau
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
 - `npm run test:weapons` – Wechsel (1/2/3, Mausrad, Q), Munition je Waffe,
@@ -232,6 +234,10 @@ Stolperfallen bei Headless-Tests:
   je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
   fielen von ~55 auf ~20, weil Pfeiler/Wracks (Wracks inzwischen entfernt) die geradeaus laufenden Bots
   bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
+- **Laserstrahl (Leuchtspur) bleibt** (Nutzer mag ihn): heller weißer Kern +
+  additiver Schein in der Teamfarbe des Schützen, 0,2 s, quadratisch
+  ausgeblendet, ohne Nebel (`weapon.ts`). Vorher nur 0,06 s und 3 cm dünn -
+  wirkte wie ein direkter Einschlag. Nicht wieder verkürzen/entfernen.
 - **Bewegungsprüfung** (`src/shared/movementRules.ts`, Server): Strecken-
   Guthaben aus Serverzeit (13 m/s x 1,25 waagerecht, 9,5 m/s hoch, 30 m/s
   runter, max. 1,5 s Vorrat - Ping-Bündelung und Hintergrund-Tab bleiben

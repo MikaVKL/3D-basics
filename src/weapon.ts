@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { Palette } from './palette'
 import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
-import type { Team } from './team'
+import { TeamColor, type Team } from './team'
 import { HEADSHOT_MULTIPLIER } from './shared/gameRules'
 import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, isMelee, type WeaponId } from './shared/weapons'
 
@@ -11,7 +11,7 @@ import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, isMelee, type Weapo
 // (Dummy oder fremder Spieler).
 
 const IMPACT_MARKER_LIFETIME = 2 // Sekunden
-const TRACER_LIFETIME = 0.06 // Sekunden
+const TRACER_LIFETIME = 0.2 // Sekunden, weiches Ausblenden
 const TRACER_MAX_DISTANCE = 60 // bei Schuss ins Leere
 
 // "Hitze" des Dauerfeuers: +1 pro Schuss, klingt so schnell ab (pro Sekunde).
@@ -42,7 +42,9 @@ interface ImpactMarker {
 }
 
 interface Tracer {
-  mesh: THREE.Mesh
+  meshes: THREE.Mesh[]
+  materials: THREE.MeshBasicMaterial[]
+  peakOpacity: number[]
   remainingLifetime: number
 }
 
@@ -56,12 +58,11 @@ export class Weapon {
     color: Palette.accentNeon,
   })
 
-  // Leuchtspur: 1 Einheit langer Zylinder, pro Schuss per scale.y gestreckt
+  // Laserstrahl: heller Kern + Schein in Teamfarbe, 1 Einheit lange Zylinder,
+  // pro Schuss per scale.y gestreckt
   private tracers: Tracer[] = []
-  private tracerGeometry = new THREE.CylinderGeometry(0.015, 0.015, 1, 6)
-  private tracerMaterial = new THREE.MeshBasicMaterial({
-    color: Palette.accentWarm,
-  })
+  private tracerCoreGeometry = new THREE.CylinderGeometry(0.012, 0.012, 1, 6)
+  private tracerGlowGeometry = new THREE.CylinderGeometry(0.035, 0.035, 1, 8)
 
   private camera: THREE.Camera
   private scene: THREE.Scene
@@ -204,9 +205,14 @@ export class Weapon {
       const tracer = this.tracers[i]
       tracer.remainingLifetime -= deltaSeconds
       if (tracer.remainingLifetime <= 0) {
-        this.scene.remove(tracer.mesh)
+        for (const mesh of tracer.meshes) this.scene.remove(mesh)
+        for (const material of tracer.materials) material.dispose()
         this.tracers.splice(i, 1)
+        continue
       }
+      // Schnell hell, dann weich aus (quadratisch)
+      const fade = (tracer.remainingLifetime / TRACER_LIFETIME) ** 2
+      tracer.materials.forEach((material, index) => (material.opacity = tracer.peakOpacity[index] * fade))
     }
   }
 
@@ -352,23 +358,42 @@ export class Weapon {
     this.impactMarkers.push({ mesh: marker, remainingLifetime: IMPACT_MARKER_LIFETIME })
   }
 
-  showRemoteTracer(start: THREE.Vector3, end: THREE.Vector3) {
-    this.spawnTracer(start, end)
+  showRemoteTracer(start: THREE.Vector3, end: THREE.Vector3, team: Team) {
+    this.spawnTracer(start, end, team)
   }
 
-  private spawnTracer(start: THREE.Vector3, end: THREE.Vector3) {
+  private spawnTracer(start: THREE.Vector3, end: THREE.Vector3, team: Team = this.shooterTeam) {
     const direction = end.clone().sub(start)
     const length = direction.length()
     if (length < 0.001) return
+    direction.normalize()
 
-    const mesh = new THREE.Mesh(this.tracerGeometry, this.tracerMaterial)
-    mesh.scale.set(1, length, 1)
-    mesh.position.copy(start).addScaledVector(direction, 0.5)
-
-    // Zylinder zeigt entlang +Y -> in Schussrichtung drehen
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize())
-
-    this.scene.add(mesh)
-    this.tracers.push({ mesh, remainingLifetime: TRACER_LIFETIME })
+    // Additiv und ohne Nebel: der Strahl bleibt auch weit weg sichtbar
+    const beamMaterial = (color: THREE.ColorRepresentation, opacity: number) =>
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        fog: false,
+      })
+    const parts: Array<[THREE.CylinderGeometry, THREE.MeshBasicMaterial, number]> = [
+      [this.tracerGlowGeometry, beamMaterial(TeamColor[team], 0.5), 0.5],
+      [this.tracerCoreGeometry, beamMaterial(0xffffff, 1), 1],
+    ]
+    const tracer: Tracer = { meshes: [], materials: [], peakOpacity: [], remainingLifetime: TRACER_LIFETIME }
+    for (const [geometry, material, peak] of parts) {
+      const mesh = new THREE.Mesh(geometry, material)
+      mesh.scale.set(1, length, 1)
+      mesh.position.copy(start).addScaledVector(direction, length / 2)
+      // Zylinder zeigt entlang +Y -> in Schussrichtung drehen
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
+      this.scene.add(mesh)
+      tracer.meshes.push(mesh)
+      tracer.materials.push(material)
+      tracer.peakOpacity.push(peak)
+    }
+    this.tracers.push(tracer)
   }
 }
