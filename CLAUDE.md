@@ -177,7 +177,9 @@ Stolperfallen bei Headless-Tests:
   Daraufhin (Nutzerwahl) Süd-Spawn rundum gedeckt: Front 7 m, Seitenteile
   bis zur Stegkante, raus seitlich unter dem Steg (Stütze dafür x -3 -> -7).
   Danach mit Eck-Rampen (2 Läufe): Süd 0/0 % (nur 2/4 Spawns), Nord 60/60 %
-  (je 5 Spawns) - Nord ggf. genauso ausbauen (mit Nutzer abstimmen). Tests laufen deshalb nicht
+  (je 5 Spawns). Daraufhin Nord-Spawn genauso gedeckt (Ost-Seitenteil bis
+  an die Fensterwand, L-Deckung bei (-3, -16) entfiel): Nord 0/14 %
+  (5/7 Spawns), Süd 20/11 % (5/9), West-Spawns 0-25 %. Tests laufen deshalb nicht
   mehr auf der Linie x = 0 (Bahnen bei x = -8 bzw. 12).
 - Beitritt zur Online-Runde (auch automatisch, wenn der Server erst aufwacht
   oder neu startet) setzt einen an einen Spawn - mit kurzem Abblenden und
