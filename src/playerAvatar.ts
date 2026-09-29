@@ -20,7 +20,7 @@ const HIT_FLASH_DURATION = 0.08
 // Leichtes Eigenleuchten in Teamfarbe: auch im Schatten (von hinten) erkennbar
 const TEAM_GLOW = 0.35
 // Schwarze Rüstung mit schwachem Farbschimmer: sonst verschwindet sie vor dunklem Hintergrund
-const ARMOR_GLOW = 0.3
+const ARMOR_GLOW = 0.22
 const STRIDE = 1.1 // Meter pro halbem Beinschwung
 const MAX_LEG_SWING = 0.6 // rad
 // Rutsch-Pose: Beine nach vorn gestreckt, Oberkörper zurückgelehnt
@@ -126,8 +126,9 @@ export class PlayerAvatar {
     }
     add(this.neonMaterial, [0.62, 0.06, 0.38], [0, 0.88, 0])
     // Schulterkante und Helmrand: Umriss vor dunklem Hintergrund
-    add(this.neonMaterial, [0.67, 0.045, 0.43], [0, 1.4, 0])
-    add(this.neonMaterial, [0.52, 0.04, 0.52], [0, 1.65, 0])
+    add(this.neonMaterial, [0.68, 0.07, 0.44], [0, 1.4, 0])
+    for (const x of [-0.33, 0.33]) add(this.neonMaterial, [0.05, 0.5, 0.44], [x, 1.15, 0])
+    add(this.neonMaterial, [0.52, 0.06, 0.52], [0, 1.65, 0])
     for (const arm of [leftArm, rightArm]) add(this.neonMaterial, [0.17, 0.05, 0.19], [0, -0.42, 0], arm)
     for (const leg of [this.leftLeg, this.rightLeg]) add(this.neonMaterial, [0.24, 0.05, 0.28], [0, -0.6, 0], leg)
     add(armorMaterial, [0.48, 0.28, 0.48], [0, 1.78, 0])
