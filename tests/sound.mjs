@@ -167,11 +167,15 @@ try {
   // Schritte des Gegners: B läuft (echte Frames), A hört sie räumlich
   await takeSounds(A)
   await wait(3500) // B's Respawn + Spawn-Schutz
+  // Die Spawns sind gedeckt: B liefe nach 1-2 m gegen Kiste/Wand -> freie Bahn
+  await teleport(B, -8, 1.7, 8)
   await B.evaluate(() => __dusk.player.setMoveInput(0, 1))
-  await wait(3000)
+  await wait(2500)
   await B.evaluate(() => __dusk.player.setMoveInput(0, 0))
   const walkSteps = (await takeSounds(A)).filter((s) => s === '@step').length
   check('A hört B\'s Schritte räumlich', walkSteps >= 2, `${walkSteps} Schritte`)
+  await wait(500) // letzte Schritte vom Laufen (Interpolation) abwarten
+  await takeSounds(A)
   await B.evaluate(() => {
     __dusk.player.setCrouching(true)
     __dusk.player.setMoveInput(0, -1)
