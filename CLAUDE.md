@@ -111,6 +111,12 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Spielerliste bei stabilem Ping selten verschickt
 - `npm run test:background` – Hintergrund-Tab: Zustand versteckt ~1/s statt
   20/s, danach wieder volle Rate, Spieler bleibt für andere sichtbar
+- `npm run test:movement-check` – Prüf-Logik der Server-Bewegungsprüfung mit
+  24000 echten Zuständen (0 Fehlalarme bei Ping/Bündelung/Hintergrund-Tab)
+  und simulierten Cheats (Teleport, Speedhack, Fliegen)
+- `npm run test:movement-enforce` – im Spiel: normales Laufen/Rutschen/Springen
+  ohne Korrektur, Teleport wird zurückgesetzt (andere sehen ihn nie an der
+  Fake-Stelle), wiederholt = Rauswurf ins Menü
 - `npm run test:connection` – Verbindungswarnung: nie im normalen Spiel (auch
   mit Ping), erscheint bei eingefrorenem Server (SIGSTOP), verschwindet danach,
   Spiel läuft weiter; Server erst später erreichbar bzw. Neustart: Abblenden +
@@ -225,6 +231,18 @@ Stolperfallen bei Headless-Tests:
   je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
   fielen von ~55 auf ~20, weil Pfeiler/Wracks (Wracks inzwischen entfernt) die geradeaus laufenden Bots
   bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
+- **Bewegungsprüfung** (`src/shared/movementRules.ts`, Server): Strecken-
+  Guthaben aus Serverzeit (13 m/s x 1,25 waagerecht, 9,5 m/s hoch, 30 m/s
+  runter, max. 1,5 s Vorrat - Ping-Bündelung und Hintergrund-Tab bleiben
+  legal). Basis ist der Spawn, den der Server wählt (Beitritt/Respawn), nie
+  eine Clientposition. Verstoß: Zustand verwerfen, alle 500 ms `correct`
+  (Client `player.moveTo`, Leben bleibt), 5 Korrekturen in 10 s = Rauswurf
+  (`kicked: movement`). Aus dem Stand ist einmal ~24 m erlaubt (Vorrat).
+  `MOVEMENT_CHECK=off|log|enforce` (Standard enforce); die Tests starten den
+  Server mit `off`, weil sie absichtlich teleportieren (Bot-Test und
+  movement-enforce mit enforce). Neue Bewegungsmechaniken (schneller als
+  13 m/s, größere Sprünge) müssen die Konstanten dort mit anheben,
+  sonst gibt es Rubber-Band. PROTOCOL_VERSION 18.
 - **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
   gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
   getestet - Nutzen gering gegen Risiko. Nur nach Absprache.
@@ -238,8 +256,11 @@ Stolperfallen bei Headless-Tests:
 - Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
 - Noch zu entscheiden: Kollision zwischen Spielern?
 - Obere Ebene: Bots nutzen sie nicht (laufen nur geradeaus zum Gegner).
-- Später: strengere Bewegungsprüfung auf dem Server. (Hintergrund-Tab
-  sendet nur ~1×/s: erledigt, `network.ts`; Austritt nach 20 s bleibt.)
+- Erledigt: Hintergrund-Tab sendet nur ~1×/s (`network.ts`; Austritt nach
+  20 s bleibt), Bewegungsprüfung auf dem Server (Stufe 1+2, s. unten).
+  Stufe 3 (Wand-/Flug-Prüfung mit Arena-Geometrie im Server) bewusst nicht
+  gebaut: `arena.ts` bräuchte eine Box-Liste in `src/shared/`, Nutzen gering
+  (Nutzer rechnet nicht mit Cheatern).
 - Ganz am Ende, nicht vorher anfangen: Raum-Codes (eigene Räume). Der Server
   hält Spieler, Punkte und Runde global (`clients`, `scores`, `nextRoundAt`
   in `server/index.ts`) - dafür müsste das in eine Raum-Klasse.

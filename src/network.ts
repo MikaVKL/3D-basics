@@ -46,6 +46,8 @@ export interface NetworkHandlers {
   onDisconnect: () => void
   // Vom Server entfernt (AFK) - kein automatisches Neuverbinden
   onKicked: (reason: KickReason) => void
+  // Server setzt uns an die letzte gültige Position zurück
+  onCorrect: (position: Vec3) => void
 }
 
 const PING_INTERVAL_MS = 1000
@@ -210,6 +212,9 @@ export class NetworkClient {
         // Sofort selbst schließen, damit ein schneller Wiederbeitritt nicht hängt
         this.socket?.close()
         this.handlers.onKicked(message.reason)
+        break
+      case 'correct':
+        this.handlers.onCorrect(message.position)
         break
       case 'rejected':
         this.status = message.reason === 'full' ? 'full' : 'outdated'

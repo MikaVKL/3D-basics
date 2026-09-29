@@ -143,6 +143,15 @@ export class Player implements Damageable {
     this.team = team
   }
 
+  // Server-Korrektur: zurück an eine gültige Stelle, Leben/Ausdauer bleiben
+  moveTo(position: THREE.Vector3) {
+    this.camera.position.copy(position)
+    this.velocity.set(0, 0, 0)
+    this.horizontalVelocity.set(0, 0)
+    this.sliding = false
+    this.bodyY = position.y - this.eyeHeight
+  }
+
   spawn(position: THREE.Vector3) {
     this.spawnPoint.copy(position)
     this.camera.position.copy(position)

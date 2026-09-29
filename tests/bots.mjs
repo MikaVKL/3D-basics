@@ -448,7 +448,7 @@ function checkCross(bots, snaps) {
 }
 
 // --- Ablauf ---
-const servers = await startServers({ serverEnv: { KILLS_TO_WIN: '10' } })
+const servers = await startServers({ serverEnv: { KILLS_TO_WIN: '10', MOVEMENT_CHECK: 'enforce' } })
 const browser = await launchBrowser()
 const bots = []
 try {

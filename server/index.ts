@@ -68,6 +68,8 @@ interface Client {
   shotBudget: RateBudget
   movement: MovementCheck // Basis der Bewegungsprüfung (Spawn-Punkt des Servers)
   movementViolations: number
+  lastCorrectionAt: number
+  correctionTimes: number[] // Zeitpunkte der letzten Korrekturen (Rauswurf bei Häufung)
   lastStateAt: number
   lastActivityAt: number
   removing: boolean // wird gerade entfernt (Close läuft noch)
@@ -241,8 +243,30 @@ function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
   }
 }
 
+// Zurücksetzen höchstens alle 500 ms; wer trotzdem weitermacht (5 Korrekturen in
+// 10 s), fliegt zurück ins Menü
+const CORRECTION_INTERVAL_MS = 500
+const CORRECTIONS_BEFORE_KICK = 5
+const CORRECTION_WINDOW_MS = 10000
+
+function correctMovement(client: Client, now: number) {
+  if (now - client.lastCorrectionAt < CORRECTION_INTERVAL_MS) return
+  client.lastCorrectionAt = now
+  client.correctionTimes = client.correctionTimes.filter((t) => now - t < CORRECTION_WINDOW_MS)
+  client.correctionTimes.push(now)
+  if (client.correctionTimes.length >= CORRECTIONS_BEFORE_KICK) {
+    console.log(`Spieler ${client.id} bewegt sich unmöglich - zurück zum Startbildschirm`)
+    client.removing = true
+    send(client.socket, { t: 'kicked', reason: 'movement' })
+    setTimeout(() => client.socket.close(), 500)
+    return
+  }
+  const { x, y, z } = client.movement
+  send(client.socket, { t: 'correct', position: { x, y, z } })
+}
+
 // off: keine Prüfung, log: Verstöße nur melden (Beobachtung), enforce: ablehnen
-const MOVEMENT_MODE = process.env.MOVEMENT_CHECK ?? 'log'
+const MOVEMENT_MODE = process.env.MOVEMENT_CHECK ?? 'enforce'
 
 // Schwellen, damit Rundungsrauschen nicht als Aktivität zählt
 function isActivity(before: PlayerNetworkState | null, after: PlayerNetworkState): boolean {
@@ -412,6 +436,8 @@ wss.on('connection', (socket) => {
         shotBudget: { tokens: RATE_BURST, updatedAt: performance.now() },
         movement: createMovementCheck(SPAWN_POINTS[spawnIndex], 0, performance.now()),
         movementViolations: 0,
+        lastCorrectionAt: 0,
+        correctionTimes: [],
         lastStateAt: performance.now(),
         lastActivityAt: performance.now(),
         removing: false,
@@ -450,6 +476,12 @@ wss.on('connection', (socket) => {
             console.log(
               `Bewegungsprüfung: Spieler ${client.id} zu weit/zu schnell (${client.movementViolations}. Verstoß, ${MOVEMENT_MODE})`
             )
+          }
+          if (MOVEMENT_MODE === 'enforce') {
+            // Zustand nicht übernehmen; das Leben-Zeitfenster bleibt gültig
+            client.lastStateAt = now
+            correctMovement(client, now)
+            return
           }
         }
         client.lastStateAt = now

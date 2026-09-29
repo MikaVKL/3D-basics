@@ -4,7 +4,7 @@ import type { Team } from '../team.ts'
 import type { WeaponId } from './weapons.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 17
+export const PROTOCOL_VERSION = 18
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -73,7 +73,7 @@ export type ClientMessage =
 
 export type RejectReason = 'full' | 'version'
 
-export type KickReason = 'afk'
+export type KickReason = 'afk' | 'movement'
 
 export type ServerMessage =
   // spawnIndex -> SPAWN_POINTS
@@ -88,6 +88,8 @@ export type ServerMessage =
   | { t: 'roster'; players: RosterEntry[] }
   | { t: 'rejected'; reason: RejectReason }
   | { t: 'kicked'; reason: KickReason }
+  // Bewegung war unplausibel (zu weit/zu schnell): zurück an die letzte gültige Stelle
+  | { t: 'correct'; position: Vec3 }
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores; headshot: boolean; weapon: WeaponId }
   // team ändert sich beim Team-Ausgleich
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number; team: Team }

@@ -53,7 +53,8 @@ export async function startServers({ gameServer = true, serverEnv = {} } = {}) {
   if (gameServer) {
     const server = spawn('node', ['server/index.ts'], {
       cwd: ROOT,
-      env: { ...process.env, PORT: String(SERVER_PORT), ...serverEnv },
+      // Viele Tests teleportieren absichtlich: Bewegungsprüfung standardmäßig aus
+      env: { ...process.env, PORT: String(SERVER_PORT), MOVEMENT_CHECK: 'off', ...serverEnv },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     server.log = ''

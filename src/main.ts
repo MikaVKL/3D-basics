@@ -258,13 +258,17 @@ const network: NetworkClient = new NetworkClient({
     sound.play('hurt')
     cameraShake.shake(0.06, 0.18)
   },
-  onKicked: () => {
+  onKicked: (reason) => {
     // Zurück auf den Startbildschirm; erneuter Klick tritt wieder bei
     if (document.pointerLockElement) document.exitPointerLock()
     setActive(false)
     cancelLeave()
-    overlayNotice.textContent = 'Wegen Inaktivität aus dem Spiel genommen - klicken, um wieder beizutreten'
+    overlayNotice.textContent =
+      reason === 'movement'
+        ? 'Ungültige Bewegung erkannt - klicken, um wieder beizutreten'
+        : 'Wegen Inaktivität aus dem Spiel genommen - klicken, um wieder beizutreten'
   },
+  onCorrect: (position) => player.moveTo(new THREE.Vector3(position.x, position.y, position.z)),
   onDisconnect: () => {
     if (isActive && !document.hidden) showNotice('Verbindung zum Server verloren – Singleplayer, verbinde neu …')
     nextRoundAt = null
