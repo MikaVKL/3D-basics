@@ -287,7 +287,7 @@ try {
     out.dropDown = { y: P.bodyY, z: cam.position.z }
 
     // Eck-Aufgänge: Nordwest (Rampe steigt nach Westen), Südost (nach Osten)
-    placeOnFloor(-4, -16)
+    placeOnFloor(-5, -16) // zwischen Rampe (ab x -6,5) und Nord-Spawn-Deckung (ab x -4,5)
     walkTo(WEST, 200)
     out.nwRampTop = { y: P.bodyY, x: cam.position.x }
     walkTo(0, 60) // von der Eck-Plattform nach Norden auf den Steg
@@ -337,6 +337,13 @@ try {
     placeOnFloor(0, 18)
     walkTo(EAST, 120)
     out.spawnExit = { west: spawnWest, east: cam.position.x }
+    // Nord-Spawn genauso: seitlich unter dem Steg raus
+    placeOnFloor(0, -18)
+    walkTo(WEST, 120)
+    const northWest = cam.position.x
+    placeOnFloor(0, -18)
+    walkTo(EAST, 120)
+    out.northSpawnExit = { west: northWest, east: cam.position.x }
 
     return out
   })
@@ -366,6 +373,7 @@ try {
   check('obere Ebene: Südsteg bis an die Ostwand', Math.abs(r.southEast.y - 2.8) < 0.01 && r.southEast.x > 28.5, `Höhe ${f2(r.southEast.y)}, x ${f2(r.southEast.x)}`)
   check('unter den Südsteg bis an die Wand laufen', r.walkUnderSouth.y < 0.01 && r.walkUnderSouth.z > 19.5, `z ${f2(r.walkUnderSouth.z)}`)
   check('Süd-Spawn: seitlich unter dem Steg raus', r.spawnExit.west < -6 && r.spawnExit.east > 6, `x ${f2(r.spawnExit.west)} / ${f2(r.spawnExit.east)}`)
+  check('Nord-Spawn: seitlich unter dem Steg raus', r.northSpawnExit.west < -6 && r.northSpawnExit.east > 6, `x ${f2(r.northSpawnExit.west)} / ${f2(r.northSpawnExit.east)}`)
   check('unter dem Steg: Sprung stößt an (Kopf <= 2,5 m)', r.underCatwalk.maxHead <= 2.51 && r.underCatwalk.landed < 0.01, `Kopf max ${f2(r.underCatwalk.maxHead)}`)
   check('unter den Steg bis an die Wand laufen', r.walkUnder.y < 0.01 && r.walkUnder.z < -19.5, `x ${f2(r.walkUnder.x)}, z ${f2(r.walkUnder.z)}`)
   check('vom Boden nicht auf den Steg springen', r.noClimb < 0.01, `Höhe ${f2(r.noClimb)}`)

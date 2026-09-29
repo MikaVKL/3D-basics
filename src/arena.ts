@@ -362,10 +362,14 @@ export function buildArena(): ArenaResult {
     [-24, -16, 3, 2, 2.4],
     [19, -8, 2, 2, 1.4], // neben statt unter der Nord-Brücke
     // Deckung vor den mittleren Spawns (0, ±18): dort wurde man im Bot-Test
-    // oft direkt nach dem Spawn getroffen (50-62 % statt 3-9 %)
-    [1.7, -14, 4, 1, 2.4],
-    // Süd-Spawn: Schüsse kamen schräg (bis ~55°) - breitere Front und
-    // Seitenteile bis an die Stegkante, raus geht es seitlich unter dem Steg
+    // oft direkt nach dem Spawn getroffen (50-62 % statt 3-9 %).
+    // Beide Spawns rundum gedeckt: Schüsse kamen schräg (bis ~55°) - Front
+    // 7 m und Seitenteile bis an die Stegkante, raus geht es seitlich unter
+    // dem Steg. Nord-Ost-Seitenteil reicht bis an die Fensterwand (x 5),
+    // sonst bliebe ein 0,5-m-Spalt; West bleibt x -5 frei (vor der Rampe).
+    [0, -14, 7, 1, 2.4],
+    [-4, -16, 1, 3, 2.4],
+    [4.25, -16, 1.5, 3, 2.4],
     [0, 14, 7, 1, 2.4],
     [-4, 16, 1, 3, 2.4],
     [4, 16, 1, 3, 2.4],
@@ -385,7 +389,6 @@ export function buildArena(): ArenaResult {
   }
 
   // 1.4m: zuverlässig erkletterbar (1.6m lag genau an der Sprunghöhe)
-  buildLCover(-3, -16, 4, 0.8, 1.4, 1, 1) // Platz vor der Nordwest-Rampe
   buildLCover(sideRoomMinX + 2, -7, 4, 0.8, 1.4, 1, -1)
   buildLCover(9, 16, 3, 0.7, 1.4, 1, -1)
   buildLCover(50, 2, 3, 0.7, 1.4, -1, -1)
