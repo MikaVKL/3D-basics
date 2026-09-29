@@ -50,6 +50,8 @@ export class PlayerAvatar {
   private readonly rightLeg: THREE.Group
   private readonly teamMaterial = new THREE.MeshStandardMaterial({ roughness: 0.6 })
   private readonly teamDarkMaterial = new THREE.MeshStandardMaterial({ roughness: 0.7 })
+  // Leuchtteile in Teamfarbe (Weste, Visier, Waffenkante)
+  private readonly neonMaterial = new THREE.MeshStandardMaterial({ emissiveIntensity: 1.6 })
   private readonly materials: THREE.MeshStandardMaterial[]
   private team: Team
   // Gehaltene Waffe, je eine Gruppe (nur die aktive sichtbar)
@@ -65,7 +67,7 @@ export class PlayerAvatar {
   private readonly lastPosition = new THREE.Vector3()
   private hasLastPosition = false
 
-  constructor(team: Team) {
+  constructor(team: Team, variant = 0) {
     const headMaterial = new THREE.MeshStandardMaterial({ color: 0xd9dde3, roughness: 0.8 })
     const visorMaterial = new THREE.MeshStandardMaterial({
       color: Palette.accentNeon,
@@ -73,7 +75,9 @@ export class PlayerAvatar {
       emissiveIntensity: 1.4,
     })
     const gunMaterial = new THREE.MeshStandardMaterial({ color: Palette.weaponBody, roughness: 0.5 })
-    this.materials = [this.teamMaterial, this.teamDarkMaterial, headMaterial, visorMaterial, gunMaterial]
+    const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x1d2a38, roughness: 0.6 })
+    this.materials = [this.teamMaterial, this.teamDarkMaterial, headMaterial, visorMaterial, gunMaterial, this.neonMaterial, darkMaterial]
+    const glow = variant > 0 ? this.neonMaterial : visorMaterial
 
     const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false })
     this.mesh = new THREE.Mesh(
@@ -110,6 +114,33 @@ export class PlayerAvatar {
     leftArm.rotation.set(1.25, 0, 0.76)
     rightArm.rotation.set(1.25, 0, -0.37)
     this.upperBody.add(torso, head, visor, leftArm, rightArm)
+    const add = (material: THREE.Material, size: [number, number, number], position: [number, number, number], parent: THREE.Object3D = this.upperBody) => {
+      const mesh = box(...size, material)
+      mesh.position.set(...position)
+      parent.add(mesh)
+      return mesh
+    }
+    if (variant === 1) {
+      add(darkMaterial, [0.64, 0.5, 0.4], [0, 1.15, 0])
+      add(this.neonMaterial, [0.06, 0.5, 0.42], [-0.15, 1.15, 0])
+      add(this.neonMaterial, [0.06, 0.5, 0.42], [0.15, 1.15, 0])
+      add(darkMaterial, [0.46, 0.14, 0.46], [0, 1.9, 0])
+    } else if (variant === 2) {
+      visor.visible = false
+      add(darkMaterial, [0.48, 0.28, 0.48], [0, 1.78, 0])
+      add(this.neonMaterial, [0.38, 0.12, 0.04], [0, 1.68, -0.245])
+      const strap = add(this.neonMaterial, [0.09, 0.78, 0.04], [0, 1.13, -0.19])
+      strap.rotation.z = 0.6
+      add(darkMaterial, [0.2, 0.2, 0.08], [0, 1.2, 0.22])
+      add(this.neonMaterial, [0.08, 0.08, 0.03], [0, 1.2, 0.27])
+      add(this.neonMaterial, [0.03, 0.22, 0.03], [0.15, 2.05, 0.15])
+    } else if (variant === 3) {
+      add(this.neonMaterial, [0.62, 0.06, 0.38], [0, 0.88, 0])
+      add(this.neonMaterial, [0.24, 0.24, 0.02], [0, 1.15, -0.19])
+      add(this.neonMaterial, [0.24, 0.24, 0.02], [0, 1.15, 0.19])
+      for (const arm of [leftArm, rightArm]) add(this.neonMaterial, [0.17, 0.05, 0.19], [0, -0.42, 0], arm)
+      for (const leg of [this.leftLeg, this.rightLeg]) add(this.neonMaterial, [0.24, 0.05, 0.28], [0, -0.6, 0], leg)
+    }
     this.root.add(this.upperBody)
 
     const bladeMaterial = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, roughness: 0.35, metalness: 0.2 })
@@ -127,12 +158,12 @@ export class PlayerAvatar {
     this.weaponModels = {
       pistol: model([
         [gunMaterial, [0.09, 0.13, 0.3], [0.18, 1.3, -0.55]],
-        [visorMaterial, [0.1, 0.03, 0.12], [0.18, 1.37, -0.52]],
+        [glow, [0.1, 0.03, 0.12], [0.18, 1.37, -0.52]],
       ]),
       rifle: model([
         [gunMaterial, [0.1, 0.14, 0.75], [0.18, 1.28, -0.55]],
         [gunMaterial, [0.07, 0.18, 0.09], [0.18, 1.15, -0.62]],
-        [visorMaterial, [0.11, 0.03, 0.5], [0.18, 1.36, -0.6]],
+        [glow, [0.11, 0.03, 0.5], [0.18, 1.36, -0.6]],
       ]),
       knife: model([
         [gunMaterial, [0.06, 0.07, 0.14], [0.18, 1.28, -0.48]],
@@ -149,6 +180,8 @@ export class PlayerAvatar {
     this.team = team
     this.teamMaterial.color.set(TeamColor[team])
     this.teamDarkMaterial.color.set(TeamColor[team]).multiplyScalar(0.55)
+    this.neonMaterial.color.set(TeamColor[team]).lerp(new THREE.Color(0xffffff), 0.35)
+    this.neonMaterial.emissive.set(TeamColor[team])
     this.resetGlow()
     // weapon.ts liest das Team am Mesh (Friendly-Fire)
     this.mesh.userData.team = team
