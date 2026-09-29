@@ -16,13 +16,7 @@ export const Palette = {
   // Deckungs-Kisten: Sandbraun, weit weg von Team Rot und Blau
   crate: 0xc9975a,
 
-  // Requisiten (Autowracks, Fässer, Paletten): matte Grau-/Oliv-/Holztöne,
-  // bewusst weder rot noch blau (Teamfarben)
-  carBody: 0x66746c,
-  carCabin: 0x7d8b83,
-  barrelOlive: 0x7f8f4f,
-  barrelBone: 0xd6d0bd,
-  pallet: 0xd3b483,
+  // Betonpfeiler: bewusst weder rot noch blau (Teamfarben)
   pillar: 0x5c6f82,
 
   // Leuchtkanten

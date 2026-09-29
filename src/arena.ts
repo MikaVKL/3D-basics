@@ -411,51 +411,17 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }
 
-  // --- Requisiten (nach dem Bild der Vorlage): Autowracks, Fässer, Paletten, Pfeiler.
-  // Alles Kollisionskörper; Höhen: Karosserie 0,9 m (mit einem Sprung), Dach
-  // 1,4 m (erkletterbar wie die niedrigen Kisten), Paletten 0,5 m als Stufe.
-  const propMaterial = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0.2 })
-  const carBodyMaterial = propMaterial(Palette.carBody)
-  const carCabinMaterial = propMaterial(Palette.carCabin)
-  const barrelMaterials = [propMaterial(Palette.barrelOlive), propMaterial(Palette.barrelBone)]
-  const palletMaterial = propMaterial(Palette.pallet)
+  // --- Betonpfeiler (Kollisionskörper, 6 m hoch, brechen lange Sichtlinien)
   const pillarMaterial = new THREE.MeshStandardMaterial({ color: Palette.pillar, roughness: 0.9, metalness: 0.05 })
 
-  function addProp(mesh: THREE.Mesh, x: number, y: number, z: number) {
-    mesh.position.set(x, y, z)
-    addEdgeOutline(mesh)
-    group.add(mesh)
-    solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh) })
-  }
-  // lengthAlongX: Ausrichtung des Wracks (Kollision bleibt achsenparallel)
-  function buildCar(x: number, z: number, lengthAlongX: boolean) {
-    const [lx, lz] = lengthAlongX ? [4.2, 1.9] : [1.9, 4.2]
-    addProp(new THREE.Mesh(new THREE.BoxGeometry(lx, 0.9, lz), carBodyMaterial), x, 0.45, z)
-    const [cx, cz] = lengthAlongX ? [2, 1.7] : [1.7, 2]
-    addProp(new THREE.Mesh(new THREE.BoxGeometry(cx, 0.5, cz), carCabinMaterial), x - (lengthAlongX ? 0.2 : 0), 1.15, z - (lengthAlongX ? 0 : 0.2))
-  }
-  function buildBarrels(points: Array<[number, number]>) {
-    points.forEach(([x, z], i) => {
-      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1, 8), barrelMaterials[i % 2])
-      addProp(barrel, x, 0.5, z)
-    })
-  }
-  function buildPallets(x: number, z: number, width: number, depth: number, layers: number) {
-    addProp(new THREE.Mesh(worldBox(width, 0.25 * layers, depth, 1), palletMaterial), x, (0.25 * layers) / 2, z)
-  }
   function buildPillar(x: number, z: number) {
-    addProp(new THREE.Mesh(worldBox(1.2, WALL_HEIGHT, 1.2), pillarMaterial), x, WALL_HEIGHT / 2, z)
+    const pillar = new THREE.Mesh(worldBox(1.2, WALL_HEIGHT, 1.2), pillarMaterial)
+    pillar.position.set(x, WALL_HEIGHT / 2, z)
+    addEdgeOutline(pillar)
+    group.add(pillar)
+    solids.push({ mesh: pillar, box: new THREE.Box3().setFromObject(pillar) })
   }
 
-  buildCar(28, -4, true)
-  buildCar(-26, 1, false)
-  buildBarrels([[-30, 12], [-29.2, 13.1], [-30.1, 13.9]])
-  buildBarrels([[30.2, -11], [29.4, -10]])
-  buildBarrels([[37.2, -14.2], [37.6, -13.2]])
-  buildBarrels([[41, 10], [42, 10.6]])
-  buildPallets(20.7, -8, 1.4, 1.2, 2) // Stufe zur 1,4-m-Kiste bei (19, -8)
-  buildPallets(-9.4, 7, 1.2, 1.4, 2) // Stufe zur 1,4-m-Kiste bei (-12, 7)
-  buildPallets(35.5, -1.5, 1.4, 1.2, 1)
   buildPillar(11, -10)
   buildPillar(-10, -4)
   buildPillar(41, 1)

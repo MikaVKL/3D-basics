@@ -214,14 +214,13 @@ Stolperfallen bei Headless-Tests:
   Regal-Steg bis zur Ostwand, Absprung-Lücke x 47..49. Die Öffnung hat
   bewusst KEINEN Sturz: mit 2,2 m Kopffreiheit stieß man im Sprung mitten
   in der Tür an (stuck-fuzz Seed 3). Spawn 5 (49,5 / -19,2) unter dem Steg.
-- **Requisiten** (`arena.ts`, Farben in `palette.ts`): Autowracks (Karosserie
-  0,9 m, Dach 1,4 m), Fässer, Paletten, drei 6-m-Pfeiler. Grau/Oliv/Holz,
-  nie rot/blau. 1,4-m-Kisten sind ohnehin per Sprung erreichbar - Paletten
-  sind Kleindeckung, keine nötigen Stufen. Standort-Falle: x 13,75..16,25
-  liegt unter der Brücke.
+- **Keine Requisiten** wie Autowracks, Fässer, Paletten (Nutzer: passen nicht
+  zum Lasertag-Look; das Vorlagenfoto galt nur dem Aufbau der Arena). Es
+  bleiben drei 6-m-Pfeiler (Grau-Blau, `Palette.pillar`) und die Kisten.
+  Neue Objekte nur in Neon/Low-Poly-Optik, nie realistisch.
 - Bot-Test mit 6 Spawns (2 Läufe): nirgends auffällig (früh getroffen 0-33 %,
   je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
-  fielen von ~55 auf ~20, weil Pfeiler/Wracks die geradeaus laufenden Bots
+  fielen von ~55 auf ~20, weil Pfeiler/Wracks (Wracks inzwischen entfernt) die geradeaus laufenden Bots
   bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
 - **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
   gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
