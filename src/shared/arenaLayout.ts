@@ -26,4 +26,5 @@ export const SPAWN_POINTS: SpawnPoint[] = [
   { x: 0, y: 1.7, z: -18 },
   { x: 0, y: 1.7, z: 18 },
   { x: ARENA_BOUNDS.maxX - 5, y: 1.7, z: 8 },
+  { x: 49.5, y: 1.7, z: -19.2 }, // Nordost-Halle, unter dem Regal-Steg
 ]

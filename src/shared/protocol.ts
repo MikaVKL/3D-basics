@@ -4,7 +4,7 @@ import type { Team } from '../team.ts'
 import type { WeaponId } from './weapons.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 16
+export const PROTOCOL_VERSION = 17
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16

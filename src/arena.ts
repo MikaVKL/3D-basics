@@ -394,7 +394,7 @@ export function buildArena(): ArenaResult {
     [4, 16, 1, 3, 2.4],
     // Nordost-Halle (Nordwand-Streifen z < -17,5 bleibt für den Regal-Steg frei)
     [42, -15, 3, 1.2, 2.4],
-    [49.5, -15.5, 2, 2.5, 1.4],
+    [49.5, -15.5, 2, 2.5, 2.4], // deckt den Halle-Spawn (49,5 / -19,2) nach Süden
     [35, -14.5, 2, 2, 1.4],
     // Flankenraum
     [sideRoomMinX + 6, -5, 2.4, 2.4, 2.4],

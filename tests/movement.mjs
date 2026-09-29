@@ -392,6 +392,13 @@ try {
     place(35.5, -1.5, EAST)
     run(30)
     out.pallet = P.bodyY
+    // Halle-Spawn (49,5 / -19,2): unter dem Regal-Steg, Kiste davor, raus nach Westen
+    placeOnFloor(49.5, -19.2)
+    walkTo(WEST, 120)
+    out.hallSpawnExit = cam.position.x
+    placeOnFloor(49.5, -19.2)
+    walkTo(0, 40)
+    out.hallSpawnWall = cam.position.z
     placeOnFloor(34, -8)
     walkTo(0, 120)
     out.hallWall = { z: cam.position.z }
@@ -428,6 +435,8 @@ try {
   check('Autowrack: Gehen dagegen blockiert', r.carWalk > -2.9, `z ${f2(r.carWalk)}`)
   check('Palette: Gehen dagegen blockiert', r.palletWalk < 34.5, `x ${f2(r.palletWalk)}`)
   check('Palette: Standfläche 0,25 m (1 Lage)', Math.abs(r.pallet - 0.25) < 0.01, `Höhe ${f2(r.pallet)}`)
+  check('Halle-Spawn: nach Westen unter dem Steg raus', r.hallSpawnExit < 44, `x ${f2(r.hallSpawnExit)}`)
+  check('Halle-Spawn: Wand im Norden', r.hallSpawnWall < -19.9, `z ${f2(r.hallSpawnWall)}`)
   check('Nordost-Halle: durch die Öffnung hinein', r.hallIn.z < -19.9, `z ${f2(r.hallIn.z)}`)
   check('Nordost-Halle: Wand neben der Öffnung hält', r.hallWall.z > -11.2, `z ${f2(r.hallWall.z)}`)
   check('Regal-Steg: durch die Ostwand auf 2,8 m', Math.abs(r.shelfEnter.y - 2.8) < 0.01 && r.shelfEnter.x > 30, `Höhe ${f2(r.shelfEnter.y)}, x ${f2(r.shelfEnter.x)}`)
