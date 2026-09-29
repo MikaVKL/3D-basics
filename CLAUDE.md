@@ -230,9 +230,13 @@ Stolperfallen bei Headless-Tests:
 
 - Reihenfolge (mit Nutzer abgestimmt): Sound, Spielermodell, Effekte,
   Kopftreffer, Waffen, Rutschen/Bunny-Hop (erledigt) -> Ping ->
-  Arena/Optik/HUD -> Raum-Codes -> Hintergrund-Tab -> Server-Prüfung.
+  Arena/Optik/HUD -> Hintergrund-Tab -> Server-Prüfung -> ganz am Ende
+  (Nutzer, nur zurückgestellt): Raum-Codes für private Runden.
 - Spielermodell soll später nochmal überarbeitet werden (Wunsch des Nutzers).
 - Noch zu entscheiden: Kollision zwischen Spielern?
 - Obere Ebene: Bots nutzen sie nicht (laufen nur geradeaus zum Gegner).
-- Später: Raum-Codes für private Runden, Ping-Anzeige, strengere
-  Bewegungsprüfung auf dem Server, Hintergrund-Tab sendet nur ~1×/s.
+- Später: strengere Bewegungsprüfung auf dem Server, Hintergrund-Tab sendet
+  nur ~1×/s.
+- Ganz am Ende, nicht vorher anfangen: Raum-Codes (eigene Räume). Der Server
+  hält Spieler, Punkte und Runde global (`clients`, `scores`, `nextRoundAt`
+  in `server/index.ts`) - dafür müsste das in eine Raum-Klasse.
