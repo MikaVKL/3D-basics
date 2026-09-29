@@ -366,6 +366,32 @@ try {
     placeOnFloor(44, -14)
     walkTo(0, 60)
     out.shelfUnder = { y: P.bodyY, z: cam.position.z }
+    // Requisiten: Autowrack (28, -4), Palette (35,5 / -1,5)
+    const hop = (yaw, frames) => {
+      cam.rotation.set(0, yaw, 0, 'YXZ')
+      P.setMoveInput(0, 1)
+      P.jump()
+      run(frames)
+      P.setMoveInput(0, 0)
+      run(90)
+    }
+    place(25.5, -4, EAST)
+    hop(EAST, 12)
+    out.carBody = P.bodyY
+    place(28, -1.5, 0)
+    P.setMoveInput(0, 1)
+    run(60)
+    P.setMoveInput(0, 0)
+    out.carWalk = cam.position.z
+    // Palette bei (35,5 / -1,5, eine Lage 0,25 m): Gehen blockiert, Sprung schafft sie (Kisten 1,4 m sind ohnehin per Sprung erreichbar)
+    place(33.5, -1.5, EAST)
+    P.setMoveInput(0, 1)
+    run(60)
+    P.setMoveInput(0, 0)
+    out.palletWalk = cam.position.x
+    place(35.5, -1.5, EAST)
+    run(30)
+    out.pallet = P.bodyY
     placeOnFloor(34, -8)
     walkTo(0, 120)
     out.hallWall = { z: cam.position.z }
@@ -398,6 +424,10 @@ try {
   check('obere Ebene: Südsteg bis an die Ostwand', Math.abs(r.southEast.y - 2.8) < 0.01 && r.southEast.x > 28.5, `Höhe ${f2(r.southEast.y)}, x ${f2(r.southEast.x)}`)
   check('unter den Südsteg bis an die Wand laufen', r.walkUnderSouth.y < 0.01 && r.walkUnderSouth.z > 19.5, `z ${f2(r.walkUnderSouth.z)}`)
   check('Süd-Spawn: seitlich unter dem Steg raus', r.spawnExit.west < -6 && r.spawnExit.east > 6, `x ${f2(r.spawnExit.west)} / ${f2(r.spawnExit.east)}`)
+  check('Autowrack: per Sprung erklimmbar (Karosserie 0,9 m / Dach 1,4 m)', r.carBody > 0.89, `Höhe ${f2(r.carBody)}`)
+  check('Autowrack: Gehen dagegen blockiert', r.carWalk > -2.9, `z ${f2(r.carWalk)}`)
+  check('Palette: Gehen dagegen blockiert', r.palletWalk < 34.5, `x ${f2(r.palletWalk)}`)
+  check('Palette: Standfläche 0,25 m (1 Lage)', Math.abs(r.pallet - 0.25) < 0.01, `Höhe ${f2(r.pallet)}`)
   check('Nordost-Halle: durch die Öffnung hinein', r.hallIn.z < -19.9, `z ${f2(r.hallIn.z)}`)
   check('Nordost-Halle: Wand neben der Öffnung hält', r.hallWall.z > -11.2, `z ${f2(r.hallWall.z)}`)
   check('Regal-Steg: durch die Ostwand auf 2,8 m', Math.abs(r.shelfEnter.y - 2.8) < 0.01 && r.shelfEnter.x > 30, `Höhe ${f2(r.shelfEnter.y)}, x ${f2(r.shelfEnter.x)}`)
