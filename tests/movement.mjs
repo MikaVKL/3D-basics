@@ -65,7 +65,7 @@ try {
     run(150)
     out.rampDown = P.bodyY
 
-    // Rampe B (West-Plattform, 2.4m) hoch, dann durch den erhöhten
+    // Rampe B (West-Plattform, 2.8m) hoch, dann durch den erhöhten
     // Durchgang in der Trennwand (x=-20) in den Hauptraum
     place(-22, 1.5, Math.PI)
     P.setMoveInput(0, 1)
@@ -80,6 +80,14 @@ try {
     P.setMoveInput(0, 0)
     run(60)
     out.throughDoorwayX = cam.position.x
+    out.linkY = P.bodyY
+    // Auf der Verbindung: Geländer im Osten hält, nach Süden auf den Südsteg
+    cam.rotation.set(0, Math.PI, 0, 'YXZ')
+    P.setMoveInput(0, 1)
+    run(90)
+    P.setMoveInput(0, 0)
+    run(30)
+    out.linkSteg = { y: P.bodyY, z: cam.position.z }
 
     // Fenster-Deckungswand bei z=-15: per Duck-Sprung durchkletterbar
     // (gewollt), stehend nicht
@@ -411,8 +419,9 @@ try {
   check('Rampe A hoch bis auf die Plattform', Math.abs(r.rampTop - 2.8) < 0.01, `Höhe ${r.rampTop.toFixed(2)}`)
   check('Rampe A gleichmäßig (kein Ruck)', r.rampMaxRise < 0.1, `max. ${r.rampMaxRise.toFixed(3)}m/Frame`)
   check('Rampe A wieder runter', r.rampDown < 0.01, `Höhe ${r.rampDown.toFixed(2)}`)
-  check('Rampe B hoch auf die West-Plattform', Math.abs(r.rampBTop - 2.4) < 0.01, `Höhe ${r.rampBTop.toFixed(2)}`)
-  check('durch erhöhten Durchgang in den Hauptraum', r.throughDoorwayX > -19.5, `x ${r.throughDoorwayX.toFixed(2)}`)
+  check('Rampe B hoch auf die West-Plattform', Math.abs(r.rampBTop - 2.8) < 0.01, `Höhe ${r.rampBTop.toFixed(2)}`)
+  check('durch das Fenster auf die Verbindung (2,8 m, Geländer im Osten)', r.throughDoorwayX > -19.5 && r.throughDoorwayX < -17 && Math.abs(r.linkY - 2.8) < 0.01, `x ${r.throughDoorwayX.toFixed(2)}, Höhe ${r.linkY.toFixed(2)}`)
+  check('Verbindung: nach Süden auf den Südsteg', Math.abs(r.linkSteg.y - 2.8) < 0.01 && r.linkSteg.z > 19.5, `Höhe ${r.linkSteg.y.toFixed(2)}, z ${r.linkSteg.z.toFixed(2)}`)
   check('Fenster: Duck-Sprung kommt durch', r.windowCrouch)
   check('Fenster: stehend springen kommt nicht durch', !r.windowStanding)
   const f2 = (n) => n.toFixed(2)

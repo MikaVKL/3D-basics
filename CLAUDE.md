@@ -153,13 +153,12 @@ Stolperfallen bei Headless-Tests:
   Geländer 1 m mit Absprung-Lücke (Nord x 26..28, Süd x -16..-14), Unterkante
   2,5 m (stehend passt man drunter, im Sprung stößt man an). Aufgänge: Rampe A
   und Eck-Rampen Nordwest/Südost (3x3-Plattform in der Ecke, 10-m-Rampe am
-  Steg entlang, stegseitig Wand statt Bord). Südwest geht nicht: dort mündet
-  der erhöhte Durchgang (2,4 m).
+  Steg entlang, stegseitig Wand statt Bord). Südwest: über Rampe B und das Fenster (s.u.).
   Die mittleren Spawns (0, ±18) liegen darunter. Wandlampen auf 5,2 m.
   Nichts unter Steg/Brücke stellen (Kisten wurden deshalb versetzt).
 - Fenster-Deckungswand ist per **Duck-Sprung durchkletterbar** (gewollter
   Trick-Weg, Öffnung 1,4 m); stehend passt man nicht durch.
-- Rampe B liegt bündig an der Trennwand (kein Bord auf der Wandseite).
+- Rampe B (2,8 m) liegt bündig an der Trennwand (kein Bord auf der Wandseite).
 - Ducken wird überall gehalten, auch auf Touch (Nutzerwunsch, kein Umschalter):
   Rutschen nur, solange gehalten.
 - Punktetabelle per Tab gedrückt halten bzw. Tippen auf den Punktestand –
@@ -203,6 +202,12 @@ Stolperfallen bei Headless-Tests:
   (geduckt: Duck-)Tempo; darunter folgt man der Eingabe sofort.
   Leertaste halten hüpft per Tasten-Wiederholung automatisch weiter.
 
+- **Fenster/Rampe B (Südwest):** West-Plattform liegt jetzt auf 2,8 m (obere
+  Ebene), Rampe 9,4 m lang (Steigung ~0,3). Der Durchgang in der Trennwand
+  (Sockel 2,8 m, Kopffreiheit 2,2 m) führt auf eine 2,5 m breite Verbindung
+  (x -19,5..-17, z 11,5..17,5) mit Geländer im Osten, Nordende offen
+  (Absprung), die am Südsteg endet (Geländerlücke dort). Damit ist die
+  Südwest-Ecke kein "geht nicht" mehr; sie ist der dritte Aufgang.
 - **Nordost-Halle** (x 32..52, z -21..-12): Zugang über 8-m-Öffnung
   (x 38..46) in der Flankenraum-Nordwand. Der Nordsteg läuft durch die
   Hauptraum-Ostwand (Öffnung z -20,5..-17,5 ab 2,8 m, Sockel darunter) als

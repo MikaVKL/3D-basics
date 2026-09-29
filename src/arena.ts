@@ -199,7 +199,7 @@ export function buildArena(): ArenaResult {
   const WEST_PLATFORM_CENTER_X = -23
   const WEST_PLATFORM_CENTER_Z = 14
   const WEST_PLATFORM_SIZE = 5
-  const WEST_PLATFORM_HEIGHT = 2.4
+  const WEST_PLATFORM_HEIGHT = 2.8 // = obere Ebene: der Durchgang führt über die Verbindung zum Südsteg
   const DOORWAY_Z_MIN = WEST_PLATFORM_CENTER_Z - WEST_PLATFORM_SIZE / 2
   const DOORWAY_Z_MAX = WEST_PLATFORM_CENTER_Z + WEST_PLATFORM_SIZE / 2
   const DOORWAY_HEIGHT = 2.2 // Kopffreiheit im Durchgang
@@ -587,7 +587,7 @@ export function buildArena(): ArenaResult {
   // side: -1 = Nordwand, 1 = Südwand. Eck-Aufgang in der West- bzw. Ostecke:
   // Plattform bündig an Steg und Wand, Rampe läuft am Steg entlang. Die
   // Südwest-Ecke bleibt frei - dort mündet der erhöhte Durchgang (2,4 m).
-  function buildUpperSide(side: -1 | 1, cornerEnd: 'west' | 'east', dropGap: [number, number]) {
+  function buildUpperSide(side: -1 | 1, cornerEnd: 'west' | 'east', dropGap: [number, number], extraGaps: [number, number][] = []) {
     const wallFace = side * (MAIN_HALF_D - WALL_THICKNESS / 2)
     const edge = wallFace - side * CATWALK_DEPTH
     // Laufsteg über die ganze Hauptraum-Breite (Trennwand bis Ostwand)
@@ -628,6 +628,7 @@ export function buildArena(): ArenaResult {
       [PLATFORM_A_X - BRIDGE_WIDTH / 2, PLATFORM_A_X + BRIDGE_WIDTH / 2],
       cornerGap,
       dropGap,
+      ...extraGaps,
     ].sort((a, b) => a[0] - b[0]) as [number, number][]
     let from = westEnd
     for (const [gapStart, gapEnd] of [...gaps, [eastEnd, eastEnd]]) {
@@ -663,7 +664,16 @@ export function buildArena(): ArenaResult {
   }
 
   const rampNorthWest = buildUpperSide(-1, 'west', [26, 28])
-  const rampSouthEast = buildUpperSide(1, 'east', [-16, -14])
+  // Südsteg: Lücke im Geländer für die Verbindung vom Fenster (siehe unten)
+  const WINDOW_LINK_X: [number, number] = [westEnd, westEnd + 2.5]
+  const rampSouthEast = buildUpperSide(1, 'east', [-16, -14], [WINDOW_LINK_X])
+
+  // Verbindung vom Fenster in der Trennwand (West-Plattform, 2,8 m) zum
+  // Südsteg: 2,5 m breit, Geländer an der Ostseite, Nordende offen (Absprung)
+  const linkDepth = 17.5 - DOORWAY_Z_MIN
+  addBlock((WINDOW_LINK_X[0] + WINDOW_LINK_X[1]) / 2, DOORWAY_Z_MIN + linkDepth / 2, 2.5, linkDepth, upperBottom, UPPER_TOP)
+  addBlock(WINDOW_LINK_X[1] - RAILING_THICKNESS / 2, DOORWAY_Z_MIN + linkDepth / 2, RAILING_THICKNESS, linkDepth, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
+  addBlock(WINDOW_LINK_X[1] - 0.2, DOORWAY_Z_MIN + 0.2, 0.4, 0.4, 0, upperBottom)
 
   // West-Plattform (Rampe B): Plattform und Rampe liegen bündig an der
   // Trennwand (kein körperbreiter Spalt), die Wand ersetzt dort das Bord.
@@ -675,7 +685,7 @@ export function buildArena(): ArenaResult {
     WEST_PLATFORM_CENTER_Z,
     WEST_PLATFORM_SIZE,
     WEST_PLATFORM_HEIGHT,
-    8,
+    9.4, // Steigung ~0,3 wie die anderen Rampen
     WEST_RAMP_WIDTH,
     'z',
     true,
