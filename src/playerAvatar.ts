@@ -19,6 +19,8 @@ const CROUCH_DROP = 0.55 // so weit sinkt der Oberkörper im Ducken
 const HIT_FLASH_DURATION = 0.08
 // Leichtes Eigenleuchten in Teamfarbe: auch im Schatten (von hinten) erkennbar
 const TEAM_GLOW = 0.35
+// Schwarze Rüstung mit schwachem Farbschimmer: sonst verschwindet sie vor dunklem Hintergrund
+const ARMOR_GLOW = 0.3
 const STRIDE = 1.1 // Meter pro halbem Beinschwung
 const MAX_LEG_SWING = 0.6 // rad
 // Rutsch-Pose: Beine nach vorn gestreckt, Oberkörper zurückgelehnt
@@ -51,6 +53,7 @@ export class PlayerAvatar {
   private readonly teamMaterial = new THREE.MeshStandardMaterial({ roughness: 0.6 })
   private readonly teamDarkMaterial = new THREE.MeshStandardMaterial({ roughness: 0.7 })
   // Leuchtteile in Teamfarbe (Weste, Visier, Waffenkante)
+  private readonly armorMaterial = new THREE.MeshStandardMaterial({ color: 0x07090c, roughness: 0.45, metalness: 0.3 })
   private readonly neonMaterial = new THREE.MeshStandardMaterial({ emissiveIntensity: 1.6 })
   private readonly materials: THREE.MeshStandardMaterial[]
   private team: Team
@@ -69,8 +72,10 @@ export class PlayerAvatar {
 
   constructor(team: Team) {
     const headMaterial = new THREE.MeshStandardMaterial({ color: 0xd9dde3, roughness: 0.8 })
+    // Rüstung: fast schwarz, dunkler als Wand und Boden (sonst verschwimmt die Silhouette)
+    const armorMaterial = this.armorMaterial
     const gunMaterial = new THREE.MeshStandardMaterial({ color: Palette.weaponBody, roughness: 0.5 })
-    this.materials = [this.teamMaterial, this.teamDarkMaterial, headMaterial, gunMaterial, this.neonMaterial]
+    this.materials = [this.teamMaterial, this.teamDarkMaterial, headMaterial, gunMaterial, this.neonMaterial, armorMaterial]
     const glow = this.neonMaterial
 
     const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false })
@@ -114,15 +119,18 @@ export class PlayerAvatar {
     }
     // Lasertag-Look: dunkle Weste mit Diagonalgurt, Helm mit Visier in Teamfarbe,
     // Leuchtgürtel und Ringe an Armen/Beinen (reine Optik, Trefferflächen bleiben)
-    add(this.teamDarkMaterial, [0.64, 0.5, 0.4], [0, 1.15, 0])
+    add(armorMaterial, [0.64, 0.5, 0.4], [0, 1.15, 0])
     for (const z of [-0.21, 0.21]) {
       const strap = add(this.neonMaterial, [0.09, 0.5, 0.04], [0, 1.15, z])
       strap.rotation.z = 0.6
     }
     add(this.neonMaterial, [0.62, 0.06, 0.38], [0, 0.88, 0])
+    // Schulterkante und Helmrand: Umriss vor dunklem Hintergrund
+    add(this.neonMaterial, [0.67, 0.045, 0.43], [0, 1.4, 0])
+    add(this.neonMaterial, [0.52, 0.04, 0.52], [0, 1.65, 0])
     for (const arm of [leftArm, rightArm]) add(this.neonMaterial, [0.17, 0.05, 0.19], [0, -0.42, 0], arm)
     for (const leg of [this.leftLeg, this.rightLeg]) add(this.neonMaterial, [0.24, 0.05, 0.28], [0, -0.6, 0], leg)
-    add(this.teamDarkMaterial, [0.48, 0.28, 0.48], [0, 1.78, 0])
+    add(armorMaterial, [0.48, 0.28, 0.48], [0, 1.78, 0])
     add(this.neonMaterial, [0.38, 0.12, 0.04], [0, 1.68, -0.245])
     add(this.neonMaterial, [0.03, 0.22, 0.03], [0.15, 2.05, 0.15])
     this.root.add(this.upperBody)
@@ -166,6 +174,7 @@ export class PlayerAvatar {
     this.teamDarkMaterial.color.set(TeamColor[team]).multiplyScalar(0.55)
     this.neonMaterial.color.set(TeamColor[team]).lerp(new THREE.Color(0xffffff), 0.35)
     this.neonMaterial.emissive.set(TeamColor[team])
+    this.armorMaterial.emissive.set(TeamColor[team]).multiplyScalar(ARMOR_GLOW)
     this.resetGlow()
     // weapon.ts liest das Team am Mesh (Friendly-Fire)
     this.mesh.userData.team = team
