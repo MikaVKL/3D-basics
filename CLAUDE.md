@@ -214,6 +214,10 @@ Stolperfallen bei Headless-Tests:
   nie rot/blau. 1,4-m-Kisten sind ohnehin per Sprung erreichbar - Paletten
   sind Kleindeckung, keine nötigen Stufen. Standort-Falle: x 13,75..16,25
   liegt unter der Brücke.
+- Bot-Test mit 6 Spawns (2 Läufe): nirgends auffällig (früh getroffen 0-33 %,
+  je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
+  fielen von ~55 auf ~20, weil Pfeiler/Wracks die geradeaus laufenden Bots
+  bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
 - **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
   gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
   getestet - Nutzen gering gegen Risiko. Nur nach Absprache.
