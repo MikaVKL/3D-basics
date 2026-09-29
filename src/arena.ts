@@ -143,6 +143,16 @@ export function buildArena(): ArenaResult {
   sideGround.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0, 0)
   group.add(sideGround)
 
+  // Nordost-Halle: nördlich des Flankenraums (Bereich zwischen Hauptraum-Ostwand
+  // und Flankenraum-Ostwand), über eine Öffnung in dessen Nordwand erreichbar
+  const HALL_MIN_Z = -MAIN_HALF_D
+  const HALL_MAX_Z = -SIDE_HALF_D
+  const HALL_DOOR_X: [number, number] = [38, 46] // Öffnung in der Flankenraum-Nordwand
+  const hallGround = new THREE.Mesh(new THREE.PlaneGeometry(SIDE_ROOM_WIDTH, HALL_MAX_Z - HALL_MIN_Z), groundMaterial)
+  hallGround.rotation.x = -Math.PI / 2
+  hallGround.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0, (HALL_MIN_Z + HALL_MAX_Z) / 2)
+  group.add(hallGround)
+
   // --- Raster auf den Böden (GridHelper ist quadratisch -> per scale gestreckt) ---
   const mainGrid = new THREE.GridHelper(MAIN_ROOM_WIDTH, 22, Palette.accentNeon, 0x2a3a4a)
   mainGrid.scale.z = MAIN_ROOM_DEPTH / MAIN_ROOM_WIDTH
@@ -157,6 +167,13 @@ export function buildArena(): ArenaResult {
   ;(sideGrid.material as THREE.Material).opacity = 0.15
   sideGrid.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0.01, 0)
   group.add(sideGrid)
+
+  const hallGrid = new THREE.GridHelper(SIDE_ROOM_WIDTH, 8, Palette.accentNeon, 0x2a3a4a)
+  hallGrid.scale.z = (HALL_MAX_Z - HALL_MIN_Z) / SIDE_ROOM_WIDTH
+  ;(hallGrid.material as THREE.Material).transparent = true
+  ;(hallGrid.material as THREE.Material).opacity = 0.15
+  hallGrid.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0.01, (HALL_MIN_Z + HALL_MAX_Z) / 2)
+  group.add(hallGrid)
 
   // --- Umgebende Wände ---
   const wallMaterial = new THREE.MeshStandardMaterial({
@@ -210,8 +227,13 @@ export function buildArena(): ArenaResult {
     },
     // Flankenraum
     { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: SIDE_HALF_D },
-    { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: -SIDE_HALF_D },
+    // Nordwand des Flankenraums mit Öffnung zur Halle
+    { w: HALL_DOOR_X[0] - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + HALL_DOOR_X[0]) / 2, z: -SIDE_HALF_D },
+    { w: sideRoomMaxX - HALL_DOOR_X[1], d: WALL_THICKNESS, x: (HALL_DOOR_X[1] + sideRoomMaxX) / 2, z: -SIDE_HALF_D },
     { w: WALL_THICKNESS, d: SIDE_ROOM_DEPTH, x: sideRoomMaxX, z: 0 },
+    // Halle: Nord- und Ostwand (West = Hauptraum-Ostwand)
+    { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: HALL_MIN_Z },
+    { w: WALL_THICKNESS, d: HALL_MAX_Z - HALL_MIN_Z + WALL_THICKNESS / 2, x: sideRoomMaxX, z: (HALL_MIN_Z + HALL_MAX_Z) / 2 - WALL_THICKNESS / 4 },
     // Trennwand: Süd-Abschnitt, Nord-Abschnitte vor und nach dem erhöhten Durchgang
     { w: WALL_THICKNESS, d: dividerSouthDepth, x: DIVIDER_X, z: -MAIN_HALF_D + dividerSouthDepth / 2 },
     {
@@ -373,6 +395,10 @@ export function buildArena(): ArenaResult {
     [0, 14, 7, 1, 2.4],
     [-4, 16, 1, 3, 2.4],
     [4, 16, 1, 3, 2.4],
+    // Nordost-Halle (Nordwand-Streifen z < -17,5 bleibt für den Regal-Steg frei)
+    [42, -15, 3, 1.2, 2.4],
+    [49.5, -15.5, 2, 2.5, 1.4],
+    [35, -14.5, 2, 2, 1.4],
     // Flankenraum
     [sideRoomMinX + 6, -5, 2.4, 2.4, 2.4],
     [sideRoomMinX + 13, 7, 2, 4.5, 2.8],
@@ -617,6 +643,6 @@ export function buildArena(): ArenaResult {
     solids,
     spawnPoints,
     ramps: [rampToMainPlatform, rampToWestPlatform, rampNorthWest, rampSouthEast],
-    shootables: [mainGround, sideGround, ...shootableExtras, ...solids.map((s) => s.mesh)],
+    shootables: [mainGround, sideGround, hallGround, ...shootableExtras, ...solids.map((s) => s.mesh)],
   }
 }
