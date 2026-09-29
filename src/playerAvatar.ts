@@ -67,17 +67,11 @@ export class PlayerAvatar {
   private readonly lastPosition = new THREE.Vector3()
   private hasLastPosition = false
 
-  constructor(team: Team, variant = 0) {
+  constructor(team: Team) {
     const headMaterial = new THREE.MeshStandardMaterial({ color: 0xd9dde3, roughness: 0.8 })
-    const visorMaterial = new THREE.MeshStandardMaterial({
-      color: Palette.accentNeon,
-      emissive: Palette.accentNeon,
-      emissiveIntensity: 1.4,
-    })
     const gunMaterial = new THREE.MeshStandardMaterial({ color: Palette.weaponBody, roughness: 0.5 })
-    const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x1d2a38, roughness: 0.6 })
-    this.materials = [this.teamMaterial, this.teamDarkMaterial, headMaterial, visorMaterial, gunMaterial, this.neonMaterial, darkMaterial]
-    const glow = variant > 0 ? this.neonMaterial : visorMaterial
+    this.materials = [this.teamMaterial, this.teamDarkMaterial, headMaterial, gunMaterial, this.neonMaterial]
+    const glow = this.neonMaterial
 
     const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false })
     this.mesh = new THREE.Mesh(
@@ -104,8 +98,6 @@ export class PlayerAvatar {
     torso.position.y = 1.125
     const head = box(0.42, 0.42, 0.42, headMaterial)
     head.position.y = 1.67
-    const visor = box(0.34, 0.09, 0.03, visorMaterial)
-    visor.position.set(0, 1.7, -0.22)
     const leftArm = limb(0.15, 0.55, 0.17, this.teamMaterial)
     const rightArm = limb(0.15, 0.55, 0.17, this.teamMaterial)
     leftArm.position.set(-0.38, 1.4, 0)
@@ -113,34 +105,26 @@ export class PlayerAvatar {
     // Waffe rechts: rechte Hand am Griff, linke greift quer an den Lauf
     leftArm.rotation.set(1.25, 0, 0.76)
     rightArm.rotation.set(1.25, 0, -0.37)
-    this.upperBody.add(torso, head, visor, leftArm, rightArm)
+    this.upperBody.add(torso, head, leftArm, rightArm)
     const add = (material: THREE.Material, size: [number, number, number], position: [number, number, number], parent: THREE.Object3D = this.upperBody) => {
       const mesh = box(...size, material)
       mesh.position.set(...position)
       parent.add(mesh)
       return mesh
     }
-    if (variant === 1) {
-      add(darkMaterial, [0.64, 0.5, 0.4], [0, 1.15, 0])
-      add(this.neonMaterial, [0.06, 0.5, 0.42], [-0.15, 1.15, 0])
-      add(this.neonMaterial, [0.06, 0.5, 0.42], [0.15, 1.15, 0])
-      add(darkMaterial, [0.46, 0.14, 0.46], [0, 1.9, 0])
-    } else if (variant === 2) {
-      visor.visible = false
-      add(darkMaterial, [0.48, 0.28, 0.48], [0, 1.78, 0])
-      add(this.neonMaterial, [0.38, 0.12, 0.04], [0, 1.68, -0.245])
-      const strap = add(this.neonMaterial, [0.09, 0.78, 0.04], [0, 1.13, -0.19])
+    // Lasertag-Look: dunkle Weste mit Diagonalgurt, Helm mit Visier in Teamfarbe,
+    // Leuchtgürtel und Ringe an Armen/Beinen (reine Optik, Trefferflächen bleiben)
+    add(this.teamDarkMaterial, [0.64, 0.5, 0.4], [0, 1.15, 0])
+    for (const z of [-0.21, 0.21]) {
+      const strap = add(this.neonMaterial, [0.09, 0.5, 0.04], [0, 1.15, z])
       strap.rotation.z = 0.6
-      add(darkMaterial, [0.2, 0.2, 0.08], [0, 1.2, 0.22])
-      add(this.neonMaterial, [0.08, 0.08, 0.03], [0, 1.2, 0.27])
-      add(this.neonMaterial, [0.03, 0.22, 0.03], [0.15, 2.05, 0.15])
-    } else if (variant === 3) {
-      add(this.neonMaterial, [0.62, 0.06, 0.38], [0, 0.88, 0])
-      add(this.neonMaterial, [0.24, 0.24, 0.02], [0, 1.15, -0.19])
-      add(this.neonMaterial, [0.24, 0.24, 0.02], [0, 1.15, 0.19])
-      for (const arm of [leftArm, rightArm]) add(this.neonMaterial, [0.17, 0.05, 0.19], [0, -0.42, 0], arm)
-      for (const leg of [this.leftLeg, this.rightLeg]) add(this.neonMaterial, [0.24, 0.05, 0.28], [0, -0.6, 0], leg)
     }
+    add(this.neonMaterial, [0.62, 0.06, 0.38], [0, 0.88, 0])
+    for (const arm of [leftArm, rightArm]) add(this.neonMaterial, [0.17, 0.05, 0.19], [0, -0.42, 0], arm)
+    for (const leg of [this.leftLeg, this.rightLeg]) add(this.neonMaterial, [0.24, 0.05, 0.28], [0, -0.6, 0], leg)
+    add(this.teamDarkMaterial, [0.48, 0.28, 0.48], [0, 1.78, 0])
+    add(this.neonMaterial, [0.38, 0.12, 0.04], [0, 1.68, -0.245])
+    add(this.neonMaterial, [0.03, 0.22, 0.03], [0.15, 2.05, 0.15])
     this.root.add(this.upperBody)
 
     const bladeMaterial = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, roughness: 0.35, metalness: 0.2 })
