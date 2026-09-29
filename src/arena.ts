@@ -568,9 +568,9 @@ export function buildArena(): ArenaResult {
       if (x > cornerRamp.minX - 0.2 && x < cornerRamp.maxX + 0.2) continue // dort trägt die Wand
       addBlock(x, edge + side * 0.2, 0.4, 0.4, 0, upperBottom)
     }
-    return cornerRamp
     addBlock(PLATFORM_A_X - BRIDGE_WIDTH / 2 + 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
     addBlock(PLATFORM_A_X + BRIDGE_WIDTH / 2 - 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
+    return cornerRamp
   }
   const rampNorthWest = buildUpperSide(-1, 'west', [26, 28])
   const rampSouthEast = buildUpperSide(1, 'east', [-16, -14])
