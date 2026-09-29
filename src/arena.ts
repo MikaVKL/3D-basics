@@ -411,15 +411,29 @@ export function buildArena(): ArenaResult {
     solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
   }
 
-  // --- Betonpfeiler (Kollisionskörper, 6 m hoch, brechen lange Sichtlinien)
+  // --- Neon-Säulen (Kollisionskörper, 6 m hoch, brechen lange Sichtlinien):
+  // dunkler Kern, leuchtende Ringe wie die Streifen oben an den Wänden. Die
+  // Ringe sind reine Optik (nicht in solids/shootables).
   const pillarMaterial = new THREE.MeshStandardMaterial({ color: Palette.pillar, roughness: 0.9, metalness: 0.05 })
+  const pillarRingMaterial = new THREE.MeshStandardMaterial({
+    color: Palette.accentNeon,
+    emissive: Palette.accentNeon,
+    emissiveIntensity: 1.2,
+  })
+  const PILLAR_SIZE = 1.2
+  const pillarRingGeometry = worldBox(PILLAR_SIZE + 0.08, 0.14, PILLAR_SIZE + 0.08)
 
   function buildPillar(x: number, z: number) {
-    const pillar = new THREE.Mesh(worldBox(1.2, WALL_HEIGHT, 1.2), pillarMaterial)
+    const pillar = new THREE.Mesh(worldBox(PILLAR_SIZE, WALL_HEIGHT, PILLAR_SIZE), pillarMaterial)
     pillar.position.set(x, WALL_HEIGHT / 2, z)
     addEdgeOutline(pillar)
     group.add(pillar)
     solids.push({ mesh: pillar, box: new THREE.Box3().setFromObject(pillar) })
+    for (const y of [0.8, 3, WALL_HEIGHT - 0.4]) {
+      const ring = new THREE.Mesh(pillarRingGeometry, pillarRingMaterial)
+      ring.position.set(x, y, z)
+      group.add(ring)
+    }
   }
 
   buildPillar(11, -10)

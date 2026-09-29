@@ -16,8 +16,8 @@ export const Palette = {
   // Deckungs-Kisten: Sandbraun, weit weg von Team Rot und Blau
   crate: 0xc9975a,
 
-  // Betonpfeiler: bewusst weder rot noch blau (Teamfarben)
-  pillar: 0x5c6f82,
+  // Säulenkern: dunkel, damit die Neonringe leuchten; weder rot noch blau
+  pillar: 0x1d2a38,
 
   // Leuchtkanten
   accentNeon: 0x33e6cc,

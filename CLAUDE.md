@@ -218,7 +218,8 @@ Stolperfallen bei Headless-Tests:
   in der Tür an (stuck-fuzz Seed 3). Spawn 5 (49,5 / -19,2) unter dem Steg.
 - **Keine Requisiten** wie Autowracks, Fässer, Paletten (Nutzer: passen nicht
   zum Lasertag-Look; das Vorlagenfoto galt nur dem Aufbau der Arena). Es
-  bleiben drei 6-m-Pfeiler (Grau-Blau, `Palette.pillar`) und die Kisten.
+  bleiben drei 6-m-Neon-Säulen (dunkler Kern `Palette.pillar`, drei
+  leuchtende Ringe wie die Wandstreifen, Ringe nur Optik) und die Kisten.
   Neue Objekte nur in Neon/Low-Poly-Optik, nie realistisch.
 - Bot-Test mit 6 Spawns (2 Läufe): nirgends auffällig (früh getroffen 0-33 %,
   je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
