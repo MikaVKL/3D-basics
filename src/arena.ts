@@ -382,16 +382,14 @@ export function buildArena(): ArenaResult {
     [19, -8, 2, 2, 1.4], // neben statt unter der Nord-Brücke
     // Deckung vor den mittleren Spawns (0, ±18): dort wurde man im Bot-Test
     // oft direkt nach dem Spawn getroffen (50-62 % statt 3-9 %).
-    // Beide Spawns rundum gedeckt: Schüsse kamen schräg (bis ~55°) - Front
-    // 7 m und Seitenteile bis an die Stegkante, raus geht es seitlich unter
-    // dem Steg. Nord-Ost-Seitenteil reicht bis an die Fensterwand (x 5),
-    // sonst bliebe ein 0,5-m-Spalt; West bleibt x -5 frei (vor der Rampe).
-    [0, -14, 7, 1, 2.4],
-    [-4, -16, 1, 3, 2.4],
+    // Front 6 m plus ein Seitenteil auf der Seite, von der geschossen wird
+    // (Bot-Test: Nord-Spawn von Osten, Süd-Spawn von Westen); die andere Seite
+    // bleibt offen, sonst war man eingesperrt (Nutzer). Nord-Ost-Seitenteil
+    // reicht bis an die Fensterwand (x 5), sonst bliebe ein 0,5-m-Spalt.
+    [0, -14, 6, 1, 2.4],
     [4.25, -16, 1.5, 3, 2.4],
-    [0, 14, 7, 1, 2.4],
-    [-4, 16, 1, 3, 2.4],
-    [4, 16, 1, 3, 2.4],
+    [0, 14, 6, 1, 2.4],
+    [-3.5, 16, 1, 3, 2.4],
     // Nordost-Halle (Nordwand-Streifen z < -17,5 bleibt für den Regal-Steg frei)
     [42, -15, 3, 1.2, 2.4],
     [49.5, -15.5, 2, 2.5, 2.4], // deckt den Halle-Spawn (49,5 / -19,2) nach Süden
