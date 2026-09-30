@@ -224,11 +224,16 @@ const SLIDE_BLEND_SPEED = 8 // pro Sekunde
 
 export class SlideView {
   amount = 0
-  private readonly baseFov: number
+  private baseFov: number
   private appliedRoll = 0
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.baseFov = camera.fov
+  }
+
+  // Blickfeld aus den Einstellungen
+  setBaseFov(fov: number) {
+    this.baseFov = fov
   }
 
   apply(camera: THREE.PerspectiveCamera, sliding: boolean, deltaSeconds: number) {

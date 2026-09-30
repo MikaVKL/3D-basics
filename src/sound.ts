@@ -150,6 +150,7 @@ export class SoundFx {
   private master: GainNode | null = null
   private noise: AudioBuffer | null = null
   muted = false
+  volume = 1 // Einstellung 0..1, wirkt auf die Gesamtlautstärke
 
   constructor() {
     try {
@@ -164,16 +165,25 @@ export class SoundFx {
     if (!this.ctx) {
       this.ctx = new AudioContext()
       this.master = this.ctx.createGain()
-      this.master.gain.value = this.muted ? 0 : 0.6
+      this.master.gain.value = this.masterGain()
       this.master.connect(this.ctx.destination)
       this.noise = createNoiseBuffer(this.ctx)
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume()
   }
 
+  private masterGain() {
+    return this.muted ? 0 : 0.6 * this.volume
+  }
+
+  setVolume(volume: number) {
+    this.volume = volume
+    if (this.master) this.master.gain.value = this.masterGain()
+  }
+
   toggleMute() {
     this.muted = !this.muted
-    if (this.master) this.master.gain.value = this.muted ? 0 : 0.6
+    if (this.master) this.master.gain.value = this.masterGain()
     try {
       localStorage.setItem(MUTE_STORAGE_KEY, this.muted ? '1' : '0')
     } catch {

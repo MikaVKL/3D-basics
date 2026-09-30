@@ -1003,6 +1003,36 @@ body {
   border-color: var(--c-neon);
 }
 
+/* Einstellungen: Beschriftung, Regler, Wert */
+.setting-row {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr 3.8rem;
+  align-items: center;
+  gap: 0.8rem;
+  width: 24rem;
+  max-width: 92vw;
+  margin: 0.7rem auto;
+  text-align: left;
+  color: var(--c-text);
+}
+
+.setting-row input[type='range'] {
+  width: 100%;
+  accent-color: var(--c-neon);
+}
+
+.setting-row output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-neon);
+}
+
+@media (max-height: 480px) {
+  .setting-row {
+    margin: 0.3rem auto;
+  }
+}
+
 #overlay-content h2 {
   margin: 0 0 0.5rem;
   font-size: 1.6rem;

@@ -120,8 +120,23 @@
         </div>
         <div id="menu-settings" class="hidden">
           <h2>Einstellungen</h2>
-          <p class="hint">Noch keine Einstellungen vorhanden.</p>
+          <div class="setting-row">
+            <label for="setting-sensitivity">Empfindlichkeit</label>
+            <input id="setting-sensitivity" type="range" />
+            <output id="setting-sensitivity-value"></output>
+          </div>
+          <div class="setting-row">
+            <label for="setting-fov">Blickfeld</label>
+            <input id="setting-fov" type="range" />
+            <output id="setting-fov-value"></output>
+          </div>
+          <div class="setting-row">
+            <label for="setting-volume">Lautstärke</label>
+            <input id="setting-volume" type="range" />
+            <output id="setting-volume-value"></output>
+          </div>
           <div class="menu-buttons">
+            <button id="settings-reset-button" class="menu-button" type="button">Standardwerte</button>
             <button id="settings-back-button" class="menu-button primary" type="button">Fertig</button>
           </div>
         </div>

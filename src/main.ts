@@ -16,6 +16,7 @@ import { NetworkClient } from './network'
 import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
 import { TeamColor, TeamLabel, type Team } from './team'
+import { DEFAULT_SETTINGS, SETTING_RANGES, clampSetting, loadSettings, saveSettings, type Settings } from './settings'
 import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
@@ -392,6 +393,57 @@ document.querySelector('#settings-back-button')!.addEventListener('click', (even
   showSettings(false)
 })
 menuSettings.addEventListener('click', (event) => event.stopPropagation())
+
+// --- Einstellungen: Regler im Menü, gemerkt im Browser ---
+const settings = loadSettings()
+const settingFormat: Record<keyof Settings, (value: number) => string> = {
+  sensitivity: (value) => `${value.toFixed(2)}×`,
+  fov: (value) => `${Math.round(value)}°`,
+  volume: (value) => `${Math.round(value * 100)} %`,
+}
+
+function applySettings() {
+  lookControl.setSensitivityScale(settings.sensitivity)
+  camera.fov = settings.fov
+  camera.updateProjectionMatrix()
+  slideView.setBaseFov(settings.fov)
+  sound.setVolume(settings.volume)
+}
+
+const settingSliders = {} as Record<keyof Settings, HTMLInputElement>
+for (const key of Object.keys(SETTING_RANGES) as Array<keyof Settings>) {
+  const slider = document.querySelector<HTMLInputElement>(`#setting-${key}`)!
+  const output = document.querySelector<HTMLOutputElement>(`#setting-${key}-value`)!
+  const { min, max, step } = SETTING_RANGES[key]
+  slider.min = String(min)
+  slider.max = String(max)
+  slider.step = String(step)
+  settingSliders[key] = slider
+  slider.addEventListener('input', () => {
+    settings[key] = clampSetting(key, Number(slider.value))
+    output.textContent = settingFormat[key](settings[key])
+    applySettings()
+    saveSettings(settings)
+  })
+}
+
+function showSettingValues() {
+  for (const key of Object.keys(settingSliders) as Array<keyof Settings>) {
+    settingSliders[key].value = String(settings[key])
+    document.querySelector(`#setting-${key}-value`)!.textContent = settingFormat[key](settings[key])
+  }
+}
+
+document.querySelector('#settings-reset-button')!.addEventListener('click', (event) => {
+  event.stopPropagation()
+  Object.assign(settings, DEFAULT_SETTINGS)
+  showSettingValues()
+  applySettings()
+  saveSettings(settings)
+})
+
+showSettingValues()
+applySettings()
 
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'

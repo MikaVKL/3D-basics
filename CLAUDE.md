@@ -129,6 +129,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   leeres Magazin), Fadenkreuz (Lücke = echte Streuung, Messer-Ring)
 - `npm run test:menu` – Pausenmenü: Weiter/Einstellungen, Zurück, Klick daneben,
   Wiederkehr nach ESC
+- `npm run test:settings` – Einstellungen: Regler (Empfindlichkeit 0,3-3×,
+  Blickfeld 60-110°, Lautstärke 0-100 %) wirken sofort, Rutschen +7° auf das
+  gewählte Blickfeld, gemerkt im Browser, kaputte Speicherwerte, Zurücksetzen
 - `npm run test:layout` – keine HUD-Überlappungen in 6 Bildschirmgrößen
   (Rechner bis kleines Handy quer, online mit langem Status/Kill-Feed),
   Handy hochkant zeigt "Gerät drehen". Nach jeder HUD-Änderung laufen lassen.
@@ -236,6 +239,13 @@ Stolperfallen bei Headless-Tests:
   je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
   fielen von ~55 auf ~20, weil Pfeiler/Wracks (Wracks inzwischen entfernt) die geradeaus laufenden Bots
   bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
+- **Einstellungen** (`src/settings.ts`, Menü "Einstellungen"): Empfindlichkeit,
+  Blickfeld, Lautstärke; `localStorage` `duskArena.settings`, jeder Wert
+  einzeln begrenzt/auf Standard, wenn kaputt. Wirkt über
+  `LookControl.setSensitivityScale`, `SlideView.setBaseFov` (Rutschen addiert
+  weiter +7°) und `SoundFx.setVolume` (M = Stumm bleibt getrennt). Neue
+  Einstellungen: Bereich in `SETTING_RANGES`, Zeile in `index.html`, Format
+  in `main.ts`.
 - **Laserstrahl (Leuchtspur) bleibt** (Nutzer mag ihn): heller weißer Kern +
   additiver Schein in der Teamfarbe des Schützen, 0,2 s, quadratisch
   ausgeblendet, ohne Nebel (`weapon.ts`). Je Waffe andere Stärke

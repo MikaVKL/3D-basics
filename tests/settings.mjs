@@ -1,0 +1,118 @@
+// Einstellungen im Menü: Regler für Empfindlichkeit, Blickfeld und
+// Lautstärke wirken sofort, werden gemerkt und vertragen kaputte Speicherwerte.
+//
+//   node tests/settings.mjs
+import { startServers, launchBrowser, openGame, wait, createChecks } from './lib.mjs'
+
+const { check, finish } = createChecks()
+const servers = await startServers({ gameServer: false })
+const browser = await launchBrowser()
+const errors = []
+
+const setSlider = (page, key, value) =>
+  page.evaluate(([k, v]) => {
+    const slider = document.querySelector(`#setting-${k}`)
+    slider.value = String(v)
+    slider.dispatchEvent(new Event('input', { bubbles: true }))
+  }, [key, value])
+const readUi = (page) =>
+  page.evaluate(() => {
+    const out = {}
+    for (const key of ['sensitivity', 'fov', 'volume']) {
+      out[key] = { value: Number(document.querySelector(`#setting-${key}`).value), label: document.querySelector(`#setting-${key}-value`).textContent }
+    }
+    return out
+  })
+const yawPer100px = (page) =>
+  page.evaluate(() => {
+    const look = __dusk.lookControl
+    const before = look.euler.y
+    look.rotate(100, 0)
+    const delta = before - look.euler.y
+    look.euler.y = before
+    return delta
+  })
+
+try {
+  let page = await openGame(browser, { online: false, errors })
+  await page.click('#settings-button')
+
+  const ui = await readUi(page)
+  check('Standardwerte 1,00× / 75° / 100 %', ui.sensitivity.value === 1 && ui.fov.value === 75 && ui.volume.value === 1 && ui.sensitivity.label === '1.00×' && ui.fov.label === '75°' && ui.volume.label === '100 %', JSON.stringify(ui))
+  check('Regler-Bereiche gesetzt', await page.evaluate(() => ['sensitivity', 'fov', 'volume'].every((k) => Number(document.querySelector(`#setting-${k}`).max) > Number(document.querySelector(`#setting-${k}`).min))))
+
+  // Bedienung mit der Tastatur (Regler fokussieren, Pfeil nach rechts)
+  await page.focus('#setting-sensitivity')
+  await page.keyboard.press('ArrowRight')
+  const stepped = await readUi(page)
+  check('Pfeiltaste ändert den Regler um einen Schritt', Math.abs(stepped.sensitivity.value - 1.05) < 0.001 && stepped.sensitivity.label === '1.05×', JSON.stringify(stepped.sensitivity))
+  await setSlider(page, 'sensitivity', 1)
+
+  // Wirkung
+  const base = await yawPer100px(page)
+  await setSlider(page, 'sensitivity', 2)
+  const doubled = await yawPer100px(page)
+  check('Empfindlichkeit 2× dreht doppelt so weit', Math.abs(doubled / base - 2) < 0.01, `${base.toFixed(3)} -> ${doubled.toFixed(3)} rad je 100 px`)
+
+  await setSlider(page, 'fov', 100)
+  await wait(400)
+  const fov = await page.evaluate(() => __dusk.camera.fov)
+  check('Blickfeld 100° wirkt auf die Kamera', Math.abs(fov - 100) < 0.01, `${fov}°`)
+
+  // Ton: Audio startet erst nach dem Klick auf Weiter
+  await setSlider(page, 'volume', 0.5)
+  await page.click('#settings-back-button')
+  await page.click('#resume-button')
+  await wait(400)
+  const gain = () => page.evaluate(() => __dusk.sound.master.gain.value)
+  check('Lautstärke 50 % halbiert die Gesamtlautstärke', Math.abs((await gain()) - 0.3) < 0.001, `${await gain()}`)
+  await page.evaluate(() => __dusk.sound.toggleMute())
+  const muted = await gain()
+  await page.evaluate(() => __dusk.sound.toggleMute())
+  check('Stummschalten (M) geht weiter, danach wieder 50 %', muted === 0 && Math.abs((await gain()) - 0.3) < 0.001, `stumm ${muted}`)
+
+  // Rutschen addiert weiter 7° auf das gewählte Blickfeld
+  // (im selben Schritt lesen: ein echtes Bild würde die Überblendung sofort abbauen)
+  const slideFov = await page.evaluate(() => {
+    __dusk.slideView.apply(__dusk.camera, true, 1)
+    return __dusk.camera.fov
+  })
+  check('Rutschen: gewähltes Blickfeld + 7°', Math.abs(slideFov - 107) < 0.01, `${slideFov}°`)
+
+  // Gemerkt
+  await page.reload()
+  await page.waitForFunction(() => typeof window.__dusk !== 'undefined')
+  await wait(400)
+  const restored = await page.evaluate(() => ({ fov: __dusk.camera.fov, stored: localStorage.getItem('duskArena.settings') }))
+  check('nach dem Neuladen gemerkt und angewendet', Math.abs(restored.fov - 100) < 0.01 && JSON.parse(restored.stored).sensitivity === 2, JSON.stringify(restored))
+  check('Empfindlichkeit nach Neuladen weiter 2×', Math.abs((await yawPer100px(page)) / base - 2) < 0.01)
+  await page.click('#settings-button')
+  const ui2 = await readUi(page)
+  check('Regler zeigen die gemerkten Werte', ui2.sensitivity.value === 2 && ui2.fov.value === 100 && ui2.volume.value === 0.5 && ui2.fov.label === '100°', JSON.stringify(ui2))
+
+  // Zurücksetzen
+  await page.click('#settings-reset-button')
+  const reset = await readUi(page)
+  check('Standardwerte setzt alles zurück', reset.sensitivity.value === 1 && reset.fov.value === 75 && reset.volume.value === 1, JSON.stringify(reset))
+  await wait(300)
+  check('Zurücksetzen wirkt auf die Kamera', Math.abs((await page.evaluate(() => __dusk.camera.fov)) - 75) < 0.01)
+
+  // Kaputte Speicherwerte
+  await page.evaluate(() => localStorage.setItem('duskArena.settings', '{"sensitivity":99,"fov":"x","volume":-5}'))
+  await page.reload()
+  await page.waitForFunction(() => typeof window.__dusk !== 'undefined')
+  await page.click('#settings-button')
+  const broken = await readUi(page)
+  check('Werte außerhalb/kaputt: begrenzt bzw. Standard', broken.sensitivity.value === 3 && broken.fov.value === 75 && broken.volume.value === 0, JSON.stringify(broken))
+  await page.evaluate(() => localStorage.setItem('duskArena.settings', 'kein json'))
+  await page.reload()
+  await page.waitForFunction(() => typeof window.__dusk !== 'undefined')
+  await page.click('#settings-button')
+  const garbage = await readUi(page)
+  check('kein gültiges JSON: Standardwerte', garbage.sensitivity.value === 1 && garbage.fov.value === 75 && garbage.volume.value === 1, JSON.stringify(garbage))
+  check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
+} finally {
+  await browser.close()
+  servers.stop()
+  finish()
+}
