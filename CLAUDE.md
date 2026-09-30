@@ -127,6 +127,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:hud` – HUD: Lebensanzeige (Werte, Aufblitzen bei Schaden,
   Pulsieren ab 30 Leben, nicht bei Tod/Respawn), Waffenfeld (Nachlade-Balken,
   leeres Magazin), Fadenkreuz (Lücke = echte Streuung, Messer-Ring)
+- `npm run test:menu` – Pausenmenü: Weiter/Einstellungen, Zurück, Klick daneben,
+  Wiederkehr nach ESC
 - `npm run test:layout` – keine HUD-Überlappungen in 6 Bildschirmgrößen
   (Rechner bis kleines Handy quer, online mit langem Status/Kill-Feed),
   Handy hochkant zeigt "Gerät drehen". Nach jeder HUD-Änderung laufen lassen.

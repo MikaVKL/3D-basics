@@ -330,6 +330,8 @@ const overlayInstruction = document.querySelector<HTMLParagraphElement>('#overla
 const overlayHint = document.querySelector<HTMLParagraphElement>('#overlay-hint')!
 const overlayNotice = document.querySelector<HTMLParagraphElement>('#overlay-notice')!
 const touchControls = document.querySelector<HTMLDivElement>('#touch-controls')!
+const menuMain = document.querySelector<HTMLDivElement>('#menu-main')!
+const menuSettings = document.querySelector<HTMLDivElement>('#menu-settings')!
 
 let isActive = false
 
@@ -355,6 +357,7 @@ function setActive(active: boolean) {
     cancelLeave()
     network.join()
   } else {
+    showSettings(false)
     scheduleLeave()
   }
 }
@@ -366,6 +369,29 @@ document.addEventListener('visibilitychange', () => {
     network.join()
   }
 })
+
+// Hauptmenü <-> Einstellungen; Klick auf die Fläche daneben setzt nur das
+// Hauptmenü fort, nicht aus den Einstellungen heraus
+let activate = () => setActive(true)
+
+function showSettings(show: boolean) {
+  menuMain.classList.toggle('hidden', show)
+  menuSettings.classList.toggle('hidden', !show)
+}
+
+function activateFromOverlay() {
+  if (!menuMain.classList.contains('hidden')) activate()
+}
+
+document.querySelector('#settings-button')!.addEventListener('click', (event) => {
+  event.stopPropagation()
+  showSettings(true)
+})
+document.querySelector('#settings-back-button')!.addEventListener('click', (event) => {
+  event.stopPropagation()
+  showSettings(false)
+})
+menuSettings.addEventListener('click', (event) => event.stopPropagation())
 
 if (isTouchDevice) {
   overlayInstruction.textContent = 'Tippen, um zu spielen'
@@ -391,13 +417,14 @@ if (isTouchDevice) {
   )
   void touchInput // arbeitet über seine Event-Listener
 
-  overlay.addEventListener('click', () => setActive(true))
+  overlay.addEventListener('click', activateFromOverlay)
 } else {
   const desktopInput = new DesktopInput(renderer.domElement, player, lookControl, weapon, (locked) => {
     setActive(locked)
   })
 
-  overlay.addEventListener('click', () => desktopInput.requestActivation())
+  activate = () => desktopInput.requestActivation()
+  overlay.addEventListener('click', activateFromOverlay)
 }
 
 // --- Fenstergröße ändern ---

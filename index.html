@@ -105,13 +105,26 @@
     <div id="overlay">
       <div id="overlay-content">
         <h1>Dusk Arena</h1>
+        <div id="menu-main">
         <input id="name-input" type="text" maxlength="16" placeholder="Dein Name" autocomplete="off" spellcheck="false" />
         <p id="overlay-instruction">Klicken, um zu spielen</p>
+        <div class="menu-buttons">
+          <button id="resume-button" class="menu-button primary" type="button">Weiter</button>
+          <button id="settings-button" class="menu-button" type="button">Einstellungen</button>
+        </div>
         <p id="overlay-notice"></p>
         <p class="hint" id="overlay-hint">
           WASD: Bewegen &nbsp;·&nbsp; Maus: Umschauen &nbsp;·&nbsp; Klick: Schießen &nbsp;·&nbsp; R: Nachladen &nbsp;·&nbsp; 1/2/3, Mausrad, Q: Waffe &nbsp;·&nbsp;
           Leertaste: Springen &nbsp;·&nbsp; Strg/C: Ducken &nbsp;·&nbsp; Shift: Sprinten &nbsp;·&nbsp; Sprint + Ducken: Rutschen &nbsp;·&nbsp; Sprung bei Landung: Bunny-Hop &nbsp;·&nbsp; Tab: Punkte &nbsp;·&nbsp; M: Ton &nbsp;·&nbsp; ESC: Menü
         </p>
+        </div>
+        <div id="menu-settings" class="hidden">
+          <h2>Einstellungen</h2>
+          <p class="hint">Noch keine Einstellungen vorhanden.</p>
+          <div class="menu-buttons">
+            <button id="settings-back-button" class="menu-button primary" type="button">Fertig</button>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -959,10 +959,58 @@ body {
   display: none;
 }
 
+#overlay-content #overlay-instruction {
+  display: none; /* der Weiter-Knopf sagt es schon */
+}
+
 #overlay-content .hint {
   margin-top: 1rem;
   font-size: 0.9rem;
   color: #8a97ab;
+}
+
+/* Menü-Buttons (Weiter / Einstellungen), Stil wie das Minecraft-Pausenmenü:
+   breite, untereinander gestapelte Knöpfe */
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 18rem;
+  max-width: 90vw;
+  margin: 1rem auto 0.5rem;
+}
+
+.menu-button {
+  padding: 0.65rem 1rem;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--c-text);
+  background: rgba(16, 22, 31, 0.85);
+  border: 1px solid rgba(51, 230, 204, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.menu-button:hover,
+.menu-button:focus-visible {
+  border-color: var(--c-neon);
+  box-shadow: 0 0 10px rgba(51, 230, 204, 0.45);
+  outline: none;
+}
+
+.menu-button.primary {
+  background: rgba(51, 230, 204, 0.18);
+  border-color: var(--c-neon);
+}
+
+#overlay-content h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.6rem;
+  color: var(--c-text);
+}
+
+#overlay-content .hidden {
+  display: none;
 }
 
 /* --- Touch-Steuerung --- */
