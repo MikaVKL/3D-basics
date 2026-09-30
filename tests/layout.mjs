@@ -47,6 +47,34 @@ try {
     })
     check(`${name} (${width}x${height}): keine Überlappungen`, result.overlaps.length === 0, result.overlaps.join(', '))
     check(`${name}: alles im Bild`, result.offscreen.length === 0, result.offscreen.join(', '))
+
+    // Rundenende: Banner mit Statistik von 8 Spielern (Hinweise sind dann weg)
+    const roundResult = await page.evaluate(async () => {
+      const mod = await import('/3D-basics/src/roundStats.ts')
+      const stats = [
+        ['Anna', 'red', 14, 6, 5], ['Maximilianus1234', 'blue', 9, 8, 2], ['Clara', 'red', 7, 9, 1], ['Dora', 'blue', 6, 10, 0],
+        ['Emil', 'red', 4, 10, 2], ['Finn', 'blue', 3, 11, 0], ['Gina', 'red', 2, 12, 1], ['Hugo', 'blue', 0, 13, 0],
+      ].map(([name, team, kills, deaths, headshots], id) => ({ id: id + 1, name, team, kills, deaths, headshots }))
+      for (const id of ['#notice-banner', '#connection-warning', '#score-goal']) document.querySelector(id).style.display = 'none'
+      document.querySelector('#round-banner').className = 'red'
+      document.querySelector('#round-winner').textContent = 'Team Rot gewinnt!'
+      document.querySelector('#round-countdown').textContent = 'Nächste Runde in 8s'
+      mod.renderRoundStats(document.querySelector('#round-stats'), stats, 8)
+      const ids = ['#round-banner', '#scoreboard', '#net-status', '#kill-feed', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
+      const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
+        .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
+      const overlaps = []
+      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+        const [a, ra] = boxes[i], [b, rb] = boxes[j]
+        const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left), h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top)
+        if (w > 1 && h > 1) overlaps.push(`${a}/${b}`)
+      }
+      const banner = boxes.find(([id]) => id === '#round-banner')?.[1]
+      const own = document.querySelector('#round-stats .own')
+      return { overlaps, inside: !!banner && banner.left >= 0 && banner.top >= 0 && banner.right <= innerWidth && banner.bottom <= innerHeight, ownShown: !!own }
+    })
+    check(`${name}: Rundenende-Statistik ohne Überlappung`, roundResult.overlaps.length === 0, roundResult.overlaps.join(', '))
+    check(`${name}: Rundenende-Statistik im Bild, eigene Zeile sichtbar`, roundResult.inside && roundResult.ownShown)
     await context.close()
   }
 } finally {

@@ -501,6 +501,103 @@ body {
   text-shadow: 0 0 14px rgba(77, 166, 255, 0.6);
 }
 
+/* Rundenstatistik: Rang, Name (Teamfarbe), Kills, Tode, Kopftreffer */
+#round-stats {
+  min-width: 20rem;
+  margin: 12px auto 4px;
+  text-align: left;
+}
+
+#round-stats:empty {
+  display: none;
+}
+
+.round-stat-row {
+  display: grid;
+  grid-template-columns: 1.6em minmax(0, 1fr) 2.4em 2.4em 3.4em;
+  padding: 3px 8px;
+  font-size: 0.95rem;
+}
+
+.round-stat-row span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.round-stat-row span:nth-child(n + 3) {
+  text-align: right;
+}
+
+.round-stat-row.header {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.round-stat-row.red span:nth-child(2) {
+  color: var(--c-red);
+}
+
+.round-stat-row.blue span:nth-child(2) {
+  color: var(--c-blue);
+}
+
+.round-stat-row.mvp span:first-child {
+  color: var(--c-warm);
+}
+
+.round-stat-row.own {
+  background: rgba(51, 230, 204, 0.15);
+  border-radius: 4px;
+}
+
+/* Niedrige Bildschirme (Handy quer, kleiner Laptop): unter dem Punktestand,
+   schmal genug zwischen Waffenfeld und Buttons, nur die besten 4 + eigene Zeile */
+@media (max-height: 560px) {
+  #round-banner {
+    top: 14%;
+    padding: 8px 12px;
+  }
+
+  #round-winner {
+    font-size: 1.4rem;
+  }
+
+  #round-stats {
+    min-width: 13rem;
+    margin-top: 6px;
+  }
+
+  .round-stat-row {
+    padding: 1px 6px;
+    font-size: 0.8rem;
+  }
+
+  .round-stat-row:nth-child(n + 6):not(.own) {
+    display: none;
+  }
+}
+
+/* Kleines Handy quer (667 px breit): zwischen Waffenfeld und Buttons */
+@media (max-height: 560px) and (max-width: 700px) {
+  #round-banner {
+    padding: 6px 8px;
+  }
+
+  #round-winner {
+    font-size: 1.1rem;
+  }
+
+  #round-stats {
+    min-width: 0;
+  }
+
+  /* feste Namensspalte: lange Namen werden gekürzt, sonst wird der Banner zu breit */
+  .round-stat-row {
+    grid-template-columns: 1.4em 7.5em 2em 2em 3em;
+  }
+}
+
 #round-countdown {
   margin-top: 4px;
   font-size: 0.95rem;

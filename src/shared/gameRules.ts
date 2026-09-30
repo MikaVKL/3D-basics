@@ -9,7 +9,7 @@ export const RESPAWN_DELAY = 3 // Sekunden
 export const SPAWN_PROTECTION = 2
 
 export const KILLS_TO_WIN = 20
-export const ROUND_END_PAUSE = 6 // Sekunden
+export const ROUND_END_PAUSE = 10 // Sekunden (Zeit für die Rundenstatistik)
 
 // Schaden und Feuerrate je Waffe: shared/weapons.ts
 export const HEADSHOT_MULTIPLIER = 2

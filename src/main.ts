@@ -16,6 +16,7 @@ import { NetworkClient } from './network'
 import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
 import { TeamColor, TeamLabel, type Team } from './team'
+import { renderRoundStats } from './roundStats'
 import { DEFAULT_SETTINGS, SETTING_RANGES, clampSetting, loadSettings, saveSettings, type Settings } from './settings'
 import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
@@ -135,6 +136,7 @@ function setLocalTeam(team: Team) {
 
 const roundBanner = document.querySelector<HTMLDivElement>('#round-banner')!
 const roundWinner = document.querySelector<HTMLDivElement>('#round-winner')!
+const roundStatsElement = document.querySelector<HTMLDivElement>('#round-stats')!
 const roundCountdown = document.querySelector<HTMLDivElement>('#round-countdown')!
 const scoreGoal = document.querySelector<HTMLDivElement>('#score-goal')!
 // Zeitpunkt der nächsten Runde (nur während der Sieger-Anzeige)
@@ -231,9 +233,10 @@ const network: NetworkClient = new NetworkClient({
       remotePlayers.handleRespawn(id)
     }
   },
-  onRoundEnd: (winner, nextRoundIn) => {
+  onRoundEnd: (winner, nextRoundIn, stats) => {
     roundBanner.className = winner
     roundWinner.textContent = `Team ${TeamLabel[winner]} gewinnt!`
+    renderRoundStats(roundStatsElement, stats, network.localId)
     nextRoundAt = performance.now() + nextRoundIn * 1000
   },
   onRoundStart: (scores) => {

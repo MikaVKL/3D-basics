@@ -60,6 +60,16 @@ export interface RosterEntry {
   ping: number | null // vom Spieler gemessen, null = noch unbekannt
 }
 
+// Statistik einer Runde (Rundenende), sortiert: meiste Kills zuerst
+export interface RoundStat {
+  id: PlayerId
+  name: string
+  team: Team
+  kills: number
+  deaths: number
+  headshots: number // Treffer am Kopf
+}
+
 export type ClientMessage =
   | { t: 'hello'; version: number; name: string }
   | { t: 'setName'; name: string }
@@ -93,7 +103,8 @@ export type ServerMessage =
   | { t: 'kill'; killer: PlayerId; victim: PlayerId; scores: Scores; headshot: boolean; weapon: WeaponId }
   // team ändert sich beim Team-Ausgleich
   | { t: 'respawn'; id: PlayerId; spawnIndex: number; life: number; team: Team }
-  | { t: 'roundEnd'; winner: Team; nextRoundIn: number }
+  // stats fehlt bei älteren Servern
+  | { t: 'roundEnd'; winner: Team; nextRoundIn: number; stats?: RoundStat[] }
   | { t: 'roundStart'; scores: Scores }
   // hit: Schuss hat etwas getroffen (Einschlagfunken statt Schuss ins Leere)
   | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3; hit: boolean; weapon: WeaponId }

@@ -13,6 +13,7 @@ import {
   type Scores,
   type Vec3,
   type RosterEntry,
+  type RoundStat,
 } from '../src/shared/protocol.ts'
 import { ARENA_BOUNDS, SPAWN_POINTS } from '../src/shared/arenaLayout.ts'
 import { checkMovement, createMovementCheck, type MovementCheck } from '../src/shared/movementRules.ts'
@@ -53,6 +54,7 @@ interface Client {
   name: string
   kills: number
   deaths: number
+  headshots: number
   socket: WebSocket
   alive: boolean
   team: Team
@@ -85,6 +87,7 @@ const KILLS_TO_WIN_ACTIVE = Number(process.env.KILLS_TO_WIN) || KILLS_TO_WIN
 // Start der nächsten Runde während der Sieger-Anzeige, sonst null
 let nextRoundAt: number | null = null
 let roundWinner: Team | null = null
+let roundStats: RoundStat[] = []
 
 // Im Schnitt höchstens so schnell, wie die Waffe feuert; der kleine Vorrat
 // fängt Netzwerk-Schwankungen ab (Pakete kommen oft gebündelt an)
@@ -359,7 +362,10 @@ function balanceTeams(now: number): boolean {
 function endRound(winner: Team, now: number) {
   roundWinner = winner
   nextRoundAt = now + ROUND_END_PAUSE * 1000
-  broadcast({ t: 'roundEnd', winner, nextRoundIn: ROUND_END_PAUSE })
+  roundStats = [...clients.values()]
+    .map((c) => ({ id: c.id, name: c.name, team: c.team, kills: c.kills, deaths: c.deaths, headshots: c.headshots }))
+    .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || b.headshots - a.headshots)
+  broadcast({ t: 'roundEnd', winner, nextRoundIn: ROUND_END_PAUSE, stats: roundStats })
   console.log(`Runde vorbei, Team ${winner} gewinnt (${scores.red}:${scores.blue})`)
 }
 
@@ -370,6 +376,7 @@ function startRound(now: number) {
   for (const client of clients.values()) {
     client.kills = 0
     client.deaths = 0
+    client.headshots = 0
   }
   broadcast({ t: 'roundStart', scores })
   balanceTeams(now)
@@ -423,6 +430,7 @@ wss.on('connection', (socket) => {
         name: sanitizeName(message.name, id),
         kills: 0,
         deaths: 0,
+        headshots: 0,
         socket,
         alive: true,
         team,
@@ -456,7 +464,7 @@ wss.on('connection', (socket) => {
       broadcastRoster()
       if (nextRoundAt !== null && roundWinner !== null) {
         const nextRoundIn = Math.max(0, (nextRoundAt - performance.now()) / 1000)
-        send(socket, { t: 'roundEnd', winner: roundWinner, nextRoundIn })
+        send(socket, { t: 'roundEnd', winner: roundWinner, nextRoundIn, stats: roundStats })
       }
       console.log(
         `Spieler ${client.id} "${client.name}" verbunden, Team ${team}, Spawn ${spawnIndex} (${clients.size}/${MAX_PLAYERS})`
@@ -556,6 +564,7 @@ function handleHit(shooter: Client, targetId: unknown, headshot: boolean) {
   if (!takeRateToken(shooter.hitBudget, weapon.fireInterval, now)) return
   // Angreifen beendet den eigenen Spawn-Schutz (Messer schickt keinen "shot")
   shooter.protectedUntil = 0
+  if (headshot) shooter.headshots += 1
 
   const killed = applyDamage(target.vitals, weapon.damage * (headshot ? HEADSHOT_MULTIPLIER : 1))
   send(target.socket, { t: 'hurt', by: shooter.id })

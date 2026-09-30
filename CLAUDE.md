@@ -129,6 +129,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   leeres Magazin), Fadenkreuz (Lücke = echte Streuung, Messer-Ring)
 - `npm run test:menu` – Pausenmenü: Weiter/Einstellungen, Zurück, Klick daneben,
   Wiederkehr nach ESC
+- `npm run test:roundstats` – Rundenende: Statistik-Liste (Stern, Teamfarben,
+  Kills/Tode/Kopftreffer, eigene Zeile), Nachzügler sehen sie, nächste Runde
+  startet bei 0
 - `npm run test:settings` – Einstellungen: Regler (Empfindlichkeit 0,3-3×,
   Blickfeld 60-110°, Lautstärke 0-100 %) wirken sofort, Rutschen +7° auf das
   gewählte Blickfeld, gemerkt im Browser, kaputte Speicherwerte, Zurücksetzen
@@ -180,7 +183,7 @@ Stolperfallen bei Headless-Tests:
 - Punktetabelle per Tab gedrückt halten bzw. Tippen auf den Punktestand –
   so lassen.
 - Zeiten: Menü/Hintergrund → nach 20 s raus, eingefrorener Tab → 15 s,
-  AFK → 90 s. Runde: erstes Team mit 20 Kills, 6 s Pause.
+  AFK → 90 s. Runde: erstes Team mit 20 Kills, 10 s Pause (Rundenstatistik).
 - Treffer: "was der Schütze sah, zählt" (keine Server-Sichtlinienprüfung).
 - Fadenkreuz zeigt nur echte Streuung (Sturmgewehr-Dauerfeuer), nicht Laufen/
   Springen - die beeinflussen die Treffsicherheit nicht.
@@ -197,7 +200,10 @@ Stolperfallen bei Headless-Tests:
   Danach mit Eck-Rampen (2 Läufe): Süd 0/0 % (nur 2/4 Spawns), Nord 60/60 %
   (je 5 Spawns). Daraufhin Nord-Spawn genauso gedeckt (Ost-Seitenteil bis
   an die Fensterwand, L-Deckung bei (-3, -16) entfiel): Nord 0/14 %
-  (5/7 Spawns), Süd 20/11 % (5/9), West-Spawns 0-25 %. Tests laufen deshalb nicht
+  (5/7 Spawns), Süd 20/11 % (5/9), West-Spawns 0-25 %. Danach (Nutzer: "man ist
+  komplett eingesperrt") auf ein L reduziert: Front 6 m + nur das Seitenteil
+  auf der Schussseite (Nord: Ost bis zur Fensterwand, Süd: West), die andere
+  Seite ist offen. Nicht wieder zu einem U schließen. Tests laufen deshalb nicht
   mehr auf der Linie x = 0 (Bahnen bei x = -8 bzw. 12).
 - Beitritt zur Online-Runde (auch automatisch, wenn der Server erst aufwacht
   oder neu startet) setzt einen an einen Spawn - mit kurzem Abblenden und
@@ -239,6 +245,13 @@ Stolperfallen bei Headless-Tests:
   je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
   fielen von ~55 auf ~20, weil Pfeiler/Wracks (Wracks inzwischen entfernt) die geradeaus laufenden Bots
   bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
+- **Rundenstatistik** (`roundEnd.stats`, `src/roundStats.ts`): Liste unter dem
+  Siegertext, nach Kills sortiert, Stern beim Besten, Namen in Teamfarbe,
+  eigene Zeile markiert; Spalten K, T, Kopf (Kopftreffer = Treffer am Kopf,
+  zählt der Server je Spieler). Angezeigt werden die besten 6 + die eigene
+  Zeile; auf niedrigen Bildschirmen (< 560 px) die besten 4 + eigene, weil
+  sonst Waffenfeld/Buttons überlappen (`test:layout` prüft das mit 8 Spielern).
+  Alte Server schicken keine Liste (Client zeigt dann nichts).
 - **Einstellungen** (`src/settings.ts`, Menü "Einstellungen"): Empfindlichkeit,
   Blickfeld, Lautstärke; `localStorage` `duskArena.settings`, jeder Wert
   einzeln begrenzt/auf Standard, wenn kaputt. Wirkt über

@@ -122,9 +122,10 @@ function cheat(name, transform, maxStates) {
 // bleibt die Geschwindigkeit bei 16 m/s. Darüber wird sofort abgelehnt.
 cheat('Teleport 40 m in einem Schritt', (o, i) => (i === 1 ? { x: 40, y: 0, z: 0 } : o), 1)
 cheat('Teleport 40 m nach oben', (o, i) => (i === 1 ? { x: 0, y: 40, z: 0 } : o), 1)
-// Läuft der Spieler gegen die Cheat-Richtung, ist er netto kaum schneller als
-// erlaubt - das dauert entsprechend länger
-cheat('Speedhack +25 m/s', (o) => ({ x: o.x + 1.25, y: o.y, z: o.z }), 100)
+// Netto-Tempo = Cheat + eigene Bewegung: läuft der Spieler gegen die Richtung,
+// bleiben von +25 m/s nur ~15 m/s und das ist legal (Grenze 16 m/s). Darum
+// 50 m/s: auch gegen die Laufrichtung bleiben > 40 m/s, unabhängig von der Karte.
+cheat('Speedhack +50 m/s', (o) => ({ x: o.x + 2.5, y: o.y, z: o.z }), 60)
 cheat('Fliegen 20 m/s aufwärts', (o) => ({ x: o.x, y: o.y + 1, z: o.z }), 60)
 
 finish()

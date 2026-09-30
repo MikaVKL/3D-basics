@@ -5,6 +5,7 @@ import {
   type ClientMessage,
   type ServerMessage,
   type PlayerId,
+  type RoundStat,
   type PlayerNetworkState,
   type SnapshotEntry,
   type Scores,
@@ -38,7 +39,7 @@ export interface NetworkHandlers {
   onOwnVitals: (health: number, shield: number, spawnProtected: boolean) => void
   onKill: (killer: PlayerId, victim: PlayerId, scores: Scores, headshot: boolean, weapon: WeaponId) => void
   onRespawn: (id: PlayerId, spawnIndex: number, team: Team) => void
-  onRoundEnd: (winner: Team, nextRoundIn: number) => void
+  onRoundEnd: (winner: Team, nextRoundIn: number, stats: RoundStat[]) => void
   onRoundStart: (scores: Scores) => void
   onRemoteShot: (from: Vec3, to: Vec3, hit: boolean, weapon: WeaponId, shooter: PlayerId) => void
   onHurt: (by: PlayerId) => void
@@ -234,7 +235,7 @@ export class NetworkClient {
         this.handlers.onRespawn(message.id, message.spawnIndex, message.team)
         break
       case 'roundEnd':
-        this.handlers.onRoundEnd(message.winner, message.nextRoundIn)
+        this.handlers.onRoundEnd(message.winner, message.nextRoundIn, message.stats ?? [])
         break
       case 'roundStart':
         this.handlers.onRoundStart(message.scores)
