@@ -236,7 +236,8 @@ Stolperfallen bei Headless-Tests:
   bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
 - **Laserstrahl (Leuchtspur) bleibt** (Nutzer mag ihn): heller weißer Kern +
   additiver Schein in der Teamfarbe des Schützen, 0,2 s, quadratisch
-  ausgeblendet, ohne Nebel (`weapon.ts`). Vorher nur 0,06 s und 3 cm dünn -
+  ausgeblendet, ohne Nebel (`weapon.ts`). Je Waffe andere Stärke
+  (`TRACER_STYLES`): Pistole dick/hell/0,2 s, Sturmgewehr dünn/schwächer/0,12 s. Vorher nur 0,06 s und 3 cm dünn -
   wirkte wie ein direkter Einschlag. Nicht wieder verkürzen/entfernen.
 - **Bewegungsprüfung** (`src/shared/movementRules.ts`, Server): Strecken-
   Guthaben aus Serverzeit (13 m/s x 1,25 waagerecht, 9,5 m/s hoch, 30 m/s

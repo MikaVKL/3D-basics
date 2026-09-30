@@ -11,7 +11,13 @@ import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, isMelee, type Weapo
 // (Dummy oder fremder Spieler).
 
 const IMPACT_MARKER_LIFETIME = 2 // Sekunden
-const TRACER_LIFETIME = 0.2 // Sekunden, weiches Ausblenden
+// Strahl je Waffe: Pistole = kräftiger Einzelschuss, Sturmgewehr = dünne,
+// kurze Salvenspur (sonst wird Dauerfeuer zum Strahlenteppich)
+const TRACER_STYLES: Record<WeaponId, { lifetime: number; width: number; glow: number }> = {
+  pistol: { lifetime: 0.2, width: 1.7, glow: 0.75 },
+  rifle: { lifetime: 0.12, width: 0.6, glow: 0.35 },
+  knife: { lifetime: 0.2, width: 1, glow: 0.5 }, // ungenutzt, Messer hat keinen Strahl
+}
 const TRACER_MAX_DISTANCE = 60 // bei Schuss ins Leere
 
 // "Hitze" des Dauerfeuers: +1 pro Schuss, klingt so schnell ab (pro Sekunde).
@@ -46,6 +52,7 @@ interface Tracer {
   materials: THREE.MeshBasicMaterial[]
   peakOpacity: number[]
   remainingLifetime: number
+  lifetime: number
 }
 
 export class Weapon {
@@ -211,7 +218,7 @@ export class Weapon {
         continue
       }
       // Schnell hell, dann weich aus (quadratisch)
-      const fade = (tracer.remainingLifetime / TRACER_LIFETIME) ** 2
+      const fade = (tracer.remainingLifetime / tracer.lifetime) ** 2
       tracer.materials.forEach((material, index) => (material.opacity = tracer.peakOpacity[index] * fade))
     }
   }
@@ -254,13 +261,13 @@ export class Weapon {
     const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
     if (hits.length > 0) {
       this.applyHit(hits[0], true)
-      this.spawnTracer(muzzlePosition, hits[0].point)
+      this.spawnTracer(muzzlePosition, hits[0].point, this.shooterTeam, this.weaponId)
       this.onShot?.(muzzlePosition, hits[0].point, true)
     } else {
       const missEnd = this.raycaster.ray.origin
         .clone()
         .addScaledVector(this.raycaster.ray.direction, TRACER_MAX_DISTANCE)
-      this.spawnTracer(muzzlePosition, missEnd)
+      this.spawnTracer(muzzlePosition, missEnd, this.shooterTeam, this.weaponId)
       this.onShot?.(muzzlePosition, missEnd, false)
     }
 
@@ -358,11 +365,12 @@ export class Weapon {
     this.impactMarkers.push({ mesh: marker, remainingLifetime: IMPACT_MARKER_LIFETIME })
   }
 
-  showRemoteTracer(start: THREE.Vector3, end: THREE.Vector3, team: Team) {
-    this.spawnTracer(start, end, team)
+  showRemoteTracer(start: THREE.Vector3, end: THREE.Vector3, team: Team, weapon: WeaponId = 'pistol') {
+    this.spawnTracer(start, end, team, weapon)
   }
 
-  private spawnTracer(start: THREE.Vector3, end: THREE.Vector3, team: Team = this.shooterTeam) {
+  private spawnTracer(start: THREE.Vector3, end: THREE.Vector3, team: Team, weapon: WeaponId) {
+    const style = TRACER_STYLES[weapon]
     const direction = end.clone().sub(start)
     const length = direction.length()
     if (length < 0.001) return
@@ -379,13 +387,13 @@ export class Weapon {
         fog: false,
       })
     const parts: Array<[THREE.CylinderGeometry, THREE.MeshBasicMaterial, number]> = [
-      [this.tracerGlowGeometry, beamMaterial(TeamColor[team], 0.5), 0.5],
+      [this.tracerGlowGeometry, beamMaterial(TeamColor[team], style.glow), style.glow],
       [this.tracerCoreGeometry, beamMaterial(0xffffff, 1), 1],
     ]
-    const tracer: Tracer = { meshes: [], materials: [], peakOpacity: [], remainingLifetime: TRACER_LIFETIME }
+    const tracer: Tracer = { meshes: [], materials: [], peakOpacity: [], remainingLifetime: style.lifetime, lifetime: style.lifetime }
     for (const [geometry, material, peak] of parts) {
       const mesh = new THREE.Mesh(geometry, material)
-      mesh.scale.set(1, length, 1)
+      mesh.scale.set(style.width, length, style.width)
       mesh.position.copy(start).addScaledVector(direction, length / 2)
       // Zylinder zeigt entlang +Y -> in Schussrichtung drehen
       mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)

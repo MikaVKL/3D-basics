@@ -251,7 +251,8 @@ const network: NetworkClient = new NetworkClient({
     weapon.showRemoteTracer(
       new THREE.Vector3(from.x, from.y, from.z),
       new THREE.Vector3(to.x, to.y, to.z),
-      network.roster.get(shooter)?.team ?? 'red'
+      network.roster.get(shooter)?.team ?? 'red',
+      shotWeapon
     )
   },
   onHurt: (by) => {

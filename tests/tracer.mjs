@@ -70,14 +70,29 @@ try {
   })
   check('fremde Strahlen in Teamfarbe (rot/blau)', remote.red === 0xff4d5a && remote.blue === 0x4da6ff, JSON.stringify(remote))
 
+  // Pistole kräftiger und länger sichtbar als Sturmgewehr
+  const styles = await page.evaluate(() => {
+    const w = __dusk.weapon
+    const V = __dusk.camera.position.constructor
+    const out = {}
+    for (const id of ['pistol', 'rifle']) {
+      w.showRemoteTracer(new V(0, 1.5, 0), new V(0, 1.5, -10), 'red', id)
+      const t = w.tracers[w.tracers.length - 1]
+      out[id] = { width: t.meshes[0].scale.x, glow: t.materials[0].opacity, life: t.lifetime }
+    }
+    return out
+  })
+  check('Pistolenstrahl dicker, heller und länger als Sturmgewehr', styles.pistol.width > styles.rifle.width && styles.pistol.glow > styles.rifle.glow && styles.pistol.life > styles.rifle.life, JSON.stringify(styles))
+
   // Dauerfeuer: nicht unbegrenzt viele Strahlen
   const burst = await page.evaluate(() => {
     const w = __dusk.weapon
     w.update = w.update // bleibt angehalten
     const V = __dusk.camera.position.constructor
+    window.__realUpdate(1)
     let max = 0
     for (let i = 0; i < 30; i++) {
-      w.showRemoteTracer(new V(0, 1.5, 0), new V(0, 1.5, -20), 'blue')
+      w.showRemoteTracer(new V(0, 1.5, 0), new V(0, 1.5, -20), 'blue', 'rifle')
       window.__realUpdate(0.1)
       max = Math.max(max, w.tracers.length)
     }
