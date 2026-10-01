@@ -18,7 +18,7 @@ import { RemotePlayers } from './remotePlayers'
 import { TeamColor, TeamLabel, type Team } from './team'
 import { renderRoundStats } from './roundStats'
 import { Minimap } from './minimap'
-import { DEFAULT_SETTINGS, SETTING_RANGES, clampSetting, loadSettings, saveSettings, type Settings } from './settings'
+import { DEFAULT_SETTINGS, SETTING_RANGES, clampSetting, loadSettings, saveSettings, type NumericSettingKey } from './settings'
 import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
@@ -398,9 +398,13 @@ document.querySelector('#settings-back-button')!.addEventListener('click', (even
 })
 menuSettings.addEventListener('click', (event) => event.stopPropagation())
 
+// Minimap vor den Einstellungen: applySettings() blendet sie ein/aus
+const minimap = new Minimap(document.querySelector<HTMLDivElement>('#minimap')!, arena.solids, arena.ramps)
+if (import.meta.env.DEV) Object.assign((window as unknown as { __dusk: object }).__dusk, { minimap })
+
 // --- Einstellungen: Regler im Menü, gemerkt im Browser ---
 const settings = loadSettings()
-const settingFormat: Record<keyof Settings, (value: number) => string> = {
+const settingFormat: Record<NumericSettingKey, (value: number) => string> = {
   sensitivity: (value) => `${value.toFixed(2)}×`,
   fov: (value) => `${Math.round(value)}°`,
   volume: (value) => `${Math.round(value * 100)} %`,
@@ -412,10 +416,11 @@ function applySettings() {
   camera.updateProjectionMatrix()
   slideView.setBaseFov(settings.fov)
   sound.setVolume(settings.volume)
+  minimap.setVisible(settings.minimap)
 }
 
-const settingSliders = {} as Record<keyof Settings, HTMLInputElement>
-for (const key of Object.keys(SETTING_RANGES) as Array<keyof Settings>) {
+const settingSliders = {} as Record<NumericSettingKey, HTMLInputElement>
+for (const key of Object.keys(SETTING_RANGES) as NumericSettingKey[]) {
   const slider = document.querySelector<HTMLInputElement>(`#setting-${key}`)!
   const output = document.querySelector<HTMLOutputElement>(`#setting-${key}-value`)!
   const { min, max, step } = SETTING_RANGES[key]
@@ -431,12 +436,30 @@ for (const key of Object.keys(SETTING_RANGES) as Array<keyof Settings>) {
   })
 }
 
+const minimapCheckbox = document.querySelector<HTMLInputElement>('#setting-minimap')!
+const minimapCheckboxValue = document.querySelector<HTMLOutputElement>('#setting-minimap-value')!
+
 function showSettingValues() {
-  for (const key of Object.keys(settingSliders) as Array<keyof Settings>) {
+  for (const key of Object.keys(settingSliders) as NumericSettingKey[]) {
     settingSliders[key].value = String(settings[key])
     document.querySelector(`#setting-${key}-value`)!.textContent = settingFormat[key](settings[key])
   }
+  minimapCheckbox.checked = settings.minimap
+  minimapCheckboxValue.textContent = settings.minimap ? 'An' : 'Aus'
 }
+
+function setMinimapEnabled(enabled: boolean) {
+  settings.minimap = enabled
+  showSettingValues()
+  applySettings()
+  saveSettings(settings)
+}
+
+minimapCheckbox.addEventListener('change', () => setMinimapEnabled(minimapCheckbox.checked))
+// N schaltet die Karte um (nicht beim Tippen im Namensfeld)
+window.addEventListener('keydown', (event) => {
+  if (event.code === 'KeyN' && !event.repeat && !(event.target instanceof HTMLInputElement)) setMinimapEnabled(!settings.minimap)
+})
 
 document.querySelector('#settings-reset-button')!.addEventListener('click', (event) => {
   event.stopPropagation()
@@ -674,14 +697,12 @@ function updateOwnFootsteps() {
   }
 }
 
-// --- Minimap: du und dein Team (keine Gegner) ---
-const minimap = new Minimap(document.querySelector<HTMLDivElement>('#minimap')!, arena.solids, arena.ramps)
+// --- Minimap: du und dein Team (keine Gegner), Erzeugung oben bei den Einstellungen ---
 const minimapDirection = new THREE.Vector3()
 const UPPER_FLOOR_FROM = 2 // Fußhöhe ab hier: obere Ebene
 
-if (import.meta.env.DEV) Object.assign((window as unknown as { __dusk: object }).__dusk, { minimap })
-
 function updateMinimap() {
+  if (!minimap.visible) return
   camera.getWorldDirection(minimapDirection)
   const mates = remotePlayers
     .positions()

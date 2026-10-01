@@ -97,6 +97,33 @@ try {
   await wait(300)
   check('Zurücksetzen wirkt auf die Kamera', Math.abs((await page.evaluate(() => __dusk.camera.fov)) - 75) < 0.01)
 
+  // Minimap: Standard an, Einstellung und Taste N, gemerkt, Zurücksetzen
+  const mapState = () =>
+    page.evaluate(() => ({
+      shown: getComputedStyle(document.querySelector('#minimap')).display !== 'none',
+      checked: document.querySelector('#setting-minimap').checked,
+      label: document.querySelector('#setting-minimap-value').textContent,
+      hudHeight: getComputedStyle(document.documentElement).getPropertyValue('--minimap-h').trim(),
+      stored: JSON.parse(localStorage.getItem('duskArena.settings') ?? '{}').minimap,
+    }))
+  const on = await mapState()
+  check('Minimap standardmäßig an', on.shown && on.checked && on.label === 'An' && parseInt(on.hudHeight) > 40, JSON.stringify(on))
+  await page.click('#setting-minimap')
+  const off = await mapState()
+  check('Haken weg: Karte aus, Platz im HUD frei, gemerkt', !off.shown && !off.checked && off.label === 'Aus' && off.hudHeight === '0px' && off.stored === false, JSON.stringify(off))
+  await page.reload()
+  await page.waitForFunction(() => typeof window.__dusk !== 'undefined')
+  await page.click('#settings-button')
+  const offAfterReload = await mapState()
+  check('nach Neuladen weiter aus', !offAfterReload.shown && !offAfterReload.checked, JSON.stringify(offAfterReload))
+  await page.keyboard.press('n')
+  const byKey = await mapState()
+  check('Taste N schaltet die Karte wieder ein (Haken folgt)', byKey.shown && byKey.checked && byKey.stored === true && parseInt(byKey.hudHeight) > 40, JSON.stringify(byKey))
+  await page.keyboard.press('n')
+  check('Taste N schaltet sie wieder aus', !(await mapState()).shown)
+  await page.click('#settings-reset-button')
+  check('Standardwerte schaltet die Karte wieder an', (await mapState()).shown)
+
   // Kaputte Speicherwerte
   await page.evaluate(() => localStorage.setItem('duskArena.settings', '{"sensitivity":99,"fov":"x","volume":-5}'))
   await page.reload()
@@ -104,6 +131,7 @@ try {
   await page.click('#settings-button')
   const broken = await readUi(page)
   check('Werte außerhalb/kaputt: begrenzt bzw. Standard', broken.sensitivity.value === 3 && broken.fov.value === 75 && broken.volume.value === 0, JSON.stringify(broken))
+  check('fehlende/kaputte Karten-Einstellung: an', (await mapState()).shown)
   await page.evaluate(() => localStorage.setItem('duskArena.settings', 'kein json'))
   await page.reload()
   await page.waitForFunction(() => typeof window.__dusk !== 'undefined')

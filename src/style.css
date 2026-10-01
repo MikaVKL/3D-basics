@@ -681,6 +681,10 @@ body {
   z-index: 4;
 }
 
+#minimap.hidden {
+  display: none;
+}
+
 #minimap canvas {
   position: absolute;
   inset: 0;
@@ -1159,6 +1163,13 @@ body {
 
 .setting-row input[type='range'] {
   width: 100%;
+  accent-color: var(--c-neon);
+}
+
+.setting-row input[type='checkbox'] {
+  justify-self: start;
+  width: 1.3rem;
+  height: 1.3rem;
   accent-color: var(--c-neon);
 }
 

@@ -4,11 +4,14 @@ export interface Settings {
   sensitivity: number // Faktor auf die Grundempfindlichkeit
   fov: number // Grad (senkrecht)
   volume: number // 0..1
+  minimap: boolean
 }
 
-export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1 }
+export type NumericSettingKey = 'sensitivity' | 'fov' | 'volume'
 
-export const SETTING_RANGES: Record<keyof Settings, { min: number; max: number; step: number }> = {
+export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1, minimap: true }
+
+export const SETTING_RANGES: Record<NumericSettingKey, { min: number; max: number; step: number }> = {
   sensitivity: { min: 0.3, max: 3, step: 0.05 },
   fov: { min: 60, max: 110, step: 1 },
   volume: { min: 0, max: 1, step: 0.05 },
@@ -16,7 +19,7 @@ export const SETTING_RANGES: Record<keyof Settings, { min: number; max: number; 
 
 const STORAGE_KEY = 'duskArena.settings'
 
-export function clampSetting(key: keyof Settings, value: unknown): number {
+export function clampSetting(key: NumericSettingKey, value: unknown): number {
   const { min, max } = SETTING_RANGES[key]
   return typeof value === 'number' && Number.isFinite(value)
     ? Math.min(max, Math.max(min, value))
@@ -36,6 +39,7 @@ export function loadSettings(): Settings {
     sensitivity: clampSetting('sensitivity', stored.sensitivity),
     fov: clampSetting('fov', stored.fov),
     volume: clampSetting('volume', stored.volume),
+    minimap: typeof stored.minimap === 'boolean' ? stored.minimap : DEFAULT_SETTINGS.minimap,
   }
 }
 

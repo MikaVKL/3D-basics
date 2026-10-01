@@ -83,17 +83,25 @@ try {
       document.querySelector('#notice-banner').style.display = 'none'
       document.querySelector('#score-goal').style.display = 'block'
       const ids = ['#scoreboard', '#score-goal', '#net-status', '#minimap', '#kill-feed', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
-      const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
-        .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
-      const overlaps = []
-      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
-        const [a, ra] = boxes[i], [b, rb] = boxes[j]
-        const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left), h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top)
-        if (w > 1 && h > 1) overlaps.push(`${a}/${b}`)
+      const measure = () => {
+        const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
+          .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
+        const overlaps = []
+        for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+          const [a, ra] = boxes[i], [b, rb] = boxes[j]
+          const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left), h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top)
+          if (w > 1 && h > 1) overlaps.push(`${a}/${b}`)
+        }
+        return { overlaps, feedShown: boxes.some(([id]) => id === '#kill-feed'), mapShown: boxes.some(([id]) => id === '#minimap') }
       }
-      return { overlaps, feedShown: boxes.some(([id]) => id === '#kill-feed'), mapShown: boxes.some(([id]) => id === '#minimap') }
+      const withMap = measure()
+      __dusk.minimap.setVisible(false) // Karte aus: Feed rückt nach oben
+      const withoutMap = measure()
+      __dusk.minimap.setVisible(true)
+      return { withMap, withoutMap }
     })
-    check(`${name}: Minimap + Kill-Feed ohne Überlappung`, normal.overlaps.length === 0 && normal.feedShown && normal.mapShown, `${normal.overlaps.join(', ')} (Feed ${normal.feedShown}, Karte ${normal.mapShown})`)
+    check(`${name}: Minimap + Kill-Feed ohne Überlappung`, normal.withMap.overlaps.length === 0 && normal.withMap.feedShown && normal.withMap.mapShown, `${normal.withMap.overlaps.join(', ')} (Feed ${normal.withMap.feedShown}, Karte ${normal.withMap.mapShown})`)
+    check(`${name}: ohne Minimap ohne Überlappung`, normal.withoutMap.overlaps.length === 0 && normal.withoutMap.feedShown && !normal.withoutMap.mapShown, `${normal.withoutMap.overlaps.join(', ')} (Feed ${normal.withoutMap.feedShown}, Karte ${normal.withoutMap.mapShown})`)
     await context.close()
   }
 } finally {

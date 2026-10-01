@@ -139,7 +139,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   startet bei 0
 - `npm run test:settings` – Einstellungen: Regler (Empfindlichkeit 0,3-3×,
   Blickfeld 60-110°, Lautstärke 0-100 %) wirken sofort, Rutschen +7° auf das
-  gewählte Blickfeld, gemerkt im Browser, kaputte Speicherwerte, Zurücksetzen
+  gewählte Blickfeld, Minimap an/aus (Haken, Taste N), gemerkt im Browser,
+  kaputte Speicherwerte, Zurücksetzen
 - `npm run test:layout` – keine HUD-Überlappungen in 6 Bildschirmgrößen
   (Rechner bis kleines Handy quer, online mit langem Status/Kill-Feed),
   Handy hochkant zeigt "Gerät drehen". Nach jeder HUD-Änderung laufen lassen.
@@ -257,7 +258,10 @@ Stolperfallen bei Headless-Tests:
   Teile ab 2 m Unterkante (Stege, Brücken) halbtransparent obendrauf. Nur
   Teamkameraden und du (Pfeil), **keine Gegner** (wäre ein Radar durch Wände),
   andere Etage gedimmt, Anzeige OBEN/UNTEN. Nach Änderungen an der Arena zur
-  Laufzeit `minimap.rebuild()`. Kill-Feed sitzt unter der Karte (Touch: links
+  Laufzeit `minimap.rebuild()`. Ein/Aus: Einstellung "Minimap" oder Taste N
+  (`settings.minimap`, gemerkt, Standard an; aus = kein Zeichnen mehr). Der
+  Platz neben der Karte bleibt auf Touch absichtlich reserviert (dort sitzen
+  rechts die Buttons, der Kill-Feed würde sie sonst überdecken). Kill-Feed sitzt unter der Karte (Touch: links
   daneben, unter "Erstes Team mit 20 Kills"); Rundenstatistik und Hinweis-Banner
   blenden ihn aus (`test:layout` prüft den Normalfall und beide Banner). Bei
   einer viel größeren Arena (> ~150 m) auf Ausschnitt um den Spieler umstellen.

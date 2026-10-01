@@ -95,6 +95,17 @@ export class Minimap {
     return [(x - this.bounds.minX) * factor, (z - this.bounds.minZ) * factor]
   }
 
+  // Ein-/Ausblenden (Einstellung, Taste N); das HUD (Kill-Feed) rückt mit
+  setVisible(visible: boolean) {
+    this.root.classList.toggle('hidden', !visible)
+    if (visible) this.resize()
+    else document.documentElement.style.setProperty('--minimap-h', '0px')
+  }
+
+  get visible(): boolean {
+    return !this.root.classList.contains('hidden')
+  }
+
   private resize() {
     const width = this.root.clientWidth
     if (width === 0) return
