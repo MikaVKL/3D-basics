@@ -33,7 +33,7 @@ try {
       document.querySelector('#score-goal').textContent = 'Erstes Team mit 20 Kills gewinnt'
       const feed = document.querySelector('#kill-feed')
       for (const t of ['Maximilianus1234 ✕ Clara', 'Du ✕ Ben', 'Ben ✕ Du']) { const e = document.createElement('div'); e.className = 'kill-entry'; e.textContent = t; feed.append(e) }
-      const ids = ['#scoreboard', '#score-goal', '#net-status', '#kill-feed', '#connection-warning', '#notice-banner', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
+      const ids = ['#scoreboard', '#score-goal', '#net-status', '#kill-feed', '#connection-warning', '#notice-banner', '#minimap', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
       const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
         .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
       const overlaps = []
@@ -60,7 +60,7 @@ try {
       document.querySelector('#round-winner').textContent = 'Team Rot gewinnt!'
       document.querySelector('#round-countdown').textContent = 'Nächste Runde in 8s'
       mod.renderRoundStats(document.querySelector('#round-stats'), stats, 8)
-      const ids = ['#round-banner', '#scoreboard', '#net-status', '#kill-feed', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
+      const ids = ['#round-banner', '#scoreboard', '#net-status', '#kill-feed', '#minimap', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
       const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
         .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
       const overlaps = []
@@ -75,6 +75,25 @@ try {
     })
     check(`${name}: Rundenende-Statistik ohne Überlappung`, roundResult.overlaps.length === 0, roundResult.overlaps.join(', '))
     check(`${name}: Rundenende-Statistik im Bild, eigene Zeile sichtbar`, roundResult.inside && roundResult.ownShown)
+
+    // Normalfall: keine Banner, Kill-Feed sichtbar (die Banner blenden ihn aus)
+    const normal = await page.evaluate(() => {
+      document.querySelector('#round-banner').classList.add('hidden')
+      document.querySelector('#notice-banner').classList.add('hidden')
+      document.querySelector('#notice-banner').style.display = 'none'
+      document.querySelector('#score-goal').style.display = 'block'
+      const ids = ['#scoreboard', '#score-goal', '#net-status', '#minimap', '#kill-feed', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button']
+      const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
+        .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
+      const overlaps = []
+      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+        const [a, ra] = boxes[i], [b, rb] = boxes[j]
+        const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left), h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top)
+        if (w > 1 && h > 1) overlaps.push(`${a}/${b}`)
+      }
+      return { overlaps, feedShown: boxes.some(([id]) => id === '#kill-feed'), mapShown: boxes.some(([id]) => id === '#minimap') }
+    })
+    check(`${name}: Minimap + Kill-Feed ohne Überlappung`, normal.overlaps.length === 0 && normal.feedShown && normal.mapShown, `${normal.overlaps.join(', ')} (Feed ${normal.feedShown}, Karte ${normal.mapShown})`)
     await context.close()
   }
 } finally {

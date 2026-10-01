@@ -63,6 +63,8 @@ Weiterarbeiten wissen muss.
 - `src/playerAvatar.ts` – Spielerfigur: `root` sichtbar, `mesh` (Körper-Kapsel)
   und `headMesh` (Kopf-Box, `userData.headshot`) unsichtbare Trefferflächen.
   Look: fast schwarze Rüstung (Weste, Helm) mit Leuchtteilen in Teamfarbe
+- `src/minimap.ts` – Minimap rechts oben (Norden oben): Grenzen und Zeichnung aus
+  `arena.solids` + `arena.ramps`, Pfeil für dich, Punkte für dein Team
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
   (Interpolation auf der Uhr des Absenders), `src/player.ts` (Bewegung und
   Kollision: Boden über die ganze Standfläche, Deckenkollision, "nur tiefer
@@ -129,6 +131,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   leeres Magazin), Fadenkreuz (Lücke = echte Streuung, Messer-Ring)
 - `npm run test:menu` – Pausenmenü: Weiter/Einstellungen, Zurück, Klick daneben,
   Wiederkehr nach ESC
+- `npm run test:minimap` – Karte: Ausschnitt aus den Arena-Daten, Wand/Kiste/Steg
+  gezeichnet, neues Objekt außerhalb weitet den Ausschnitt, eigener Pfeil,
+  OBEN/UNTEN, nur Teamkameraden (Gegner nie), andere Etage gedimmt
 - `npm run test:roundstats` – Rundenende: Statistik-Liste (Stern, Teamfarben,
   Kills/Tode/Kopftreffer, eigene Zeile), Nachzügler sehen sie, nächste Runde
   startet bei 0
@@ -245,6 +250,17 @@ Stolperfallen bei Headless-Tests:
   je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
   fielen von ~55 auf ~20, weil Pfeiler/Wracks (Wracks inzwischen entfernt) die geradeaus laufenden Bots
   bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
+- **Minimap** (rechts oben, `src/minimap.ts`): wird NICHT von Hand gezeichnet,
+  sondern aus `arena.solids`/`arena.ramps` erzeugt - neue Kisten, Wände, Hallen
+  erscheinen von selbst, Ausschnitt = alle Objekte + 1,5 m. `Solid.kind`
+  (`wall`/`cover`, sonst Struktur) färbt; Teile < 0,5 m (Stützen) bleiben weg,
+  Teile ab 2 m Unterkante (Stege, Brücken) halbtransparent obendrauf. Nur
+  Teamkameraden und du (Pfeil), **keine Gegner** (wäre ein Radar durch Wände),
+  andere Etage gedimmt, Anzeige OBEN/UNTEN. Nach Änderungen an der Arena zur
+  Laufzeit `minimap.rebuild()`. Kill-Feed sitzt unter der Karte (Touch: links
+  daneben, unter "Erstes Team mit 20 Kills"); Rundenstatistik und Hinweis-Banner
+  blenden ihn aus (`test:layout` prüft den Normalfall und beide Banner). Bei
+  einer viel größeren Arena (> ~150 m) auf Ausschnitt um den Spieler umstellen.
 - **Rundenstatistik** (`roundEnd.stats`, `src/roundStats.ts`): Liste unter dem
   Siegertext, nach Kills sortiert, Stern beim Besten, Namen in Teamfarbe,
   eigene Zeile markiert; Spalten K, T, Kopf (Kopftreffer = Treffer am Kopf,

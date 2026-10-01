@@ -70,6 +70,15 @@ export class RemotePlayers {
     }
   }
 
+  // Für die Minimap: sichtbare Position (Füße) und Leben aller fremden Spieler
+  positions(): Array<{ id: PlayerId; x: number; y: number; z: number; alive: boolean }> {
+    return [...this.players].map(([id, player]) => {
+      const { x, y, z } = player.avatar.root.position
+      const latest = player.samples[player.samples.length - 1]
+      return { id, x, y, z, alive: latest ? latest.state.isAlive : true }
+    })
+  }
+
   private add(id: PlayerId, state: PlayerNetworkState): RemotePlayer {
     const player: RemotePlayer = { avatar: new PlayerAvatar(state.team), samples: [],
       clockOffset: null,

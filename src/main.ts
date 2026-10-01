@@ -17,6 +17,7 @@ import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
 import { TeamColor, TeamLabel, type Team } from './team'
 import { renderRoundStats } from './roundStats'
+import { Minimap } from './minimap'
 import { DEFAULT_SETTINGS, SETTING_RANGES, clampSetting, loadSettings, saveSettings, type Settings } from './settings'
 import { KillFeed } from './killFeed'
 import { HitFeedback } from './hitFeedback'
@@ -673,6 +674,25 @@ function updateOwnFootsteps() {
   }
 }
 
+// --- Minimap: du und dein Team (keine Gegner) ---
+const minimap = new Minimap(document.querySelector<HTMLDivElement>('#minimap')!, arena.solids, arena.ramps)
+const minimapDirection = new THREE.Vector3()
+const UPPER_FLOOR_FROM = 2 // Fußhöhe ab hier: obere Ebene
+
+if (import.meta.env.DEV) Object.assign((window as unknown as { __dusk: object }).__dusk, { minimap })
+
+function updateMinimap() {
+  camera.getWorldDirection(minimapDirection)
+  const mates = remotePlayers
+    .positions()
+    .filter((p) => p.alive && network.roster.get(p.id)?.team === player.team)
+    .map((p) => ({ x: p.x, z: p.z, high: p.y > UPPER_FLOOR_FROM }))
+  minimap.update(
+    { x: camera.position.x, z: camera.position.z, dirX: minimapDirection.x, dirZ: minimapDirection.z, high: player.feetHeight > UPPER_FLOOR_FROM, team: player.team },
+    mates
+  )
+}
+
 let wasAlive = true
 function animate() {
   requestAnimationFrame(animate)
@@ -694,6 +714,7 @@ function animate() {
   }
   playerAvatar.applyState(player.getNetworkState())
   remotePlayers.update(deltaSeconds, network.remotePlayers)
+  updateMinimap()
   sound.updateListener(camera)
   killFeed.update()
   hitFeedback.update()

@@ -661,9 +661,53 @@ body {
   opacity: 1;
 }
 
-#kill-feed {
+/* Minimap rechts unter dem Verbindungsstatus; Höhe folgt dem Seitenverhältnis
+   der Arena (--minimap-h setzt minimap.ts), der Kill-Feed rutscht darunter */
+:root {
+  --minimap-w: 220px;
+  --minimap-h: 0px;
+}
+
+#minimap {
   position: fixed;
   top: calc(var(--edge-top) + 38px);
+  right: var(--edge-right);
+  width: var(--minimap-w);
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 4;
+}
+
+#minimap canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.minimap-floor {
+  position: absolute;
+  left: 5px;
+  top: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--c-text);
+  opacity: 0.7;
+  text-shadow: var(--shadow-text);
+}
+
+.minimap-floor[data-floor='high'] {
+  color: var(--c-neon);
+  opacity: 1;
+}
+
+#kill-feed {
+  position: fixed;
+  top: calc(var(--edge-top) + 38px + var(--minimap-h) + 8px);
   right: var(--edge-right);
   display: flex;
   flex-direction: column;
@@ -1308,4 +1352,32 @@ body {
 #crouch-button.active {
   background: rgba(255, 107, 61, 0.55);
   border-color: rgba(255, 107, 61, 0.9);
+}
+
+/* Minimap kleiner auf niedrigen Bildschirmen und auf Touch-Geräten; dort sitzen
+   rechts die Buttons, darum steht der Kill-Feed links neben der Karte und
+   macht beim Rundenende dem Statistik-Banner Platz */
+@media (max-height: 560px), (pointer: coarse) {
+  :root {
+    --minimap-w: 144px;
+  }
+}
+
+/* Statistik-Banner und Hinweise haben Vorrang vor dem Kill-Feed */
+#round-banner:not(.hidden) ~ #kill-feed,
+#notice-banner:not(.hidden) ~ #kill-feed {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  #kill-feed {
+    top: calc(var(--edge-top) + 74px); /* unter "Erstes Team mit 20 Kills" */
+    right: calc(var(--edge-right) + var(--minimap-w) + 8px);
+  }
+}
+
+@media (pointer: coarse) and (max-width: 700px) {
+  :root {
+    --minimap-w: 124px;
+  }
 }

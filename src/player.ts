@@ -143,6 +143,11 @@ export class Player implements Damageable {
     this.team = team
   }
 
+  // Fußhöhe über dem Boden (Minimap: obere/untere Ebene)
+  get feetHeight(): number {
+    return this.bodyY
+  }
+
   // Server-Korrektur: zurück an eine gültige Stelle, Leben/Ausdauer bleiben
   moveTo(position: THREE.Vector3) {
     this.camera.position.copy(position)

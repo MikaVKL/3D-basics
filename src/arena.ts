@@ -16,6 +16,9 @@ import {
 export interface Solid {
   mesh: THREE.Object3D
   box: THREE.Box3
+  // Für die Minimap: Außen-/Trennwand, Deckungskiste; ohne Angabe = Struktur
+  // (Plattform, Steg, Säule ...) - neue Teile erscheinen so von selbst
+  kind?: 'wall' | 'cover'
 }
 
 // Begehbare Schräge: blockiert nicht, sondern liefert eine Stand-Höhe
@@ -253,7 +256,7 @@ export function buildArena(): ArenaResult {
     wall.position.set(def.x, WALL_HEIGHT / 2, def.z)
     addEdgeOutline(wall)
     group.add(wall)
-    solids.push({ mesh: wall, box: new THREE.Box3().setFromObject(wall) })
+    solids.push({ mesh: wall, box: new THREE.Box3().setFromObject(wall), kind: 'wall' })
 
     // Leuchtender Neon-Streifen oben (emissive, ohne echte Lichtquelle)
     const stripeGeometry = worldBox(
@@ -279,7 +282,7 @@ export function buildArena(): ArenaResult {
   doorwaySillMesh.position.set(DIVIDER_X, WEST_PLATFORM_HEIGHT / 2, WEST_PLATFORM_CENTER_Z)
   addEdgeOutline(doorwaySillMesh)
   group.add(doorwaySillMesh)
-  solids.push({ mesh: doorwaySillMesh, box: new THREE.Box3().setFromObject(doorwaySillMesh) })
+  solids.push({ mesh: doorwaySillMesh, box: new THREE.Box3().setFromObject(doorwaySillMesh), kind: 'wall' })
 
   const doorwayLintelHeight = WALL_HEIGHT - DOORWAY_TOP
   const doorwayLintelMesh = new THREE.Mesh(
@@ -289,7 +292,7 @@ export function buildArena(): ArenaResult {
   doorwayLintelMesh.position.set(DIVIDER_X, DOORWAY_TOP + doorwayLintelHeight / 2, WEST_PLATFORM_CENTER_Z)
   addEdgeOutline(doorwayLintelMesh)
   group.add(doorwayLintelMesh)
-  solids.push({ mesh: doorwayLintelMesh, box: new THREE.Box3().setFromObject(doorwayLintelMesh) })
+  solids.push({ mesh: doorwayLintelMesh, box: new THREE.Box3().setFromObject(doorwayLintelMesh), kind: 'wall' })
 
   // --- Freistehende Wand mit Fenster (Pfosten, Sockel, Sturz) ---
   function buildWindowWall(centerX: number, centerZ: number, totalWidth: number, windowWidth: number) {
@@ -340,7 +343,7 @@ export function buildArena(): ArenaResult {
     )
     addEdgeOutline(armAlongX)
     group.add(armAlongX)
-    solids.push({ mesh: armAlongX, box: new THREE.Box3().setFromObject(armAlongX) })
+    solids.push({ mesh: armAlongX, box: new THREE.Box3().setFromObject(armAlongX), kind: 'cover' })
 
     const armAlongZ = new THREE.Mesh(
       worldBox(thickness, height, armLength),
@@ -353,7 +356,7 @@ export function buildArena(): ArenaResult {
     )
     addEdgeOutline(armAlongZ)
     group.add(armAlongZ)
-    solids.push({ mesh: armAlongZ, box: new THREE.Box3().setFromObject(armAlongZ) })
+    solids.push({ mesh: armAlongZ, box: new THREE.Box3().setFromObject(armAlongZ), kind: 'cover' })
   }
 
   // --- Deckungs-Kisten ---
@@ -406,7 +409,7 @@ export function buildArena(): ArenaResult {
     box.position.set(x, height / 2, z)
     addEdgeOutline(box)
     group.add(box)
-    solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box) })
+    solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box), kind: 'cover' })
   }
 
   // --- Neon-Säulen (Kollisionskörper, 6 m hoch, brechen lange Sichtlinien):

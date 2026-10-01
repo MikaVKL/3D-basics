@@ -44,15 +44,18 @@
       <div id="round-countdown"></div>
     </div>
 
+    <!-- Kurzer Hinweis bei Beitritt/Verbindungsverlust (vor dem Kill-Feed: CSS blendet ihn dann aus) + Abblenden beim Beitritt -->
+    <div id="notice-banner" class="hidden"></div>
+
     <!-- Verbindungsstatus zum Multiplayer-Server (oben rechts) -->
     <div id="net-status" data-status="offline"><span id="net-text"></span><span id="net-ping"></span></div>
+    <!-- Minimap (rechts): entsteht aus der Arena, siehe minimap.ts -->
+    <div id="minimap"></div>
     <div id="kill-feed"></div>
 
     <!-- Punktetabelle: Tab gedrückt halten (Touch: auf den Punktestand tippen) -->
     <div id="score-table" class="hidden"></div>
 
-    <!-- Kurzer Hinweis bei Beitritt/Verbindungsverlust + Abblenden beim Beitritt -->
-    <div id="notice-banner" class="hidden"></div>
     <div id="screen-fade"></div>
 
     <!-- Hinweis, wenn online länger nichts vom Server kommt -->
