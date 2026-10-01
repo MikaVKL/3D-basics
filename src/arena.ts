@@ -156,6 +156,12 @@ export function buildArena(): ArenaResult {
   hallGround.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0, (HALL_MIN_Z + HALL_MAX_Z) / 2)
   group.add(hallGround)
 
+  // Boden des Südost-Tunnels (außerhalb der Räume)
+  const tunnelGround = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 8.5), groundMaterial)
+  tunnelGround.rotation.x = -Math.PI / 2
+  tunnelGround.position.set(34.25, 0, 16.25)
+  group.add(tunnelGround)
+
   // --- Raster auf den Böden (GridHelper ist quadratisch -> per scale gestreckt) ---
   const mainGrid = new THREE.GridHelper(MAIN_ROOM_WIDTH, 22, Palette.accentNeon, 0x2a3a4a)
   mainGrid.scale.z = MAIN_ROOM_DEPTH / MAIN_ROOM_WIDTH
@@ -213,6 +219,13 @@ export function buildArena(): ArenaResult {
   const DOORWAY_HEIGHT = 2.2 // Kopffreiheit im Durchgang
   const DOORWAY_TOP = WEST_PLATFORM_HEIGHT + DOORWAY_HEIGHT
 
+  // Südost-Tunnel (L): der Gang unter dem Südsteg (z 17,5..20,5) geht durch die
+  // Hauptraum-Ostwand nach Osten und biegt außerhalb nach Norden ab; er mündet
+  // durch die Flankenraum-Südwand in die Ostzone. Breite 3 m, Höhe 2,5 m.
+  const SE_TUNNEL_Z_MIN = 17.5
+  const SE_TUNNEL_Z_MAX = 20.5
+  const SE_TUNNEL_X_MAX = 36 // Innenkante der Ostwand des Tunnels
+  const SE_TUNNEL_NORTH_X: [number, number] = [33, 36] // Nordarm, mündet bei z 12
   const dividerNorthLowerDepth = DOORWAY_Z_MIN - DIVIDER_GAP_Z_MAX
   const dividerNorthUpperDepth = MAIN_HALF_D - DOORWAY_Z_MAX
 
@@ -221,17 +234,33 @@ export function buildArena(): ArenaResult {
     { w: MAIN_ROOM_WIDTH, d: WALL_THICKNESS, x: 0, z: -MAIN_HALF_D },
     { w: MAIN_ROOM_WIDTH, d: WALL_THICKNESS, x: 0, z: MAIN_HALF_D },
     { w: WALL_THICKNESS, d: MAIN_ROOM_DEPTH, x: -MAIN_HALF_W, z: 0 },
+    // Ostwand südlich der Öffnung, bis zum Durchgang des Südost-Tunnels
     {
       w: WALL_THICKNESS,
-      d: MAIN_HALF_D - SIDE_HALF_D,
+      d: SE_TUNNEL_Z_MIN - SIDE_HALF_D,
       x: MAIN_HALF_W,
-      z: (MAIN_HALF_D + SIDE_HALF_D) / 2,
+      z: (SIDE_HALF_D + SE_TUNNEL_Z_MIN) / 2,
     },
+    { w: WALL_THICKNESS, d: SE_TUNNEL_Z_MAX - SE_TUNNEL_Z_MIN, x: MAIN_HALF_W, z: (SE_TUNNEL_Z_MIN + SE_TUNNEL_Z_MAX) / 2, bottom: TUNNEL_HEIGHT },
     // Ostwand nördlich der Öffnung: Durchgang für den Regal-Steg (z -20,5..-17,5, siehe unten)
     { w: WALL_THICKNESS, d: 5.5, x: MAIN_HALF_W, z: -SIDE_HALF_D - 5.5 / 2 },
     { w: WALL_THICKNESS, d: 0.5, x: MAIN_HALF_W, z: -MAIN_HALF_D + 0.25 },
-    // Flankenraum
-    { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: SIDE_HALF_D },
+    // Flankenraum-Südwand mit Mündung des Südost-Tunnels (Sturz darüber)
+    { w: SE_TUNNEL_NORTH_X[0] - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + SE_TUNNEL_NORTH_X[0]) / 2, z: SIDE_HALF_D },
+    { w: sideRoomMaxX - SE_TUNNEL_NORTH_X[1], d: WALL_THICKNESS, x: (SE_TUNNEL_NORTH_X[1] + sideRoomMaxX) / 2, z: SIDE_HALF_D },
+    {
+      w: SE_TUNNEL_NORTH_X[1] - SE_TUNNEL_NORTH_X[0],
+      d: WALL_THICKNESS,
+      x: (SE_TUNNEL_NORTH_X[0] + SE_TUNNEL_NORTH_X[1]) / 2,
+      z: SIDE_HALF_D,
+      bottom: TUNNEL_HEIGHT,
+    },
+    // Südost-Tunnel: Südwand, Ostwand, dünne Westwand des Nordarms, Decke über beiden Armen
+    { w: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2 - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + SE_TUNNEL_X_MAX + WALL_THICKNESS / 2) / 2, z: MAIN_HALF_D },
+    { w: WALL_THICKNESS, d: MAIN_HALF_D + WALL_THICKNESS / 2 - (SIDE_HALF_D + WALL_THICKNESS / 2), x: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2, z: (MAIN_HALF_D + WALL_THICKNESS / 2 + SIDE_HALF_D + WALL_THICKNESS / 2) / 2 },
+    { w: SE_TUNNEL_NORTH_X[0] - (sideRoomMinX + WALL_THICKNESS / 2), d: SE_TUNNEL_Z_MIN - (SIDE_HALF_D + WALL_THICKNESS / 2), x: (sideRoomMinX + WALL_THICKNESS / 2 + SE_TUNNEL_NORTH_X[0]) / 2, z: (SIDE_HALF_D + WALL_THICKNESS / 2 + SE_TUNNEL_Z_MIN) / 2 },
+    { w: SE_TUNNEL_X_MAX - (sideRoomMinX + WALL_THICKNESS / 2), d: SE_TUNNEL_Z_MAX - SE_TUNNEL_Z_MIN, x: (sideRoomMinX + WALL_THICKNESS / 2 + SE_TUNNEL_X_MAX) / 2, z: (SE_TUNNEL_Z_MIN + SE_TUNNEL_Z_MAX) / 2, bottom: TUNNEL_HEIGHT },
+    { w: SE_TUNNEL_NORTH_X[1] - SE_TUNNEL_NORTH_X[0], d: SE_TUNNEL_Z_MIN - (SIDE_HALF_D + WALL_THICKNESS / 2), x: (SE_TUNNEL_NORTH_X[0] + SE_TUNNEL_NORTH_X[1]) / 2, z: (SIDE_HALF_D + WALL_THICKNESS / 2 + SE_TUNNEL_Z_MIN) / 2, bottom: TUNNEL_HEIGHT },
     // Nordwand des Flankenraums mit Öffnung zur Halle
     { w: HALL_DOOR_X[0] - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + HALL_DOOR_X[0]) / 2, z: -SIDE_HALF_D },
     { w: sideRoomMaxX - HALL_DOOR_X[1], d: WALL_THICKNESS, x: (HALL_DOOR_X[1] + sideRoomMaxX) / 2, z: -SIDE_HALF_D },
@@ -472,17 +501,15 @@ export function buildArena(): ArenaResult {
     rampWidth: number,
     rampAxis: 'x' | 'z',
     rampAscending: boolean,
-    // lateralOffset: Rampe quer verschieben; omitCurbSide: Bord weglassen, wo eine Wand steht;
-    // hollowThickness: Plattform nur als Deckplatte dieser Dicke (darunter begehbar)
-    options: { lateralOffset?: number; omitCurbSide?: -1 | 1; hollowThickness?: number } = {}
+    // lateralOffset: Rampe quer verschieben; omitCurbSide: Bord weglassen, wo eine Wand steht
+    options: { lateralOffset?: number; omitCurbSide?: -1 | 1 } = {}
   ): Ramp {
     const lateralOffset = options.lateralOffset ?? 0
     const rampCenterX = rampAxis === 'z' ? centerX + lateralOffset : centerX
     const rampCenterZ = rampAxis === 'x' ? centerZ + lateralOffset : centerZ
-    const platformThickness = options.hollowThickness ?? platformHeight
-    const platformGeometry = worldBox(platformSize, platformThickness, platformSize)
+    const platformGeometry = worldBox(platformSize, platformHeight, platformSize)
     const platform = new THREE.Mesh(platformGeometry, wallMaterial)
-    platform.position.set(centerX, platformHeight - platformThickness / 2, centerZ)
+    platform.position.set(centerX, platformHeight / 2, centerZ)
     addEdgeOutline(platform)
     group.add(platform)
     solids.push({ mesh: platform, box: new THREE.Box3().setFromObject(platform) })
@@ -522,23 +549,6 @@ export function buildArena(): ArenaResult {
     addEdgeOutline(rampMesh)
     group.add(rampMesh)
     shootableExtras.push(rampMesh)
-
-    // Ist die Plattform unten hohl, wäre der Raum unter der Rampe (der Keil
-    // ist keine Kollisionsfläche) vom Durchgang aus begehbar: Rampenende im
-    // Keil verschließen. Etwas niedriger als die Rampe an dieser Stelle, damit
-    // man oben nicht daran hängen bleibt und nichts herausragt.
-    if (options.hollowThickness !== undefined) {
-      const sealThickness = 0.1
-      const sealHeight = platformHeight - 0.1
-      const highEnd = rampAscending ? rampMax : rampMin
-      const sealCenter = highEnd + (rampAscending ? -1 : 1) * (sealThickness / 2)
-      const sealGeometry = rampAxis === 'x' ? worldBox(sealThickness, sealHeight, rampWidth) : worldBox(rampWidth, sealHeight, sealThickness)
-      const seal = new THREE.Mesh(sealGeometry, wallMaterial)
-      if (rampAxis === 'x') seal.position.set(sealCenter, sealHeight / 2, rampCenterZ)
-      else seal.position.set(rampCenterX, sealHeight / 2, sealCenter)
-      group.add(seal)
-      solids.push({ mesh: seal, box: new THREE.Box3().setFromObject(seal) })
-    }
 
     // Seitenborde: Rampe nur von vorne betretbar (seitlich würde man
     // schlagartig auf Rampenhöhe gehoben). Komplett außerhalb der
@@ -601,14 +611,7 @@ export function buildArena(): ArenaResult {
   // side: -1 = Nordwand, 1 = Südwand. Eck-Aufgang in der West- bzw. Ostecke:
   // Plattform bündig an Steg und Wand, Rampe läuft am Steg entlang. Die
   // Südwest-Ecke bleibt frei - dort mündet der erhöhte Durchgang (2,4 m).
-  // openUnderCorner: unter der Eck-Plattform ist ein Durchgang (L-Tunnel), siehe unten
-  function buildUpperSide(
-    side: -1 | 1,
-    cornerEnd: 'west' | 'east',
-    dropGap: [number, number],
-    extraGaps: [number, number][] = [],
-    openUnderCorner = false
-  ) {
+  function buildUpperSide(side: -1 | 1, cornerEnd: 'west' | 'east', dropGap: [number, number], extraGaps: [number, number][] = []) {
     const wallFace = side * (MAIN_HALF_D - WALL_THICKNESS / 2)
     const edge = wallFace - side * CATWALK_DEPTH
     // Laufsteg über die ganze Hauptraum-Breite (Trennwand bis Ostwand)
@@ -629,13 +632,10 @@ export function buildArena(): ArenaResult {
       CORNER_PLATFORM_SIZE,
       'x',
       cornerEnd === 'east',
-      { omitCurbSide: side, hollowThickness: openUnderCorner ? UPPER_THICKNESS : undefined }
+      { omitCurbSide: side }
     )
     // Statt Bord auf der Stegseite: Wand unter der Stegkante bis zur
     // Unterkante, sonst käme man von unter dem Steg seitlich auf die Rampe.
-    // Sie reicht nur über die Rampe, nicht über die Plattform: ist diese unten
-    // hohl (openUnderCorner), geht der Gang unter dem Steg dort in den Raum
-    // unter der Plattform über (L-Tunnel) und mündet auf der Hauptraum-Seite
     addBlock(
       (cornerRamp.minX + cornerRamp.maxX) / 2,
       edge + side * (RAILING_THICKNESS / 2),
@@ -690,7 +690,7 @@ export function buildArena(): ArenaResult {
   const rampNorthWest = buildUpperSide(-1, 'west', [26, 28])
   // Südsteg: Lücke im Geländer für die Verbindung vom Fenster (siehe unten)
   const WINDOW_LINK_X: [number, number] = [westEnd, westEnd + 2.5]
-  const rampSouthEast = buildUpperSide(1, 'east', [-16, -14], [WINDOW_LINK_X], true)
+  const rampSouthEast = buildUpperSide(1, 'east', [-16, -14], [WINDOW_LINK_X])
 
   // Verbindung vom Fenster in der Trennwand (West-Plattform, 2,8 m) zum
   // Südsteg: 2,5 m breit, Geländer an der Ostseite, Nordende offen (Absprung)

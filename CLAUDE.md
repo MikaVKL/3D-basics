@@ -244,14 +244,17 @@ Stolperfallen bei Headless-Tests:
   Einsehbarkeit je Spawn messen: Raster über die Arena, Raycast gegen
   `arena.solids` (Augenhöhe, bis 40 m): S0 11 %, S1 12 %, S2 17 %, S3 25 %.
   Der Gang zeigt nach Osten auf den Nord-Spawn S2 (schon immer so).
-  **Südost-Tunnel als L:** Die Südost-Eck-Plattform ist unten hohl (Deckplatte
-  0,3 m, `hollowThickness`); der Gang unter dem Südsteg biegt am Ostende nach
-  Norden ab und mündet unter der Plattform bei z 14,5 im Hauptraum (geradeaus
-  ginge es aus der Karte). Das Rampenende ist dort mit einer unsichtbaren
-  Wand im Keil verschlossen - sonst läuft man auf Bodenhöhe durch den Keil.
-  Gleiches Muster: aus dem Südost-Gang ist S3 (0, 18) auf 19-31 m einsehbar;
-  bewusst nicht verändert (Linie gab es schon als Sackgasse). Wer sie
-  entschärfen will: Spawn S3/S2 verschieben (Einsehbarkeit messen) statt
+  **Südost-Tunnel als L in die Ostzone:** Der Gang unter dem Südsteg geht am
+  Ostende durch die Hauptraum-Ostwand (z 17,5..20,5, 2,5 m hoch) nach Osten
+  (bis x 36), biegt außerhalb der Räume nach Norden ab (x 33..36) und mündet
+  durch die Flankenraum-Südwand (z 12) in die Ostzone. Gebaut aus Wandteilen
+  (`SE_TUNNEL_*` in `arena.ts`: Durchbruch + Sturz, Südwand, Ostwand, dünne
+  Westwand, Decke über beiden Armen, Bodenfläche `tunnelGround`). Die
+  Eck-Plattform bleibt massiv. (Ein erster Entwurf mit hohler Plattform und
+  Ausgang in den Hauptraum wurde auf Nutzerwunsch ersetzt.)
+  Aus dem langen Südgang (inkl. neuem Ostarm) ist S3 (0, 18) auf 19-33 m
+  einsehbar; bewusst nicht verändert (Linie gab es schon als Sackgasse). Wer
+  sie entschärfen will: Spawn S3/S2 verschieben (Einsehbarkeit messen) statt
   Kisten in den Gang zu stellen.
 - **Nordost-Halle** (x 32..52, z -21..-12): Zugang über 8-m-Öffnung
   (x 38..46) in der Flankenraum-Nordwand. Der Nordsteg läuft durch die

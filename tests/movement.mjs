@@ -393,24 +393,15 @@ try {
     walkTo(EAST, 260)
     out.nwTunnelBack = { x: cam.position.x, y: P.bodyY }
 
-    // Südost-Tunnel (L): Gang unter dem Südsteg nach Osten, am Ende nach Norden
-    // unter der Eck-Plattform hindurch ins Freie (der Gang endete an der Ostwand)
+    // Südost-Tunnel (L): Gang unter dem Südsteg nach Osten durch die Ostwand, dann
+    // außerhalb nach Norden durch die Südwand des Flankenraums (Ostzone)
     placeOnFloor(20, 19)
-    walkTo(EAST, 130)
-    out.seTunnelEnd = { x: cam.position.x, z: cam.position.z, y: P.bodyY }
-    walkTo(0, 120)
-    out.seTunnelOut = { x: cam.position.x, z: cam.position.z, y: P.bodyY }
-    walkTo(Math.PI, 170)
-    out.seTunnelBack = { z: cam.position.z, y: P.bodyY }
-    // Unter der Plattform: nicht auf die Rampe (die Rampe steigt dort bis 2,8 m), Sprung stößt an
-    placeOnFloor(29.5, 16)
-    walkTo(WEST, 60)
-    out.seUnderRamp = { x: cam.position.x, y: P.bodyY }
-    placeOnFloor(30, 16)
-    let seHead = 0
-    P.jump()
-    run(60, () => (seHead = Math.max(seHead, P.bodyY + 2.0)))
-    out.seUnderPlatform = { head: seHead, landed: P.bodyY }
+    walkTo(EAST, 190)
+    out.seTunnelEast = { x: cam.position.x, z: cam.position.z, y: P.bodyY }
+    walkTo(0, 200)
+    out.seTunnelNorth = { x: cam.position.x, z: cam.position.z, y: P.bodyY }
+    walkTo(Math.PI, 260)
+    out.seTunnelBack = { x: cam.position.x, z: cam.position.z, y: P.bodyY }
 
     // Aus dem Nordwest-Tunnel darf kein Spawn der West-Zone einsehbar sein
     // (sonst Schießstand). Der Nord-Spawn (0, -18) liegt weiter am selben Gang
@@ -458,11 +449,9 @@ try {
   check('unter dem Steg: nicht seitlich auf die Rampe', r.rampSide.y < 0.01 && r.rampSide.z < -17.5, `Höhe ${f2(r.rampSide.y)}, z ${f2(r.rampSide.z)}`)
   check('Nordwest-Tunnel führt durch die Trennwand in die West-Zone', r.nwTunnel.x < -28 && r.nwTunnel.y < 0.01, `x ${f2(r.nwTunnel.x)}, z ${f2(r.nwTunnel.z)}`)
   check('Nordwest-Tunnel: auch zurück in den Hauptraum', r.nwTunnelBack.x > -16 && r.nwTunnelBack.y < 0.01, `x ${f2(r.nwTunnelBack.x)}`)
-  check('Südost-Tunnel: Gang unter dem Südsteg bis zur Plattform', r.seTunnelEnd.x > 30.9 && r.seTunnelEnd.y < 0.01, `x ${f2(r.seTunnelEnd.x)}, z ${f2(r.seTunnelEnd.z)}`)
-  check('Südost-Tunnel (L): nach Norden unter der Plattform ins Freie', r.seTunnelOut.z < 13 && r.seTunnelOut.x > 28.5 && r.seTunnelOut.y < 0.01, `x ${f2(r.seTunnelOut.x)}, z ${f2(r.seTunnelOut.z)}`)
-  check('Südost-Tunnel: auch zurück in den Gang', r.seTunnelBack.z > 19.5 && r.seTunnelBack.y < 0.01, `z ${f2(r.seTunnelBack.z)}`)
-  check('unter der Plattform: nicht auf die Rampe', r.seUnderRamp.x > 28.7 && r.seUnderRamp.y < 0.01, `x ${f2(r.seUnderRamp.x)}, Höhe ${f2(r.seUnderRamp.y)}`)
-  check('unter der Plattform: Sprung stößt an (Kopf <= 2,5 m)', r.seUnderPlatform.head <= 2.51 && r.seUnderPlatform.landed < 0.01, `Kopf max ${f2(r.seUnderPlatform.head)}`)
+  check('Südost-Tunnel: Gang unter dem Südsteg durch die Ostwand nach Osten', r.seTunnelEast.x > 35 && r.seTunnelEast.z > 17.5 && r.seTunnelEast.y < 0.01, `x ${f2(r.seTunnelEast.x)}, z ${f2(r.seTunnelEast.z)}`)
+  check('Südost-Tunnel (L): nach Norden in den Flankenraum (Ostzone)', r.seTunnelNorth.z < 10 && r.seTunnelNorth.x > 33 && r.seTunnelNorth.y < 0.01, `x ${f2(r.seTunnelNorth.x)}, z ${f2(r.seTunnelNorth.z)}`)
+  check('Südost-Tunnel: auch zurück bis in den Gang', r.seTunnelBack.z > 19.5 && r.seTunnelBack.y < 0.01, `x ${f2(r.seTunnelBack.x)}, z ${f2(r.seTunnelBack.z)}`)
   check('Nordwest-Tunnel: von dort ist kein West-Spawn einsehbar', r.tunnelSight === 0, `${r.tunnelSight} freie Sichtlinien`)
   check('Lücke im Geländer: hinunterspringen', r.dropDown.y < 0.01 && r.dropDown.z > -17, `Höhe ${f2(r.dropDown.y)}, z ${f2(r.dropDown.z)}`)
   check('obere Ebene: Brücke nach Süden auf den Südsteg', Math.abs(r.southCatwalk.y - 2.8) < 0.01 && r.southCatwalk.z > 18.5, `Höhe ${f2(r.southCatwalk.y)}, z ${f2(r.southCatwalk.z)}`)
