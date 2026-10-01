@@ -96,6 +96,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:effects` – Mündungsleuchten, Funken, Todeseffekt, Kamera-Ruck
 - `npm run test:tracer` – Laserstrahl: Kern + Schein in Teamfarbe, 0,2 s mit
   weichem Ausblenden, aufgeräumt, fremde Strahlen rot/blau
+- `npm run test:aim` – Zielen (rechte Maustaste halten): Zoom je Waffe, Empfind-
+  lichkeit folgt dem Zoom, halbe Streuung, 75 % Tempo, kein Sprint, Waffe
+  mittig, Abbruch bei Nachladen/Messer/Tod, Einstellungs-Blickfeld als Basis
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
 - `npm run test:weapons` – Wechsel (1/2/3, Mausrad, Q), Munition je Waffe,
@@ -299,6 +302,14 @@ Stolperfallen bei Headless-Tests:
   weiter +7°) und `SoundFx.setVolume` (M = Stumm bleibt getrennt). Neue
   Einstellungen: Bereich in `SETTING_RANGES`, Zeile in `index.html`, Format
   in `main.ts`.
+- **Zielen (ADS)**: rechte Maustaste halten (`DesktopInput`, `Weapon.setAiming`).
+  Blickfeld x `aimZoom` (Pistole 0,8, Sturmgewehr 0,65, Messer 1 = kein Zielen;
+  `shared/weapons.ts`), Basis ist das Blickfeld aus den Einstellungen; die
+  Empfindlichkeit wird mit tan(FOV/2) skaliert (`LookControl.setZoomScale`),
+  Streuung halbiert, Tempo 75 % und kein Sprint (`Player.setAiming`), Waffe wandert
+  in die Bildmitte (`WeaponView.aim`). Nachladen/Wechsel/Messer unterbrechen es,
+  die gehaltene Taste zielt danach weiter; Tod/Menü beenden es (`cancelFire`).
+  Gegner sehen das Zielen nicht (kein Protokoll). Offen: Touch-Button.
 - **Laserstrahl (Leuchtspur) bleibt** (Nutzer mag ihn): heller weißer Kern +
   additiver Schein in der Teamfarbe des Schützen, 0,2 s, quadratisch
   ausgeblendet, ohne Nebel (`weapon.ts`). Je Waffe andere Stärke
@@ -346,6 +357,9 @@ Stolperfallen bei Headless-Tests:
   Stufe 3 (Wand-/Flug-Prüfung mit Arena-Geometrie im Server) bewusst nicht
   gebaut: `arena.ts` bräuchte eine Box-Liste in `src/shared/`, Nutzen gering
   (Nutzer rechnet nicht mit Cheatern).
+- Idee (Nutzer, nicht wichtig, nur vermerkt): **Waffe inspizieren** (Taste, z. B.
+  F): kurze Animation, die Waffe dreht sich im Blick - rein kosmetisch, wie in
+  Valorant/CS. Nicht gebaut.
 - Ganz am Ende, nicht vorher anfangen: Raum-Codes (eigene Räume). Der Server
   hält Spieler, Punkte und Runde global (`clients`, `scores`, `nextRoundAt`
   in `server/index.ts`) - dafür müsste das in eine Raum-Klasse.

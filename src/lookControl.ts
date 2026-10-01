@@ -10,6 +10,7 @@ export class LookControl {
   private euler = new THREE.Euler(0, 0, 0, 'YXZ')
   private camera: THREE.Camera
   private sensitivity: number
+  private zoomScale = 1
 
   constructor(camera: THREE.Camera, sensitivity: number = BASE_SENSITIVITY) {
     this.camera = camera
@@ -22,9 +23,15 @@ export class LookControl {
     this.sensitivity = BASE_SENSITIVITY * scale
   }
 
+  // Beim Zielen: Empfindlichkeit folgt dem Zoom, damit sich die Zielbewegung
+  // am Bildschirm gleich anfühlt (scale = tan(FOV/2) gezoomt / normal)
+  setZoomScale(scale: number) {
+    this.zoomScale = scale
+  }
+
   rotate(deltaX: number, deltaY: number) {
-    this.euler.y -= deltaX * this.sensitivity
-    this.euler.x -= deltaY * this.sensitivity
+    this.euler.y -= deltaX * this.sensitivity * this.zoomScale
+    this.euler.x -= deltaY * this.sensitivity * this.zoomScale
     this.euler.x = THREE.MathUtils.clamp(this.euler.x, -PITCH_LIMIT, PITCH_LIMIT)
 
     this.camera.quaternion.setFromEuler(this.euler)

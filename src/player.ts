@@ -25,6 +25,7 @@ const CROUCH_SPEED_MULTIPLIER = 0.6
 const CROUCH_TRANSITION_SPEED = 6
 const MOVE_SPEED = 6 // Meter pro Sekunde
 const SPRINT_SPEED_MULTIPLIER = 1.6
+const AIM_SPEED_MULTIPLIER = 0.75
 const JUMP_SPEED = 7.6 // ~1.6m Sprunghöhe: reicht für die 1.4m-Kisten
 const GRAVITY = 18
 const PLAYER_RADIUS = 0.4
@@ -115,6 +116,7 @@ export class Player implements Damageable {
   private isCrouching = false
   private eyeHeight = EYE_HEIGHT
 
+  private aiming = false
   private wantsToSprint = false
   private isSprinting = false
   private stamina = MAX_STAMINA
@@ -268,6 +270,11 @@ export class Player implements Damageable {
     this.wantsToCrouch = crouching
   }
 
+  // Beim Zielen langsamer, kein Sprint
+  setAiming(aiming: boolean) {
+    this.aiming = aiming
+  }
+
   setSprinting(sprinting: boolean) {
     this.wantsToSprint = sprinting
   }
@@ -335,7 +342,7 @@ export class Player implements Damageable {
 
     // Sprint nur ungeduckt, in Bewegung und mit Stamina
     const isMoving = this.moveInputX !== 0 || this.moveInputZ !== 0
-    if (this.wantsToSprint && !this.isCrouching && isMoving) {
+    if (this.wantsToSprint && !this.isCrouching && !this.aiming && isMoving) {
       this.isSprinting = this.isSprinting ? this.stamina > 0 : this.stamina >= MIN_STAMINA_TO_START_SPRINT
     } else {
       this.isSprinting = false
@@ -410,7 +417,7 @@ export class Player implements Damageable {
 
   // Volles Tempo der aktuellen Haltung (Gehen/Sprint/Ducken)
   private stanceSpeed(): number {
-    const speed = MOVE_SPEED * WEAPONS[this.weapon].moveSpeed
+    const speed = MOVE_SPEED * WEAPONS[this.weapon].moveSpeed * (this.aiming ? AIM_SPEED_MULTIPLIER : 1)
     if (this.isCrouching) return speed * CROUCH_SPEED_MULTIPLIER
     return this.isSprinting ? speed * SPRINT_SPEED_MULTIPLIER : speed
   }

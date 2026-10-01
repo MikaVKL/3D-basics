@@ -24,6 +24,8 @@ const TRACER_MAX_DISTANCE = 60 // bei Schuss ins Leere
 // Die ersten Schüsse einer Salve treffen genau.
 const HEAT_DECAY = 4
 const PRECISE_SHOTS = 2
+const AIM_BLEND_SPEED = 9 // pro Sekunde (~0,11 s bis ganz gezoomt)
+const AIM_SPREAD_REDUCTION = 0.5 // beim Zielen halbe Streuung
 // Dauerfeuer holt verpasste Schüsse nach (sonst hinge die Feuerrate an den
 // FPS), aber höchstens so viel Rückstand
 const MAX_FIRE_CATCHUP = 0.1 // Sekunden
@@ -98,6 +100,9 @@ export class Weapon {
   // Klick während der Feuerpause: Schuss folgt, sobald sie vorbei ist
   private shotQueued = false
   private heat = 0
+  // Zielen: gewünscht (Taste gehalten) und tatsächlich (0..1, blendet weich ein)
+  private aimWanted = false
+  aimAmount = 0
 
   constructor(
     camera: THREE.Camera,
@@ -163,10 +168,25 @@ export class Weapon {
     this.cancelFire()
   }
 
-  // Tod, Menü: kein Weiterfeuern und kein vorgemerkter Schuss
+  // Tod, Menü: kein Weiterfeuern, kein vorgemerkter Schuss, kein Zielen
   cancelFire() {
     this.triggerHeld = false
     this.shotQueued = false
+    this.aimWanted = false
+  }
+
+  setAiming(aiming: boolean) {
+    this.aimWanted = aiming
+  }
+
+  // Zielt gerade (gehalten, und weder Messer noch Wechsel/Nachladen)
+  get isAiming(): boolean {
+    return this.aimWanted && !this.isMelee && this.switchRemaining === 0 && this.reloadRemaining === 0
+  }
+
+  // Blickfeld-Faktor des aktuellen Zielens (1 = nicht gezoomt)
+  get zoomFactor(): number {
+    return 1 + (this.stats.aimZoom - 1) * this.aimAmount
   }
 
   // Gedrückt halten: Dauerfeuer nur bei automatischen Waffen
@@ -183,6 +203,9 @@ export class Weapon {
     this.heat = Math.max(0, this.heat - HEAT_DECAY * deltaSeconds)
     this.view.lowered = this.switchRemaining / SWITCH_TIME
     this.view.slide = this.slideAmount
+    const aimStep = AIM_BLEND_SPEED * deltaSeconds
+    this.aimAmount += Math.min(aimStep, Math.max(-aimStep, (this.isAiming ? 1 : 0) - this.aimAmount))
+    this.view.aim = this.aimAmount
     this.view.update(deltaSeconds)
 
     if (this.reloadRemaining > 0) {
@@ -318,7 +341,8 @@ export class Weapon {
 
   // Streuung (rad), die der nächste Schuss hätte - auch fürs Fadenkreuz
   get currentSpread(): number {
-    return Math.min(this.stats.maxSpread, Math.max(0, this.heat - PRECISE_SHOTS) * this.stats.spreadPerHeat)
+    const spread = Math.min(this.stats.maxSpread, Math.max(0, this.heat - PRECISE_SHOTS) * this.stats.spreadPerHeat)
+    return spread * (1 - AIM_SPREAD_REDUCTION * this.aimAmount)
   }
 
   get isMelee(): boolean {

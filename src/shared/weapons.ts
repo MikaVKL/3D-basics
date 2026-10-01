@@ -14,6 +14,8 @@ export interface WeaponStats {
   // Streuung (rad) wächst mit der "Hitze" des Dauerfeuers
   spreadPerHeat: number
   maxSpread: number
+  // Zielen (rechte Maustaste): Faktor auf das Blickfeld, 1 = kein Zielen (Messer)
+  aimZoom: number
 }
 
 export const WEAPONS: Record<WeaponId, WeaponStats> = {
@@ -28,6 +30,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     moveSpeed: 1,
     spreadPerHeat: 0,
     maxSpread: 0,
+    aimZoom: 0.8,
   },
   rifle: {
     label: 'Sturmgewehr',
@@ -40,6 +43,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     moveSpeed: 0.92,
     spreadPerHeat: 0.006,
     maxSpread: 0.035,
+    aimZoom: 0.65,
   },
   knife: {
     label: 'Messer',
@@ -52,6 +56,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     moveSpeed: 1.15,
     spreadPerHeat: 0,
     maxSpread: 0,
+    aimZoom: 1,
   },
 }
 

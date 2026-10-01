@@ -225,6 +225,8 @@ const SLIDE_BLEND_SPEED = 8 // pro Sekunde
 export class SlideView {
   amount = 0
   private baseFov: number
+  // Faktor aufs Blickfeld (Zielen), 1 = normal
+  zoom = 1
   private appliedRoll = 0
 
   constructor(camera: THREE.PerspectiveCamera) {
@@ -239,7 +241,7 @@ export class SlideView {
   apply(camera: THREE.PerspectiveCamera, sliding: boolean, deltaSeconds: number) {
     const step = SLIDE_BLEND_SPEED * deltaSeconds
     this.amount += THREE.MathUtils.clamp((sliding ? 1 : 0) - this.amount, -step, step)
-    const fov = this.baseFov + SLIDE_FOV_BOOST * this.amount
+    const fov = (this.baseFov + SLIDE_FOV_BOOST * this.amount) * this.zoom
     if (camera.fov !== fov) {
       camera.fov = fov
       camera.updateProjectionMatrix()

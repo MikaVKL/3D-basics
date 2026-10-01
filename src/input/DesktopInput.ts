@@ -38,6 +38,11 @@ export class DesktopInput {
     document.addEventListener('mousedown', (e) => this.handleMouseDown(e))
     document.addEventListener('mouseup', (e) => {
       if (e.button === 0) this.weapon.setTrigger(false)
+      if (e.button === 2) this.weapon.setAiming(false)
+    })
+    // Rechte Maustaste zielt: kein Kontextmenü im Spiel
+    document.addEventListener('contextmenu', (e) => {
+      if (document.pointerLockElement === this.domElement) e.preventDefault()
     })
     document.addEventListener('wheel', (e) => {
       if (document.pointerLockElement !== this.domElement || e.deltaY === 0) return
@@ -62,8 +67,9 @@ export class DesktopInput {
 
   private handleMouseDown(e: MouseEvent) {
     if (document.pointerLockElement !== this.domElement) return
-    if (e.button !== 0) return
     if (!this.player.isAlive) return
+    if (e.button === 2) this.weapon.setAiming(true)
+    if (e.button !== 0) return
     this.weapon.setTrigger(true)
   }
 

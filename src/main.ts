@@ -751,6 +751,10 @@ function animate() {
   effects.update(deltaSeconds)
   sky.position.copy(camera.position)
   cameraShake.apply(camera, deltaSeconds)
+  // Zielen: Blickfeld zoomt, Empfindlichkeit und Tempo folgen
+  slideView.zoom = weapon.zoomFactor
+  lookControl.setZoomScale(Math.tan((settings.fov * weapon.zoomFactor * Math.PI) / 360) / Math.tan((settings.fov * Math.PI) / 360))
+  player.setAiming(weapon.isAiming)
   slideView.apply(camera, player.isSliding && player.isAlive, deltaSeconds)
   weapon.slideAmount = slideView.amount
   renderer.render(scene, camera)

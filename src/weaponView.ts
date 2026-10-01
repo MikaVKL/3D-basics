@@ -7,6 +7,8 @@ import type { WeaponId } from './shared/weapons'
 
 const REST_POSITION = new THREE.Vector3(0.28, -0.28, -0.5)
 const REST_ROTATION_Y = -0.05
+// Waffe beim Zielen: mittig, knapp unter dem Fadenkreuz
+const AIM_POSITION = new THREE.Vector3(0, -0.2, -0.42)
 const SWITCH_DROP = 0.35 // so weit sinkt die Waffe beim Wechseln
 
 const RECOIL_DURATION = 0.12 // Sekunden
@@ -46,6 +48,8 @@ export class WeaponView {
   lowered = 0
   // 0..1 beim Rutschen: Waffe nach innen geneigt und etwas tiefer
   slide = 0
+  // 0..1 beim Zielen: Waffe wandert in die Bildmitte
+  aim = 0
 
   constructor(camera: THREE.Camera) {
     this.group.position.copy(REST_POSITION)
@@ -130,20 +134,24 @@ export class WeaponView {
 
   update(deltaSeconds: number) {
     this.recoilRemaining = Math.max(0, this.recoilRemaining - deltaSeconds)
-    this.group.position.y = REST_POSITION.y - SWITCH_DROP * this.lowered - 0.05 * this.slide
+    const restX = REST_POSITION.x + (AIM_POSITION.x - REST_POSITION.x) * this.aim
+    const restY = REST_POSITION.y + (AIM_POSITION.y - REST_POSITION.y) * this.aim
+    const restZ = REST_POSITION.z + (AIM_POSITION.z - REST_POSITION.z) * this.aim
+    this.group.position.y = restY - SWITCH_DROP * this.lowered - 0.05 * this.slide
+    this.group.rotation.y = REST_ROTATION_Y * (1 - this.aim)
     this.group.rotation.z = 0.35 * this.slide
     if (this.current.stab) {
       // Schnell vor, langsamer zurück
       const t = 1 - this.recoilRemaining / STAB_DURATION // 0 -> 1
       const thrust = this.recoilRemaining > 0 ? (t < 0.3 ? t / 0.3 : (1 - t) / 0.7) : 0
-      this.group.position.z = REST_POSITION.z - STAB_REACH * thrust
-      this.group.position.x = REST_POSITION.x - 0.12 * thrust
+      this.group.position.z = restZ - STAB_REACH * thrust
+      this.group.position.x = restX - 0.12 * thrust
       this.group.rotation.x = -this.lowered * 0.6
       return
     }
     const recoil = (this.recoilRemaining / RECOIL_DURATION) * this.current.recoilScale // 1 -> 0
-    this.group.position.x = REST_POSITION.x
-    this.group.position.z = REST_POSITION.z + RECOIL_KICK_Z * recoil
+    this.group.position.x = restX
+    this.group.position.z = restZ + RECOIL_KICK_Z * recoil
     this.group.rotation.x = -RECOIL_KICK_ROTATION * recoil - this.lowered * 0.6
   }
 }
