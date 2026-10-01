@@ -7,8 +7,10 @@ import type { WeaponId } from './shared/weapons'
 
 const REST_POSITION = new THREE.Vector3(0.28, -0.28, -0.5)
 const REST_ROTATION_Y = -0.05
-// Waffe beim Zielen: mittig, knapp unter dem Fadenkreuz
-const AIM_POSITION = new THREE.Vector3(0, -0.2, -0.42)
+// Beim Zielen liegt die Visierlinie (Oberkante von Kimme und Korn) knapp unter
+// der Bildmitte; x/y legt jedes Modell selbst fest (aimX/aimY), z gilt für alle
+const AIM_Z = -0.42
+const AIM_SIGHT_DROP = 0.006
 const SWITCH_DROP = 0.35 // so weit sinkt die Waffe beim Wechseln
 
 const RECOIL_DURATION = 0.12 // Sekunden
@@ -17,11 +19,17 @@ const RECOIL_KICK_ROTATION = 0.12
 const STAB_DURATION = 0.25
 const STAB_REACH = 0.22
 
+// Helles Korn (wie der weiße Punkt an echten Visieren): sonst geht es im Dunkel der Waffe unter
+const SIGHT_DOT = new THREE.MeshStandardMaterial({ color: 0xf2f6fa, emissive: 0xf2f6fa, emissiveIntensity: 0.5 })
+
 interface Model {
   group: THREE.Group
   // Unsichtbarer Punkt am Lauf-Ende (Start der Leuchtspur)
   muzzle: THREE.Object3D
   recoilScale: number
+  // Verschiebung der Waffe zum Zielen, damit die Visierlinie in der Bildmitte liegt
+  aimX: number
+  aimY: number
   // Messer: Stoß nach vorn statt Rückstoß
   stab: boolean
 }
@@ -81,7 +89,12 @@ export class WeaponView {
     part(group, body, [0.04, 0.04, 0.22], [0, 0.02, -0.27])
     part(group, body, [0.06, 0.16, 0.07], [0, -0.11, 0.09], 0.3)
     part(group, accent, [0.095, 0.015, 0.06], [0, 0.055, 0.05])
-    return this.finishModel(group, -0.4, 1)
+    // Visier: Korn vorn auf dem Lauf, zwei Kimmenpfosten hinten auf dem Schlitten
+    // (alle Oberkanten bei y 0,075, damit die Visierlinie parallel zum Lauf liegt)
+    part(group, SIGHT_DOT, [0.014, 0.035, 0.02], [0, 0.0575, -0.37])
+    part(group, body, [0.02, 0.025, 0.02], [-0.022, 0.0625, 0.14])
+    part(group, body, [0.02, 0.025, 0.02], [0.022, 0.0625, 0.14])
+    return this.finishModel(group, -0.4, 1, false, 0.075)
   }
 
   private buildRifle(body: THREE.Material, accent: THREE.Material): Model {
@@ -92,9 +105,12 @@ export class WeaponView {
     part(group, body, [0.05, 0.14, 0.06], [0, -0.1, 0.12], 0.3) // Griff
     part(group, body, [0.06, 0.1, 0.18], [0, -0.01, 0.3]) // Schaft
     part(group, accent, [0.01, 0.02, 0.36], [-0.042, 0.02, -0.1])
-    part(group, body, [0.03, 0.05, 0.03], [0, 0.075, -0.5]) // Korn
+    part(group, SIGHT_DOT, [0.03, 0.05, 0.03], [0, 0.075, -0.5]) // Korn
+    // Kimme: zwei Pfosten auf dem Gehäuse, Oberkante wie das Korn (y 0,1)
+    part(group, body, [0.02, 0.045, 0.03], [-0.025, 0.0775, 0.1])
+    part(group, body, [0.02, 0.045, 0.03], [0.025, 0.0775, 0.1])
     group.position.set(-0.02, -0.04, -0.08)
-    return this.finishModel(group, -0.57, 0.6)
+    return this.finishModel(group, -0.57, 0.6, false, 0.1)
   }
 
   private buildKnife(body: THREE.Material, accent: THREE.Material): Model {
@@ -110,12 +126,15 @@ export class WeaponView {
     return this.finishModel(group, -0.3, 1, true)
   }
 
-  private finishModel(group: THREE.Group, muzzleZ: number, recoilScale: number, stab = false): Model {
+  // sightTop: Oberkante der Visierung im Modell (Messer: keine, Zielen gesperrt)
+  private finishModel(group: THREE.Group, muzzleZ: number, recoilScale: number, stab = false, sightTop = 0): Model {
     const muzzle = new THREE.Object3D()
     muzzle.position.set(0, 0.02, muzzleZ)
     group.add(muzzle)
     this.group.add(group)
-    return { group, muzzle, recoilScale, stab }
+    const aimX = -group.position.x
+    const aimY = -(group.position.y + sightTop) - AIM_SIGHT_DROP
+    return { group, muzzle, recoilScale, aimX, aimY, stab }
   }
 
   setWeapon(id: WeaponId) {
@@ -134,9 +153,9 @@ export class WeaponView {
 
   update(deltaSeconds: number) {
     this.recoilRemaining = Math.max(0, this.recoilRemaining - deltaSeconds)
-    const restX = REST_POSITION.x + (AIM_POSITION.x - REST_POSITION.x) * this.aim
-    const restY = REST_POSITION.y + (AIM_POSITION.y - REST_POSITION.y) * this.aim
-    const restZ = REST_POSITION.z + (AIM_POSITION.z - REST_POSITION.z) * this.aim
+    const restX = REST_POSITION.x + (this.current.aimX - REST_POSITION.x) * this.aim
+    const restY = REST_POSITION.y + (this.current.aimY - REST_POSITION.y) * this.aim
+    const restZ = REST_POSITION.z + (AIM_Z - REST_POSITION.z) * this.aim
     this.group.position.y = restY - SWITCH_DROP * this.lowered - 0.05 * this.slide
     this.group.rotation.y = REST_ROTATION_Y * (1 - this.aim)
     this.group.rotation.z = 0.35 * this.slide

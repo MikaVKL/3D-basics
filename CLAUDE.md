@@ -309,7 +309,11 @@ Stolperfallen bei Headless-Tests:
   Streuung halbiert, Tempo 75 % und kein Sprint (`Player.setAiming`), Waffe wandert
   in die Bildmitte (`WeaponView.aim`). Nachladen/Wechsel/Messer unterbrechen es,
   die gehaltene Taste zielt danach weiter; Tod/Menü beenden es (`cancelFire`).
-  Gegner sehen das Zielen nicht (kein Protokoll). Offen: Touch-Button.
+  Visier: Kimme (2 Pfosten) und helles Korn am Modell, `aimX/aimY` je Modell
+  richtet die Visierlinie unter die Bildmitte aus. Gegner sehen das Zielen nicht
+  (kein Protokoll). Offen, bewusst zurückgestellt (Nutzer: Laptop zuerst, nicht
+  Mobile): Touch-Button zum Zielen, Umschalter statt Halten in den Einstellungen.
+- **Stamina**: 5 s Dauersprint (Abfluss 20/s, Regeneration 15/s), auf Nutzerwunsch.
 - **Laserstrahl (Leuchtspur) bleibt** (Nutzer mag ihn): heller weißer Kern +
   additiver Schein in der Teamfarbe des Schützen, 0,2 s, quadratisch
   ausgeblendet, ohne Nebel (`weapon.ts`). Je Waffe andere Stärke

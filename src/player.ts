@@ -31,7 +31,7 @@ const GRAVITY = 18
 const PLAYER_RADIUS = 0.4
 
 const MAX_STAMINA = 100
-const STAMINA_DRAIN_RATE = 25 // pro Sekunde (~4s Dauersprint)
+const STAMINA_DRAIN_RATE = 20 // pro Sekunde (5 s Dauersprint, ~48 m)
 const STAMINA_REGEN_RATE = 15
 // Mindestvorrat zum Starten eines Sprints (verhindert Start-Stopp-Flackern
 // bei fast leerem Vorrat); einmal gestartet, läuft er bis 0
