@@ -385,6 +385,34 @@ try {
     walkTo(0, 120)
     out.hallWall = { z: cam.position.z }
 
+    // Nordwest-Tunnel (unter dem Nordsteg) führt durch die Trennwand in die West-Zone
+    placeOnFloor(-10, -19)
+    walkTo(WEST, 220)
+    out.nwTunnel = { x: cam.position.x, z: cam.position.z, y: P.bodyY }
+    // ... und wieder zurück
+    walkTo(EAST, 260)
+    out.nwTunnelBack = { x: cam.position.x, y: P.bodyY }
+
+    // Aus dem Nordwest-Tunnel darf kein Spawn der West-Zone einsehbar sein
+    // (sonst Schießstand). Der Nord-Spawn (0, -18) liegt weiter am selben Gang
+    // und ist von dort schon immer einsehbar - bewusst nicht Teil der Prüfung.
+    const ray = new __dusk.weapon.raycaster.constructor()
+    const walls = __dusk.arena.solids.map((s) => s.mesh)
+    const V = cam.position.constructor
+    let seeing = 0
+    for (const spawn of __dusk.arena.spawnPoints.filter((p) => p.x < -20.5)) {
+      for (let x = -19; x <= -7; x += 1) {
+        for (let z = -20.2; z <= -17.8; z += 0.6) {
+          const from = new V(x, 1.5, z)
+          const dir = new V(spawn.x, 1.5, spawn.z).sub(from)
+          ray.set(from, dir.clone().normalize())
+          ray.far = dir.length()
+          if (ray.intersectObjects(walls, false).length === 0) seeing++
+        }
+      }
+    }
+    out.tunnelSight = seeing
+
     return out
   })
 
@@ -409,6 +437,9 @@ try {
   check('Südost-Rampe hoch auf die Eck-Plattform', Math.abs(r.seRampTop.y - 2.8) < 0.01 && r.seRampTop.x > 29, `Höhe ${f2(r.seRampTop.y)}, x ${f2(r.seRampTop.x)}`)
   check('von der Eck-Plattform auf den Südsteg', Math.abs(r.seCatwalk.y - 2.8) < 0.01 && r.seCatwalk.z > 18.5, `Höhe ${f2(r.seCatwalk.y)}, z ${f2(r.seCatwalk.z)}`)
   check('unter dem Steg: nicht seitlich auf die Rampe', r.rampSide.y < 0.01 && r.rampSide.z < -17.5, `Höhe ${f2(r.rampSide.y)}, z ${f2(r.rampSide.z)}`)
+  check('Nordwest-Tunnel führt durch die Trennwand in die West-Zone', r.nwTunnel.x < -28 && r.nwTunnel.y < 0.01, `x ${f2(r.nwTunnel.x)}, z ${f2(r.nwTunnel.z)}`)
+  check('Nordwest-Tunnel: auch zurück in den Hauptraum', r.nwTunnelBack.x > -16 && r.nwTunnelBack.y < 0.01, `x ${f2(r.nwTunnelBack.x)}`)
+  check('Nordwest-Tunnel: von dort ist kein West-Spawn einsehbar', r.tunnelSight === 0, `${r.tunnelSight} freie Sichtlinien`)
   check('Lücke im Geländer: hinunterspringen', r.dropDown.y < 0.01 && r.dropDown.z > -17, `Höhe ${f2(r.dropDown.y)}, z ${f2(r.dropDown.z)}`)
   check('obere Ebene: Brücke nach Süden auf den Südsteg', Math.abs(r.southCatwalk.y - 2.8) < 0.01 && r.southCatwalk.z > 18.5, `Höhe ${f2(r.southCatwalk.y)}, z ${f2(r.southCatwalk.z)}`)
   check('obere Ebene: Südsteg bis an die Ostwand', Math.abs(r.southEast.y - 2.8) < 0.01 && r.southEast.x > 28.5, `Höhe ${f2(r.southEast.y)}, x ${f2(r.southEast.x)}`)

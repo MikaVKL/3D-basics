@@ -21,7 +21,7 @@ export interface SpawnPoint {
 
 // y = Augenhöhe
 export const SPAWN_POINTS: SpawnPoint[] = [
-  { x: -28, y: 1.7, z: -18 },
+  { x: -29, y: 1.7, z: -11 }, // nicht im Blickfeld des Nordwest-Tunnels (z -20,5..-17,5)
   { x: -28, y: 1.7, z: 18 },
   { x: 0, y: 1.7, z: -18 },
   { x: 0, y: 1.7, z: 18 },

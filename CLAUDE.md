@@ -236,6 +236,14 @@ Stolperfallen bei Headless-Tests:
   (x -19,5..-17, z 11,5..17,5) mit Geländer im Osten, Nordende offen
   (Absprung), die am Südsteg endet (Geländerlücke dort). Damit ist die
   Südwest-Ecke kein "geht nicht" mehr; sie ist der dritte Aufgang.
+- **Tunnel unter den Stegen** (Nutzer: keine Sackgassen): Der Gang unter dem
+  Nordsteg ist am Westende durch die Trennwand geöffnet (z -20,5..-17,5, 2,5 m
+  hoch) und führt in die West-Zone. Deshalb steht **Spawn S0 bei (-29, -11)**
+  (nicht mehr (-28, -18)): aus dem Tunnel war er sonst auf 21 m einsehbar.
+  `test:movement` prüft, dass aus dem Tunnel kein West-Spawn einsehbar ist.
+  Einsehbarkeit je Spawn messen: Raster über die Arena, Raycast gegen
+  `arena.solids` (Augenhöhe, bis 40 m): S0 11 %, S1 12 %, S2 17 %, S3 25 %.
+  Der Gang zeigt nach Osten auf den Nord-Spawn S2 (schon immer so).
 - **Nordost-Halle** (x 32..52, z -21..-12): Zugang über 8-m-Öffnung
   (x 38..46) in der Flankenraum-Nordwand. Der Nordsteg läuft durch die
   Hauptraum-Ostwand (Öffnung z -20,5..-17,5 ab 2,8 m, Sockel darunter) als

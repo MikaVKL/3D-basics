@@ -197,7 +197,12 @@ export function buildArena(): ArenaResult {
   const DIVIDER_X = -20
   const DIVIDER_SOLID_SOUTH_Z_MAX = -11
   const DIVIDER_GAP_Z_MAX = -3 // Durchgang: von SOLID_SOUTH_Z_MAX bis hier
-  const dividerSouthDepth = DIVIDER_SOLID_SOUTH_Z_MAX - -MAIN_HALF_D
+  // Tunnel unter dem Nordsteg geht durch die Trennwand in die West-Zone (vorher
+  // Sackgasse): Öffnung z -20,5..-17,5, Höhe wie die Stegunterkante
+  const DIVIDER_TUNNEL_Z_MIN = -MAIN_HALF_D + WALL_THICKNESS / 2
+  const DIVIDER_TUNNEL_Z_MAX = -17.5
+  const TUNNEL_HEIGHT = 2.5
+  const dividerSouthDepth = DIVIDER_SOLID_SOUTH_Z_MAX - DIVIDER_TUNNEL_Z_MAX
 
   const WEST_PLATFORM_CENTER_X = -23
   const WEST_PLATFORM_CENTER_Z = 14
@@ -211,7 +216,7 @@ export function buildArena(): ArenaResult {
   const dividerNorthLowerDepth = DOORWAY_Z_MIN - DIVIDER_GAP_Z_MAX
   const dividerNorthUpperDepth = MAIN_HALF_D - DOORWAY_Z_MAX
 
-  const wallDefs = [
+  const wallDefs: Array<{ w: number; d: number; x: number; z: number; bottom?: number }> = [
     // Hauptraum (Ost-Wand mit Öffnung zum Flankenraum)
     { w: MAIN_ROOM_WIDTH, d: WALL_THICKNESS, x: 0, z: -MAIN_HALF_D },
     { w: MAIN_ROOM_WIDTH, d: WALL_THICKNESS, x: 0, z: MAIN_HALF_D },
@@ -235,7 +240,15 @@ export function buildArena(): ArenaResult {
     { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: HALL_MIN_Z },
     { w: WALL_THICKNESS, d: HALL_MAX_Z - HALL_MIN_Z + WALL_THICKNESS / 2, x: sideRoomMaxX, z: (HALL_MIN_Z + HALL_MAX_Z) / 2 - WALL_THICKNESS / 4 },
     // Trennwand: Süd-Abschnitt, Nord-Abschnitte vor und nach dem erhöhten Durchgang
-    { w: WALL_THICKNESS, d: dividerSouthDepth, x: DIVIDER_X, z: -MAIN_HALF_D + dividerSouthDepth / 2 },
+    { w: WALL_THICKNESS, d: dividerSouthDepth, x: DIVIDER_X, z: DIVIDER_TUNNEL_Z_MAX + dividerSouthDepth / 2 },
+    // Sturz über dem Tunnel-Durchgang
+    {
+      w: WALL_THICKNESS,
+      d: DIVIDER_TUNNEL_Z_MAX - DIVIDER_TUNNEL_Z_MIN,
+      x: DIVIDER_X,
+      z: (DIVIDER_TUNNEL_Z_MIN + DIVIDER_TUNNEL_Z_MAX) / 2,
+      bottom: TUNNEL_HEIGHT,
+    },
     {
       w: WALL_THICKNESS,
       d: dividerNorthLowerDepth,
@@ -251,9 +264,10 @@ export function buildArena(): ArenaResult {
   ]
 
   for (const def of wallDefs) {
-    const wallGeometry = worldBox(def.w, WALL_HEIGHT, def.d)
+    const wallBottom = def.bottom ?? 0
+    const wallGeometry = worldBox(def.w, WALL_HEIGHT - wallBottom, def.d)
     const wall = new THREE.Mesh(wallGeometry, wallMaterial)
-    wall.position.set(def.x, WALL_HEIGHT / 2, def.z)
+    wall.position.set(def.x, wallBottom + (WALL_HEIGHT - wallBottom) / 2, def.z)
     addEdgeOutline(wall)
     group.add(wall)
     solids.push({ mesh: wall, box: new THREE.Box3().setFromObject(wall), kind: 'wall' })
