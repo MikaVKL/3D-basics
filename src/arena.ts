@@ -472,15 +472,17 @@ export function buildArena(): ArenaResult {
     rampWidth: number,
     rampAxis: 'x' | 'z',
     rampAscending: boolean,
-    // lateralOffset: Rampe quer verschieben; omitCurbSide: Bord weglassen, wo eine Wand steht
-    options: { lateralOffset?: number; omitCurbSide?: -1 | 1 } = {}
+    // lateralOffset: Rampe quer verschieben; omitCurbSide: Bord weglassen, wo eine Wand steht;
+    // hollowThickness: Plattform nur als Deckplatte dieser Dicke (darunter begehbar)
+    options: { lateralOffset?: number; omitCurbSide?: -1 | 1; hollowThickness?: number } = {}
   ): Ramp {
     const lateralOffset = options.lateralOffset ?? 0
     const rampCenterX = rampAxis === 'z' ? centerX + lateralOffset : centerX
     const rampCenterZ = rampAxis === 'x' ? centerZ + lateralOffset : centerZ
-    const platformGeometry = worldBox(platformSize, platformHeight, platformSize)
+    const platformThickness = options.hollowThickness ?? platformHeight
+    const platformGeometry = worldBox(platformSize, platformThickness, platformSize)
     const platform = new THREE.Mesh(platformGeometry, wallMaterial)
-    platform.position.set(centerX, platformHeight / 2, centerZ)
+    platform.position.set(centerX, platformHeight - platformThickness / 2, centerZ)
     addEdgeOutline(platform)
     group.add(platform)
     solids.push({ mesh: platform, box: new THREE.Box3().setFromObject(platform) })
@@ -520,6 +522,23 @@ export function buildArena(): ArenaResult {
     addEdgeOutline(rampMesh)
     group.add(rampMesh)
     shootableExtras.push(rampMesh)
+
+    // Ist die Plattform unten hohl, wäre der Raum unter der Rampe (der Keil
+    // ist keine Kollisionsfläche) vom Durchgang aus begehbar: Rampenende im
+    // Keil verschließen. Etwas niedriger als die Rampe an dieser Stelle, damit
+    // man oben nicht daran hängen bleibt und nichts herausragt.
+    if (options.hollowThickness !== undefined) {
+      const sealThickness = 0.1
+      const sealHeight = platformHeight - 0.1
+      const highEnd = rampAscending ? rampMax : rampMin
+      const sealCenter = highEnd + (rampAscending ? -1 : 1) * (sealThickness / 2)
+      const sealGeometry = rampAxis === 'x' ? worldBox(sealThickness, sealHeight, rampWidth) : worldBox(rampWidth, sealHeight, sealThickness)
+      const seal = new THREE.Mesh(sealGeometry, wallMaterial)
+      if (rampAxis === 'x') seal.position.set(sealCenter, sealHeight / 2, rampCenterZ)
+      else seal.position.set(rampCenterX, sealHeight / 2, sealCenter)
+      group.add(seal)
+      solids.push({ mesh: seal, box: new THREE.Box3().setFromObject(seal) })
+    }
 
     // Seitenborde: Rampe nur von vorne betretbar (seitlich würde man
     // schlagartig auf Rampenhöhe gehoben). Komplett außerhalb der
@@ -582,7 +601,14 @@ export function buildArena(): ArenaResult {
   // side: -1 = Nordwand, 1 = Südwand. Eck-Aufgang in der West- bzw. Ostecke:
   // Plattform bündig an Steg und Wand, Rampe läuft am Steg entlang. Die
   // Südwest-Ecke bleibt frei - dort mündet der erhöhte Durchgang (2,4 m).
-  function buildUpperSide(side: -1 | 1, cornerEnd: 'west' | 'east', dropGap: [number, number], extraGaps: [number, number][] = []) {
+  // openUnderCorner: unter der Eck-Plattform ist ein Durchgang (L-Tunnel), siehe unten
+  function buildUpperSide(
+    side: -1 | 1,
+    cornerEnd: 'west' | 'east',
+    dropGap: [number, number],
+    extraGaps: [number, number][] = [],
+    openUnderCorner = false
+  ) {
     const wallFace = side * (MAIN_HALF_D - WALL_THICKNESS / 2)
     const edge = wallFace - side * CATWALK_DEPTH
     // Laufsteg über die ganze Hauptraum-Breite (Trennwand bis Ostwand)
@@ -603,10 +629,13 @@ export function buildArena(): ArenaResult {
       CORNER_PLATFORM_SIZE,
       'x',
       cornerEnd === 'east',
-      { omitCurbSide: side }
+      { omitCurbSide: side, hollowThickness: openUnderCorner ? UPPER_THICKNESS : undefined }
     )
     // Statt Bord auf der Stegseite: Wand unter der Stegkante bis zur
-    // Unterkante, sonst käme man von unter dem Steg seitlich auf die Rampe
+    // Unterkante, sonst käme man von unter dem Steg seitlich auf die Rampe.
+    // Sie reicht nur über die Rampe, nicht über die Plattform: ist diese unten
+    // hohl (openUnderCorner), geht der Gang unter dem Steg dort in den Raum
+    // unter der Plattform über (L-Tunnel) und mündet auf der Hauptraum-Seite
     addBlock(
       (cornerRamp.minX + cornerRamp.maxX) / 2,
       edge + side * (RAILING_THICKNESS / 2),
@@ -661,7 +690,7 @@ export function buildArena(): ArenaResult {
   const rampNorthWest = buildUpperSide(-1, 'west', [26, 28])
   // Südsteg: Lücke im Geländer für die Verbindung vom Fenster (siehe unten)
   const WINDOW_LINK_X: [number, number] = [westEnd, westEnd + 2.5]
-  const rampSouthEast = buildUpperSide(1, 'east', [-16, -14], [WINDOW_LINK_X])
+  const rampSouthEast = buildUpperSide(1, 'east', [-16, -14], [WINDOW_LINK_X], true)
 
   // Verbindung vom Fenster in der Trennwand (West-Plattform, 2,8 m) zum
   // Südsteg: 2,5 m breit, Geländer an der Ostseite, Nordende offen (Absprung)
