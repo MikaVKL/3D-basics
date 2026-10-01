@@ -12,7 +12,7 @@ export type NumericSettingKey = 'sensitivity' | 'fov' | 'volume'
 export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1, minimap: true }
 
 export const SETTING_RANGES: Record<NumericSettingKey, { min: number; max: number; step: number }> = {
-  sensitivity: { min: 0.3, max: 3, step: 0.05 },
+  sensitivity: { min: 0.3, max: 8, step: 0.05 },
   fov: { min: 60, max: 110, step: 1 },
   volume: { min: 0, max: 1, step: 0.05 },
 }

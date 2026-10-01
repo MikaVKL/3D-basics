@@ -137,7 +137,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:roundstats` – Rundenende: Statistik-Liste (Stern, Teamfarben,
   Kills/Tode/Kopftreffer, eigene Zeile), Nachzügler sehen sie, nächste Runde
   startet bei 0
-- `npm run test:settings` – Einstellungen: Regler (Empfindlichkeit 0,3-3×,
+- `npm run test:settings` – Einstellungen: Regler (Empfindlichkeit 0,3-8×,
   Blickfeld 60-110°, Lautstärke 0-100 %) wirken sofort, Rutschen +7° auf das
   gewählte Blickfeld, Minimap an/aus (Haken, Taste N), gemerkt im Browser,
   kaputte Speicherwerte, Zurücksetzen

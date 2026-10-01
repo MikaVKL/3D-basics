@@ -54,6 +54,12 @@ try {
   const doubled = await yawPer100px(page)
   check('Empfindlichkeit 2× dreht doppelt so weit', Math.abs(doubled / base - 2) < 0.01, `${base.toFixed(3)} -> ${doubled.toFixed(3)} rad je 100 px`)
 
+  await setSlider(page, 'sensitivity', 8)
+  const maxed = await yawPer100px(page)
+  const maxLabel = await page.textContent('#setting-sensitivity-value')
+  check('Empfindlichkeit bis 8× (dreht 8-fach, Anzeige 8.00×)', Math.abs(maxed / base - 8) < 0.01 && maxLabel === '8.00×', `${maxed.toFixed(3)} rad je 100 px, ${maxLabel}`)
+  await setSlider(page, 'sensitivity', 2)
+
   await setSlider(page, 'fov', 100)
   await wait(400)
   const fov = await page.evaluate(() => __dusk.camera.fov)
@@ -130,7 +136,7 @@ try {
   await page.waitForFunction(() => typeof window.__dusk !== 'undefined')
   await page.click('#settings-button')
   const broken = await readUi(page)
-  check('Werte außerhalb/kaputt: begrenzt bzw. Standard', broken.sensitivity.value === 3 && broken.fov.value === 75 && broken.volume.value === 0, JSON.stringify(broken))
+  check('Werte außerhalb/kaputt: begrenzt bzw. Standard', broken.sensitivity.value === 8 && broken.fov.value === 75 && broken.volume.value === 0, JSON.stringify(broken))
   check('fehlende/kaputte Karten-Einstellung: an', (await mapState()).shown)
   await page.evaluate(() => localStorage.setItem('duskArena.settings', 'kein json'))
   await page.reload()
