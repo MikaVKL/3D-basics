@@ -123,6 +123,24 @@ export const SYNTHS = {
     tone(ctx, out, 'square', 230, 105, 0.14, 0.06, 0.34)
     tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.45) // fertig-"Ping"
   },
+  // Schwere Pistole: tiefer und wuchtiger als die normale
+  heavyShot: (ctx, out, noise) => {
+    tone(ctx, out, 'sawtooth', 900, 90, 0.35, 0.2)
+    noiseBurst(ctx, out, noise, 'lowpass', 1400, 0.5, 0.16)
+    tone(ctx, out, 'sine', 110, 40, 0.45, 0.2)
+    noiseBurst(ctx, out, noise, 'highpass', 3000, 0.15, 0.04)
+  },
+  heavyReloadOut: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.4, 0.035)
+    tone(ctx, out, 'square', 320, 130, 0.13, 0.1, 0.03)
+    noiseBurst(ctx, out, noise, 'lowpass', 420, 0.45, 0.1, 0.09)
+  },
+  heavyReloadIn: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.5, 0.08)
+    tone(ctx, out, 'square', 210, 100, 0.12, 0.07)
+    noiseBurst(ctx, out, noise, 'bandpass', 2600, 0.5, 0.03, 0.16) // Schlitten
+    tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.22) // fertig-"Ping"
+  },
   // Nachladen: Energiezelle löst sich (Anfang) und rastet wieder ein (Ende);
   // zwei getrennte Töne, damit sie zur Nachladezeit der Waffe passen
   reloadOut: (ctx, out, noise) => {

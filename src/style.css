@@ -281,6 +281,12 @@ body {
     min-width: 0;
     box-sizing: border-box;
   }
+
+  /* Mit vielen Waffen passt die Leiste nicht in 160 px: nur die aktive zeigen
+     (gewechselt wird per Button) */
+  .weapon-slot:not(.active) {
+    display: none;
+  }
 }
 
 #weapon-slots {

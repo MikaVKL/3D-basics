@@ -108,6 +108,7 @@ export class WeaponView {
       rifle: this.buildRifle(body, accent),
       shotgun: this.buildShotgun(accent),
       sniper: this.buildSniper(accent),
+      heavyPistol: this.buildHeavyPistol(accent),
       knife: this.buildKnife(body, accent),
     }
     this.current = this.models.pistol
@@ -252,6 +253,31 @@ export class WeaponView {
     for (const x of [-0.035, 0.035]) part(group, FRAME, [0.01, 0.01, 0.16], [x, -0.03, -0.42])
     group.position.set(-0.02, -0.04, -0.08)
     return this.finishModel(group, -0.88, 1.5, false, 0.098)
+  }
+
+  // Schwere Pistole: breiter Schlitten mit Lüftungsschlitzen, dicke Mündung, massiver Griff
+  private buildHeavyPistol(accent: THREE.Material): Model {
+    const group = new THREE.Group()
+    part(group, METAL, [0.085, 0.09, 0.52], [0, 0.02, -0.1]) // Schlitten
+    for (const z of [-0.25, -0.29, -0.33]) part(group, GROOVE, [0.05, 0.012, 0.022], [0, 0.066, z]) // Schlitze oben
+    for (const z of [0.07, 0.095, 0.12, 0.145]) part(group, GROOVE, [0.089, 0.07, 0.01], [0, 0.02, z]) // Rillen hinten
+    part(group, FRAME, [0.045, 0.045, 0.06], [0, 0.015, -0.39]) // Laufmündung
+    part(group, accent, [0.054, 0.054, 0.012], [0, 0.015, -0.425]) // Mündungsring
+    part(group, FRAME, [0.07, 0.05, 0.36], [0, -0.045, -0.02]) // Rahmen
+    part(group, FRAME, [0.065, 0.035, 0.14], [0, -0.04, -0.22]) // Schiene vorn
+    part(group, GRIP, [0.062, 0.17, 0.085], [0, -0.14, 0.095], 0.25) // Griff
+    part(group, accent, [0.066, 0.012, 0.03], [0, -0.075, 0.12], 0.25) // Griffkante
+    part(group, accent, [0.089, 0.012, 0.3], [0, 0.035, -0.1]) // Leuchtstreifen
+    // Abzugsbügel, Abzug, Hahn
+    part(group, FRAME, [0.014, 0.05, 0.014], [0, -0.09, -0.08])
+    part(group, FRAME, [0.014, 0.014, 0.11], [0, -0.115, -0.03])
+    part(group, GROOVE, [0.012, 0.035, 0.014], [0, -0.08, 0.02])
+    part(group, FRAME, [0.02, 0.028, 0.03], [0, 0.05, 0.19])
+    // Visier: Korn vorn, Kimmenpfosten hinten (Oberkante y 0,085)
+    part(group, SIGHT_DOT, [0.016, 0.03, 0.02], [0, 0.07, -0.33])
+    part(group, METAL, [0.02, 0.03, 0.02], [-0.026, 0.07, 0.14])
+    part(group, METAL, [0.02, 0.03, 0.02], [0.026, 0.07, 0.14])
+    return this.finishModel(group, -0.44, 1.4, false, 0.085)
   }
 
   private buildKnife(body: THREE.Material, accent: THREE.Material): Model {

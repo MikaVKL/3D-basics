@@ -16,6 +16,7 @@ const IMPACT_MARKER_LIFETIME = 2 // Sekunden
 const TRACER_STYLES: Record<WeaponId, { lifetime: number; width: number; glow: number }> = {
   pistol: { lifetime: 0.2, width: 1.7, glow: 0.75 },
   rifle: { lifetime: 0.12, width: 0.6, glow: 0.35 },
+  heavyPistol: { lifetime: 0.25, width: 1.9, glow: 0.8 },
   sniper: { lifetime: 0.35, width: 1.3, glow: 0.7 },
   shotgun: { lifetime: 0.1, width: 0.45, glow: 0.3 }, // je Korn
   knife: { lifetime: 0.2, width: 1, glow: 0.5 }, // ungenutzt, Messer hat keinen Strahl

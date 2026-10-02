@@ -159,7 +159,7 @@ function fadeScreen() {
   void screenFade.offsetWidth // Animation neu starten
   screenFade.classList.add('active')
 }
-const SHOT_SOUNDS = { pistol: 'shot', rifle: 'rifleShot', shotgun: 'shotgunShot', sniper: 'sniperShot', knife: 'knife' } as const
+const SHOT_SOUNDS = { pistol: 'shot', rifle: 'rifleShot', shotgun: 'shotgunShot', sniper: 'sniperShot', heavyPistol: 'heavyShot', knife: 'knife' } as const
 const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#hitmarker')!,
   document.querySelector<HTMLDivElement>('#damage-indicators')!,
@@ -313,6 +313,7 @@ const RELOAD_SOUNDS = {
   rifle: ['rifleReloadOut', 'rifleReloadIn'],
   shotgun: ['shotgunReloadOut', 'shotgunReloadIn'],
   sniper: ['sniperReloadOut', 'sniperReloadIn'],
+  heavyPistol: ['heavyReloadOut', 'heavyReloadIn'],
   knife: ['reloadOut', 'reloadIn'],
 } as const
 weapon.onReload = () => sound.play(RELOAD_SOUNDS[weapon.current][0], 0.6)

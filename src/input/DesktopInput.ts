@@ -102,7 +102,8 @@ export class DesktopInput {
       case 'Digit2':
       case 'Digit3':
       case 'Digit4':
-      case 'Digit5': {
+      case 'Digit5':
+      case 'Digit6': {
         const slot = WEAPON_SLOTS[Number(code.slice(5)) - 1]
         if (pressed && slot) this.weapon.switchTo(slot)
         break
