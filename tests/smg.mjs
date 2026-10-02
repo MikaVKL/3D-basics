@@ -10,7 +10,7 @@ const browser = await launchBrowser()
 const errors = []
 try {
   const page = await openGame(browser, { online: false, errors })
-  await play(page)
+  await play(page, { secondary: 'smg' })
   await wait(500)
   await page.evaluate(() => {
     window.__sounds = []
@@ -20,7 +20,7 @@ try {
       play(name, volume)
     }
   })
-  await page.keyboard.press('Digit7')
+  await page.keyboard.press('Digit1')
   await wait(600)
   const hud = await page.evaluate(() => ({
     weapon: __dusk.weapon.current,
@@ -28,7 +28,7 @@ try {
     max: __dusk.weapon.getAmmoState().max,
     name: document.querySelector('#weapon-name')?.textContent,
   }))
-  check('Taste 7: Maschinenpistole, 25er-Magazin, Slot aktiv', hud.weapon === 'smg' && hud.slot === 'smg' && hud.max === 25, JSON.stringify(hud))
+  check('Auswahl: Maschinenpistole auf Taste 1, 25er-Magazin, Slot aktiv', hud.weapon === 'smg' && hud.slot === 'smg' && hud.max === 25, JSON.stringify(hud))
 
   // Feuerrate: Dauerfeuer über simulierte Zeit (Headless rendert zu langsam für echte Bilder)
   const burst = await page.evaluate(() => {
@@ -42,16 +42,8 @@ try {
     return { shots, spread: W.currentSpread }
   })
   check('Dauerfeuer: ~14 Schuss in 1 s', burst.shots >= 13 && burst.shots <= 15, String(burst.shots))
-  const rifleSpread = await page.evaluate(async () => {
-    const W = __dusk.weapon
-    W.switchTo('rifle')
-    W.switchRemaining = 0
-    W.setTrigger(true)
-    for (let i = 0; i < 60; i++) W.update(1 / 60)
-    W.setTrigger(false)
-    return W.currentSpread
-  })
-  check('Streuung nach 1 s Dauerfeuer: MP größer als Sturmgewehr, nicht über 0,06', burst.spread > rifleSpread && burst.spread <= 0.0601, `MP ${burst.spread.toFixed(3)} / Gewehr ${rifleSpread.toFixed(3)}`)
+  const rifleMax = await page.evaluate(async () => (await import('/3D-basics/src/shared/weapons.ts')).WEAPONS.rifle.maxSpread)
+  check('Streuung nach 1 s Dauerfeuer: MP über dem Maximum des Sturmgewehrs (0,035), höchstens 0,06', burst.spread > rifleMax && burst.spread <= 0.0601, `MP ${burst.spread.toFixed(3)}`)
 
   const speeds = await page.evaluate(() => {
     const P = __dusk.player
@@ -86,13 +78,13 @@ try {
   // Mehrspieler: Server rechnet 8 je Treffer, Ratenlimit greift
   const A = await openGame(browser, { name: 'Anna', errors })
   const B = await openGame(browser, { name: 'Ben', errors })
-  await play(A)
+  await play(A, { secondary: 'smg' })
   await play(B)
   await wait(3800)
   const vitals = () => B.evaluate(() => ({ ...__dusk.player.vitals }))
   await teleport(B, 0, 1.7, 5)
   await teleport(A, 0, 1.7, 12)
-  await A.keyboard.press('Digit7')
+  await A.keyboard.press('Digit1')
   await wait(800)
   const held = await B.evaluate((id) => __dusk.remotePlayers.players.get(id).avatar.heldWeapon, await A.evaluate(() => __dusk.network.localId))
   check('B sieht A mit der Maschinenpistole', held === 'smg', held)

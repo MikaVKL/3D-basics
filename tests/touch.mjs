@@ -2,7 +2,7 @@
 // Rutschen nur, solange der Finger drauf ist, danach steht man selbst auf.
 //
 //   node tests/touch.mjs
-import { startServers, launchBrowser, wait, createChecks, GAME_URL } from './lib.mjs'
+import { startServers, launchBrowser, wait, createChecks, GAME_URL, play } from './lib.mjs'
 
 const { check, finish } = createChecks()
 const servers = await startServers({ gameServer: false })
@@ -15,7 +15,7 @@ try {
   await page.goto(`${GAME_URL}?server=${encodeURIComponent('ws://localhost:1')}`)
   await page.waitForFunction(() => typeof window.__dusk !== 'undefined')
   check('Touch-Steuerung aktiv', await page.evaluate(() => !document.querySelector('#touch-controls').classList.contains('hidden')))
-  await page.tap('#overlay', { position: { x: 5, y: 5 } })
+  await play(page, undefined, { touch: true })
   await wait(300)
 
   // Finger auf dem Button halten / loslassen (echte Touch-Ereignisse per CDP)
@@ -157,9 +157,9 @@ try {
   await page.touchscreen.tap(menuBox.x + menuBox.width / 2, menuBox.y + menuBox.height / 2)
   await wait(300)
   check('Menü-Button öffnet das Menü', await page.evaluate(() => !document.querySelector('#overlay').classList.contains('hidden')))
-  await page.touchscreen.tap(300, 200)
+  await page.tap('#resume-button')
   await wait(300)
-  check('Tippen setzt das Spiel fort', await page.evaluate(() => document.querySelector('#overlay').classList.contains('hidden')))
+  check('Weiter-Button setzt das Spiel fort', await page.evaluate(() => document.querySelector('#overlay').classList.contains('hidden')))
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

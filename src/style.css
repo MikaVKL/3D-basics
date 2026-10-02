@@ -1187,6 +1187,145 @@ body {
   border-color: var(--c-neon);
 }
 
+/* Waffenauswahl: Karten je Slot, ausgewählte leuchten */
+#menu-loadout h2 {
+  margin: 0.2rem 0 0.4rem;
+}
+
+#menu-loadout h3 {
+  margin: 0.5rem 0 0.3rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #8a97ab;
+}
+
+.weapon-cards {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.weapon-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  width: 9.5rem;
+  padding: 0.5rem 0.4rem 0.6rem;
+  font: inherit;
+  color: var(--c-text);
+  background: rgba(16, 22, 31, 0.85);
+  border: 1px solid rgba(138, 151, 171, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.weapon-card:hover,
+.weapon-card:focus-visible {
+  border-color: var(--c-neon);
+  outline: none;
+}
+
+.weapon-card.selected {
+  border-color: var(--c-neon);
+  background: rgba(51, 230, 204, 0.16);
+  box-shadow: 0 0 12px rgba(51, 230, 204, 0.4);
+}
+
+.weapon-card strong {
+  font-size: 0.95rem;
+}
+
+.card-description {
+  min-height: 1.1em;
+  font-size: 0.72rem;
+  color: #aab4c4;
+}
+
+.card-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  margin-top: 0.2rem;
+}
+
+.card-bar {
+  height: 4px;
+  background: rgba(138, 151, 171, 0.25);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.card-bar i {
+  display: block;
+  height: 100%;
+  background: var(--c-neon);
+}
+
+#overlay-content #menu-loadout .loadout-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: #8a97ab;
+}
+
+.menu-buttons.row {
+  flex-direction: row;
+  width: 22rem;
+}
+
+.menu-buttons.row .menu-button {
+  flex: 1;
+}
+
+.menu-button.hidden {
+  display: none;
+}
+
+/* Niedrige Fenster (Laptop klein, Handy quer): Auswahl kompakter, ohne Titel und Beschreibung */
+@media (max-height: 640px) {
+  #overlay-content:has(#menu-loadout:not(.hidden)) h1 {
+    display: none;
+  }
+
+  #menu-loadout h2 {
+    font-size: 1.2rem;
+    margin: 0 0 0.2rem;
+  }
+
+  #menu-loadout h3 {
+    margin: 0.3rem 0 0.2rem;
+  }
+
+  .weapon-card {
+    width: 9rem;
+    gap: 0.1rem;
+    padding: 0.3rem 0.3rem 0.4rem;
+  }
+
+  .weapon-card strong {
+    font-size: 0.82rem;
+  }
+
+  .card-description {
+    display: none;
+  }
+
+  #overlay-content #menu-loadout .loadout-note {
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  #menu-loadout .menu-buttons.row {
+    margin: 0.5rem auto 0;
+  }
+
+  #menu-loadout .menu-button {
+    padding: 0.45rem 1rem;
+  }
+}
+
 /* Einstellungen: Beschriftung, Regler, Wert */
 .setting-row {
   display: grid;

@@ -1,7 +1,6 @@
 import type { Player } from '../player'
 import type { LookControl } from '../lookControl'
 import type { Weapon } from '../weapon'
-import { WEAPON_SLOTS } from '../shared/weapons'
 
 // Maus + Tastatur über die rohe Pointer-Lock-API; Umschauen läuft wie bei
 // Touch über lookControl.rotate()
@@ -100,12 +99,8 @@ export class DesktopInput {
         break
       case 'Digit1':
       case 'Digit2':
-      case 'Digit3':
-      case 'Digit4':
-      case 'Digit5':
-      case 'Digit6':
-      case 'Digit7': {
-        const slot = WEAPON_SLOTS[Number(code.slice(5)) - 1]
+      case 'Digit3': {
+        const slot = this.weapon.slots[Number(code.slice(5)) - 1]
         if (pressed && slot) this.weapon.switchTo(slot)
         break
       }

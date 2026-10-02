@@ -109,9 +109,24 @@ export async function openGame(browser, { online = true, name, errors = [] } = {
   return page
 }
 
-// Klick auf "Spielen" (in eine Ecke, nicht ins Namensfeld)
-export async function play(page) {
-  await page.click('#overlay', { position: { x: 5, y: 5 } })
+// "Starten" -> Waffenauswahl -> "Spielen" (oder im Pausenmenü "Weiter"). loadout = { primary, secondary }
+// wählt Karten an; ohne Angabe bleiben die Standardwaffen (Sturmgewehr + Pistole).
+export async function play(page, loadout, { touch = false } = {}) {
+  const click = (selector) => (touch ? page.tap(selector) : page.click(selector))
+  // Die Tests laufen oft in winzigen Fenstern (480x270): für die Auswahl kurz vergrößern
+  const original = page.viewportSize()
+  const needsResize = original && (original.width < 800 || original.height < 560)
+  if (needsResize) await page.setViewportSize({ width: 1280, height: 720 })
+  if (await page.locator('#start-button').isVisible()) {
+    await click('#start-button')
+    for (const id of [loadout?.primary, loadout?.secondary]) {
+      if (id) await click(`.weapon-card[data-weapon="${id}"]`)
+    }
+    await click('#loadout-play-button')
+  } else {
+    await click('#resume-button')
+  }
+  if (needsResize) await page.setViewportSize(original)
 }
 
 // Zielen + Schuss im selben Aufruf: LookControl setzt die Kamera bei jedem

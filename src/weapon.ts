@@ -4,7 +4,7 @@ import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
 import { TeamColor, type Team } from './team'
 import { HEADSHOT_MULTIPLIER } from './shared/gameRules'
-import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, isMelee, damageFactor, type WeaponId } from './shared/weapons'
+import { WEAPONS, ALL_WEAPONS, DEFAULT_LOADOUT, SWITCH_TIME, isMelee, damageFactor, loadoutSlots, type Loadout, type WeaponId } from './shared/weapons'
 
 // Hitscan aus der Bildschirmmitte, mehrere Waffen mit eigener Munition,
 // Nachladen, Wechsel, Dauerfeuer. Treffer laufen generisch über Damageable
@@ -44,7 +44,7 @@ export interface AmmoState {
 
 function fullMagazines(): Record<WeaponId, number> {
   const ammo = {} as Record<WeaponId, number>
-  for (const id of WEAPON_SLOTS) ammo[id] = WEAPONS[id].magazine
+  for (const id of ALL_WEAPONS) ammo[id] = WEAPONS[id].magazine
   return ammo
 }
 
@@ -109,8 +109,10 @@ export class Weapon {
   // Messerstich (getroffen oder nicht), für den Ton
   onSwing?: () => void
 
-  private weaponId: WeaponId = DEFAULT_WEAPON
-  private previousWeapon: WeaponId = WEAPON_SLOTS[1]
+  // Waffen auf den Tasten 1-3: Secondary, Primary, Messer
+  slots: WeaponId[] = loadoutSlots(DEFAULT_LOADOUT)
+  private weaponId: WeaponId = this.slots[0]
+  private previousWeapon: WeaponId = this.slots[1]
   private ammoByWeapon = fullMagazines()
   private reloadRemaining = 0
   private switchRemaining = 0
@@ -143,6 +145,7 @@ export class Weapon {
     this.scene = scene
     this.shootables = shootables
     this.view = new WeaponView(camera)
+    this.view.setWeapon(this.weaponId)
     this.shooterTeam = shooterTeam
     this.onKill = onKill
   }
@@ -164,7 +167,7 @@ export class Weapon {
   }
 
   switchTo(id: WeaponId) {
-    if (id === this.weaponId) return
+    if (id === this.weaponId || !this.slots.includes(id)) return
     this.previousWeapon = this.weaponId
     this.weaponId = id
     // Nachladen bricht ab (Munition bleibt wie sie war)
@@ -179,8 +182,8 @@ export class Weapon {
 
   // Mausrad: +1 = nächste Waffe
   cycle(direction: 1 | -1) {
-    const index = WEAPON_SLOTS.indexOf(this.weaponId)
-    this.switchTo(WEAPON_SLOTS[(index + direction + WEAPON_SLOTS.length) % WEAPON_SLOTS.length])
+    const index = this.slots.indexOf(this.weaponId)
+    this.switchTo(this.slots[(index + direction + this.slots.length) % this.slots.length])
   }
 
   switchToPrevious() {
@@ -188,10 +191,12 @@ export class Weapon {
   }
 
   // Nach dem Respawn: alles voll, Startwaffe in der Hand
-  resetLoadout() {
+  // loadout: gewählte Waffen, wirken ab diesem Leben (Beitritt/Respawn)
+  resetLoadout(loadout?: Loadout) {
+    if (loadout) this.slots = loadoutSlots(loadout)
     this.ammoByWeapon = fullMagazines()
-    this.switchTo(DEFAULT_WEAPON)
-    this.previousWeapon = WEAPON_SLOTS[1]
+    this.switchTo(this.slots[0])
+    this.previousWeapon = this.slots[1]
     this.reloadRemaining = 0
     this.switchRemaining = 0
     // Kein Wechsel-Ablauf beim Respawn: Modell sofort, ohne Ton

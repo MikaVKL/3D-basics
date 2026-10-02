@@ -24,7 +24,8 @@ import { HitFeedback } from './hitFeedback'
 import { ScoreTable } from './scoreTable'
 import { SoundFx } from './sound'
 import { Effects, CameraShake, SlideView } from './effects'
-import { WEAPONS, WEAPON_SLOTS, type WeaponId } from './shared/weapons'
+import { WEAPONS, type WeaponId } from './shared/weapons'
+import { LoadoutScreen } from './loadoutScreen'
 import { weaponIcon } from './weaponIcons'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
@@ -400,18 +401,69 @@ document.addEventListener('visibilitychange', () => {
   }
 })
 
-// Hauptmenü <-> Einstellungen; Klick auf die Fläche daneben setzt nur das
-// Hauptmenü fort, nicht aus den Einstellungen heraus
+// Hauptmenü, Einstellungen und Waffenauswahl; Klick auf die Fläche daneben setzt nur
+// das Hauptmenü fort (nach dem ersten Start), nicht aus den Einstellungen/der Auswahl heraus
 let activate = () => setActive(true)
 
+const menuLoadout = document.querySelector<HTMLDivElement>('#menu-loadout')!
+const startButton = document.querySelector<HTMLButtonElement>('#start-button')!
+const resumeButton = document.querySelector<HTMLButtonElement>('#resume-button')!
+const loadoutOpenButton = document.querySelector<HTMLButtonElement>('#loadout-open-button')!
+const loadoutScreen = new LoadoutScreen(
+  document.querySelector<HTMLDivElement>('#loadout-primary')!,
+  document.querySelector<HTMLDivElement>('#loadout-secondary')!
+)
+// Erster "Spielen"-Klick hat das Spiel gestartet: ab dann gibt es "Weiter" statt "Starten"
+let started = false
+
+function showScreen(screen: 'main' | 'settings' | 'loadout') {
+  menuMain.classList.toggle('hidden', screen !== 'main')
+  menuSettings.classList.toggle('hidden', screen !== 'settings')
+  menuLoadout.classList.toggle('hidden', screen !== 'loadout')
+  startButton.classList.toggle('hidden', started)
+  resumeButton.classList.toggle('hidden', !started)
+  loadoutOpenButton.classList.toggle('hidden', !started)
+}
+
 function showSettings(show: boolean) {
-  menuMain.classList.toggle('hidden', show)
-  menuSettings.classList.toggle('hidden', !show)
+  showScreen(show ? 'settings' : 'main')
+}
+
+// Neues Leben (erster Start, Beitritt, Respawn): gewählte Waffen, volle Magazine, Secondary in der Hand
+function startLife() {
+  weapon.resetLoadout(loadoutScreen.loadout)
+  player.weapon = weapon.current
+  buildWeaponSlots()
 }
 
 function activateFromOverlay() {
-  if (!menuMain.classList.contains('hidden')) activate()
+  if (started && !menuMain.classList.contains('hidden')) activate()
 }
+
+startButton.addEventListener('click', (event) => {
+  event.stopPropagation()
+  showScreen('loadout')
+})
+loadoutOpenButton.addEventListener('click', (event) => {
+  event.stopPropagation()
+  showScreen('loadout')
+})
+document.querySelector('#loadout-back-button')!.addEventListener('click', (event) => {
+  event.stopPropagation()
+  showScreen('main')
+})
+document.querySelector('#loadout-play-button')!.addEventListener('click', (event) => {
+  event.stopPropagation()
+  if (!started) {
+    started = true
+    startLife()
+  }
+  activate()
+})
+resumeButton.addEventListener('click', (event) => {
+  event.stopPropagation()
+  activate()
+})
 
 document.querySelector('#settings-button')!.addEventListener('click', (event) => {
   event.stopPropagation()
@@ -632,18 +684,25 @@ function updateScoreboardHud() {
 }
 
 const weaponSlots = document.querySelector<HTMLDivElement>('#weapon-slots')!
-const slotElements = WEAPON_SLOTS.map((id, index) => {
-  const element = document.createElement('span')
-  element.className = 'weapon-slot'
-  element.dataset.weapon = id
-  const key = document.createElement('span')
-  key.className = 'slot-key'
-  key.textContent = String(index + 1)
-  element.append(key, weaponIcon(id, 0.75))
-  weaponSlots.appendChild(element)
-  return element
-})
+let slotElements: HTMLElement[] = []
+// Leiste nach den Tasten 1-3 (Primary, Secondary, Messer) neu aufbauen
+function buildWeaponSlots() {
+  weaponSlots.replaceChildren()
+  slotElements = weapon.slots.map((id, index) => {
+    const element = document.createElement('span')
+    element.className = 'weapon-slot'
+    element.dataset.weapon = id
+    const key = document.createElement('span')
+    key.className = 'slot-key'
+    key.textContent = String(index + 1)
+    element.append(key, weaponIcon(id, 0.75))
+    weaponSlots.appendChild(element)
+    return element
+  })
+  shownWeapon = null
+}
 let shownWeapon: WeaponId | null = null
+buildWeaponSlots()
 
 const crosshair = document.querySelector<HTMLDivElement>('#crosshair')!
 const CROSSHAIR_BASE_GAP = 4 // px
@@ -666,7 +725,7 @@ function updateAmmoHud() {
   const ammo = weapon.getAmmoState()
   if (shownWeapon !== ammo.weapon) {
     shownWeapon = ammo.weapon
-    WEAPON_SLOTS.forEach((id, index) => slotElements[index].classList.toggle('active', id === ammo.weapon))
+    weapon.slots.forEach((id, index) => slotElements[index].classList.toggle('active', id === ammo.weapon))
     weaponName.textContent = WEAPONS[ammo.weapon].label
     weaponCurrentIcon.replaceChildren(weaponIcon(ammo.weapon, 1.5))
   }
@@ -760,7 +819,7 @@ function animate() {
     updateOwnFootsteps()
   }
   // Respawn (online wie offline): volle Magazine, Startwaffe
-  if (player.isAlive && !wasAlive) weapon.resetLoadout()
+  if (player.isAlive && !wasAlive) startLife()
   if (!player.isAlive) weapon.cancelFire()
   wasAlive = player.isAlive
   weapon.update(deltaSeconds)

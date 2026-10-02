@@ -116,7 +116,9 @@
         <input id="name-input" type="text" maxlength="16" placeholder="Dein Name" autocomplete="off" spellcheck="false" />
         <p id="overlay-instruction">Klicken, um zu spielen</p>
         <div class="menu-buttons">
-          <button id="resume-button" class="menu-button primary" type="button">Weiter</button>
+          <button id="start-button" class="menu-button primary" type="button">Starten</button>
+          <button id="resume-button" class="menu-button primary hidden" type="button">Weiter</button>
+          <button id="loadout-open-button" class="menu-button hidden" type="button">Waffenauswahl</button>
           <button id="settings-button" class="menu-button" type="button">Einstellungen</button>
         </div>
         <p id="overlay-notice"></p>
@@ -124,6 +126,18 @@
           WASD: Bewegen &nbsp;·&nbsp; Maus: Umschauen &nbsp;·&nbsp; Klick: Schießen &nbsp;·&nbsp; R: Nachladen &nbsp;·&nbsp; 1/2/3, Mausrad, Q: Waffe &nbsp;·&nbsp;
           Leertaste: Springen &nbsp;·&nbsp; Strg/C: Ducken &nbsp;·&nbsp; Shift: Sprinten &nbsp;·&nbsp; Sprint + Ducken: Rutschen &nbsp;·&nbsp; Sprung bei Landung: Bunny-Hop &nbsp;·&nbsp; Tab: Punkte &nbsp;·&nbsp; M: Ton &nbsp;·&nbsp; N: Karte &nbsp;·&nbsp; ESC: Menü
         </p>
+        </div>
+        <div id="menu-loadout" class="hidden">
+          <h2>Waffenauswahl</h2>
+          <h3>Primary</h3>
+          <div id="loadout-primary" class="weapon-cards"></div>
+          <h3>Secondary</h3>
+          <div id="loadout-secondary" class="weapon-cards"></div>
+          <p class="loadout-note">Das Messer ist immer dabei. Neue Wahl gilt ab dem nächsten Spawn.</p>
+          <div class="menu-buttons row">
+            <button id="loadout-back-button" class="menu-button" type="button">Zurück</button>
+            <button id="loadout-play-button" class="menu-button primary" type="button">Spielen</button>
+          </div>
         </div>
         <div id="menu-settings" class="hidden">
           <h2>Einstellungen</h2>

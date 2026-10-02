@@ -72,10 +72,10 @@ export const SYNTHS = {
   },
   // Shotgun: tiefer Knall mit langem Rauschen, kurz danach der Pumpgriff
   shotgunShot: (ctx, out, noise) => {
-    noiseBurst(ctx, out, noise, 'lowpass', 1600, 0.9, 0.28)
-    noiseBurst(ctx, out, noise, 'bandpass', 700, 0.5, 0.18)
-    tone(ctx, out, 'sawtooth', 320, 50, 0.45, 0.22)
-    tone(ctx, out, 'sine', 90, 35, 0.6, 0.3)
+    noiseBurst(ctx, out, noise, 'lowpass', 1600, 0.6, 0.28)
+    noiseBurst(ctx, out, noise, 'bandpass', 700, 0.35, 0.18)
+    tone(ctx, out, 'sawtooth', 320, 50, 0.3, 0.22)
+    tone(ctx, out, 'sine', 90, 35, 0.4, 0.3)
   },
   shotgunPump: (ctx, out, noise) => {
     noiseBurst(ctx, out, noise, 'bandpass', 1500, 0.5, 0.04)

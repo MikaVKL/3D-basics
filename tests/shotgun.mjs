@@ -11,7 +11,7 @@ const errors = []
 try {
   // --- Einzelspieler: Dummy bei (3, 0.8, -6) ---
   const page = await openGame(browser, { online: false, errors })
-  await play(page)
+  await play(page, { primary: 'shotgun' })
   await wait(500)
 
   const factors = await page.evaluate(async () => {
@@ -21,14 +21,14 @@ try {
   })
   check('Schadensfaktor: voll bis 5 m, Mitte 0,575, ab 16 m 0,15', factors.join() === '1,1,0.575,0.15,0.15', factors.join())
 
-  await page.keyboard.press('Digit4')
+  await page.keyboard.press('Digit2')
   await wait(500)
   const hud = await page.evaluate(() => ({
     weapon: __dusk.weapon.current,
     slot: document.querySelector('.weapon-slot.active')?.dataset.weapon,
     ammo: __dusk.weapon.getAmmoState().max,
   }))
-  check('Taste 4: Shotgun, 6er-Magazin, Slot aktiv', hud.weapon === 'shotgun' && hud.slot === 'shotgun' && hud.ammo === 6, JSON.stringify(hud))
+  check('Auswahl: Shotgun auf Taste 2, 6er-Magazin, Slot aktiv', hud.weapon === 'shotgun' && hud.slot === 'shotgun' && hud.ammo === 6, JSON.stringify(hud))
 
   await page.evaluate(() => {
     window.__dmg = []
@@ -81,7 +81,7 @@ try {
   // --- Mehrspieler: Server rechnet nach ---
   const A = await openGame(browser, { name: 'Anna', errors })
   const B = await openGame(browser, { name: 'Ben', errors })
-  await play(A)
+  await play(A, { primary: 'shotgun' })
   await play(B)
   await wait(3800)
   const vitals = () => B.evaluate(() => ({ ...__dusk.player.vitals }))
@@ -95,7 +95,7 @@ try {
   })
   await teleport(B, 0, 1.7, 5)
   await teleport(A, 0, 1.7, 8)
-  await A.keyboard.press('Digit4')
+  await A.keyboard.press('Digit2')
   await wait(800)
   const held = await B.evaluate((id) => __dusk.remotePlayers.players.get(id).avatar.heldWeapon, await A.evaluate(() => __dusk.network.localId))
   check('B sieht A mit Shotgun', held === 'shotgun', held)

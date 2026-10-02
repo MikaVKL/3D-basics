@@ -2,7 +2,7 @@
 // Lautstärke wirken sofort, werden gemerkt und vertragen kaputte Speicherwerte.
 //
 //   node tests/settings.mjs
-import { startServers, launchBrowser, openGame, wait, createChecks } from './lib.mjs'
+import { startServers, launchBrowser, openGame, play, wait, createChecks } from './lib.mjs'
 
 const { check, finish } = createChecks()
 const servers = await startServers({ gameServer: false })
@@ -69,7 +69,7 @@ try {
   await setSlider(page, 'volume', 0.5)
   await setSlider(page, 'music', 0.25)
   await page.click('#settings-back-button')
-  await page.click('#resume-button')
+  await play(page)
   await wait(400)
   const gain = () => page.evaluate(() => __dusk.sound.master.gain.value)
   check('Lautstärke 50 % halbiert die Gesamtlautstärke', Math.abs((await gain()) - 0.3) < 0.001, `${await gain()}`)

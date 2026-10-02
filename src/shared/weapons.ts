@@ -139,9 +139,29 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
 }
 
 // Reihenfolge = Tasten 1, 2, ...
-// Vorübergehend alle Waffen auf Tasten 1.. (bis die Auswahl vor dem Beitritt kommt)
-export const WEAPON_SLOTS: WeaponId[] = ['pistol', 'rifle', 'knife', 'shotgun', 'sniper', 'heavyPistol', 'smg']
-export const DEFAULT_WEAPON: WeaponId = 'pistol'
+// Auswahl vor dem Beitritt: eine Primary- und eine Secondary-Waffe, das Messer ist immer dabei.
+// Tasten wie bisher: 1 = Secondary (Pistole), 2 = Primary (Sturmgewehr), 3 = Messer.
+export interface Loadout {
+  primary: WeaponId
+  secondary: WeaponId
+}
+export const PRIMARY_WEAPONS: WeaponId[] = ['rifle', 'shotgun', 'sniper']
+export const SECONDARY_WEAPONS: WeaponId[] = ['pistol', 'heavyPistol', 'smg']
+export const DEFAULT_LOADOUT: Loadout = { primary: 'rifle', secondary: 'pistol' }
+// Waffe nach dem Spawn: die Secondary (bisher immer die Pistole)
+export const DEFAULT_WEAPON: WeaponId = DEFAULT_LOADOUT.secondary
+
+export function isLoadout(value: unknown): value is Loadout {
+  if (typeof value !== 'object' || value === null) return false
+  const v = value as Record<string, unknown>
+  return PRIMARY_WEAPONS.includes(v.primary as WeaponId) && SECONDARY_WEAPONS.includes(v.secondary as WeaponId)
+}
+
+export function loadoutSlots(loadout: Loadout): WeaponId[] {
+  return [loadout.secondary, loadout.primary, 'knife']
+}
+
+export const ALL_WEAPONS = Object.keys(WEAPONS) as WeaponId[]
 export const SWITCH_TIME = 0.3 // Sekunden
 
 export function isMelee(id: WeaponId): boolean {

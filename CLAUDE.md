@@ -253,8 +253,13 @@ Stolperfallen bei Headless-Tests:
   (fertig, Taste 6: 45, Kopf 90, 0,5 s, 7er, 1,8 s Nachladen, Tempo 97 %), Maschinenpistole
   (fertig, Taste 7: 8, 14/s auto, 25er, 1,6 s Nachladen, Reichweite 60 m, Tempo 105 %,
   Streuung 0,009/Hitze bis 0,06);
-  danach erst Waffenauswahl (Primary/Secondary/Messer) mit Bildschirm vor Beitritt und
-  nach dem Tod. Bis dahin liegen alle Waffen auf Tasten 1..n (`WEAPON_SLOTS`).
+  **Waffenauswahl** (`src/loadoutScreen.ts`, Nutzerwunsch): Hauptmenü "Starten" -> Fenster
+  mit Karten Primary (Sturmgewehr/Shotgun/Sniper) und Secondary (Pistole/Schwere
+  Pistole/MP), Messer fest; "Zurück" ins Hauptmenü, "Spielen" startet. Ohne Wahl gilt
+  Sturmgewehr + Pistole. Tasten wie bisher: 1 = Secondary, 2 = Primary, 3 = Messer; nach
+  dem Spawn hält man die Secondary (Pistole). Wahl im Browser gemerkt (`duskArena.loadout`),
+  im Pausenmenü über "Waffenauswahl" änderbar, gilt ab dem nächsten Spawn
+  (`startLife()` in main.ts). Tests wählen per `play(page, { primary, secondary })`.
   Neue Modelle mindestens auf dem Niveau von Pistole/Sturmgewehr (`gunMaterial`).
 - Bewegung (`player.ts`): horizontale Geschwindigkeit mit Schwung. Bis zum
   normalen Tempo der Haltung folgt man der Eingabe sofort (wie früher),

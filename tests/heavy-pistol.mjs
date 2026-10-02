@@ -10,7 +10,7 @@ const browser = await launchBrowser()
 const errors = []
 try {
   const page = await openGame(browser, { online: false, errors })
-  await play(page)
+  await play(page, { secondary: 'heavyPistol' })
   await wait(500)
   await page.evaluate(() => {
     window.__dmg = []
@@ -22,7 +22,7 @@ try {
       play(name, volume)
     }
   })
-  await page.keyboard.press('Digit6')
+  await page.keyboard.press('Digit1')
   await wait(600)
   const hud = await page.evaluate(() => ({
     weapon: __dusk.weapon.current,
@@ -30,7 +30,7 @@ try {
     max: __dusk.weapon.getAmmoState().max,
     name: document.querySelector('#weapon-name')?.textContent,
   }))
-  check('Taste 6: Schwere Pistole, 7er-Magazin, Slot aktiv', hud.weapon === 'heavyPistol' && hud.slot === 'heavyPistol' && hud.max === 7, JSON.stringify(hud))
+  check('Auswahl: Schwere Pistole auf Taste 1, 7er-Magazin, Slot aktiv', hud.weapon === 'heavyPistol' && hud.slot === 'heavyPistol' && hud.max === 7, JSON.stringify(hud))
 
   await teleport(page, 3, 1.7, -3)
   await wait(200)
@@ -61,13 +61,13 @@ try {
   // Mehrspieler: Server rechnet 45 / 90
   const A = await openGame(browser, { name: 'Anna', errors })
   const B = await openGame(browser, { name: 'Ben', errors })
-  await play(A)
+  await play(A, { secondary: 'heavyPistol' })
   await play(B)
   await wait(3800)
   const vitals = () => B.evaluate(() => ({ ...__dusk.player.vitals, alive: __dusk.player.isAlive }))
   await teleport(B, 0, 1.7, 5)
   await teleport(A, 0, 1.7, 12)
-  await A.keyboard.press('Digit6')
+  await A.keyboard.press('Digit1')
   await wait(800)
   const held = await B.evaluate((id) => __dusk.remotePlayers.players.get(id).avatar.heldWeapon, await A.evaluate(() => __dusk.network.localId))
   check('B sieht A mit der schweren Pistole', held === 'heavyPistol', held)

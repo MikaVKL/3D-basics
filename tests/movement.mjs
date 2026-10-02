@@ -11,6 +11,7 @@ try {
   const page = await openGame(browser, { online: false })
   const r = await page.evaluate(() => {
     const P = __dusk.player
+    P.weapon = 'pistol' // Tempo-Messungen mit 100 % (Startwaffe ist jetzt das Sturmgewehr)
     const cam = __dusk.camera
     const DT = 1 / 60
     // Freie Bahn für Rutschen/Bunny-Hop: ab z=4 gut 16 m Richtung Süden ohne Hindernis

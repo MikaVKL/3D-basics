@@ -22,7 +22,7 @@ try {
       await context.close()
       continue
     }
-    if (touch) await page.tap('#overlay', { position: { x: 5, y: 5 } }); else await play(page)
+    await play(page, undefined, { touch })
     await wait(2500)
     const result = await page.evaluate(() => {
       const style = document.createElement('style')
