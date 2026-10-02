@@ -31,6 +31,11 @@ const METAL = gunMaterial(0x7a8ba2, 0.4, 0.5, 0.3)
 const FRAME = gunMaterial(0x4c596b, 0.45, 0.5, 0.3)
 const GRIP = gunMaterial(0x3a4350, 0.85, 0.1, 0.4)
 const GROOVE = gunMaterial(0x1a2028, 0.6, 0.4, 0)
+for (const detail of [GROOVE, SIGHT_DOT]) {
+  detail.polygonOffset = true
+  detail.polygonOffsetFactor = -2
+  detail.polygonOffsetUnits = -2
+}
 
 interface Model {
   group: THREE.Group
@@ -103,6 +108,9 @@ export class WeaponView {
       emissiveIntensity: 0.8,
     })
     this.accent = accent
+    accent.polygonOffset = true
+    accent.polygonOffsetFactor = -2
+    accent.polygonOffsetUnits = -2
     this.models = {
       pistol: this.buildPistol(body, accent),
       rifle: this.buildRifle(body, accent),
@@ -133,11 +141,11 @@ export class WeaponView {
     part(group, accent, [0.04, 0.04, 0.012], [0, 0.015, -0.385]) // Mündungsring
     const frame = FRAME
     part(group, frame, [0.06, 0.04, 0.34], [0, -0.04, -0.01]) // Rahmen
-    part(group, frame, [0.055, 0.03, 0.12], [0, -0.035, -0.2]) // Rahmen vorn (Schiene)
+    part(group, frame, [0.055, 0.027, 0.12], [0, -0.0365, -0.2]) // Rahmen vorn (Schiene)
     part(group, grip, [0.056, 0.16, 0.075], [0, -0.13, 0.09], 0.25) // Griff
     // Abzugsbügel und Abzug
     part(group, frame, [0.012, 0.05, 0.012], [0, -0.085, -0.07])
-    part(group, frame, [0.012, 0.012, 0.1], [0, -0.108, -0.015])
+    part(group, frame, [0.01, 0.012, 0.1], [0, -0.108, -0.015])
     part(group, groove, [0.01, 0.03, 0.012], [0, -0.075, 0.02])
     // Rillen am hinteren Schlitten und Leuchtstreifen an den Seiten (statt Fleck oben)
     for (const z of [0.08, 0.105, 0.13]) part(group, groove, [0.074, 0.06, 0.01], [0, 0.0175, z])
@@ -166,12 +174,12 @@ export class WeaponView {
     part(group, GRIP, [0.05, 0.14, 0.06], [0, -0.1, 0.12], 0.3) // Griff
     // Abzugsbügel und Abzug
     part(group, FRAME, [0.012, 0.04, 0.012], [0, -0.085, 0.0])
-    part(group, FRAME, [0.012, 0.012, 0.1], [0, -0.103, 0.045])
+    part(group, FRAME, [0.01, 0.012, 0.1], [0, -0.103, 0.045])
     part(group, GROOVE, [0.01, 0.03, 0.012], [0, -0.07, 0.06])
     // Auswurföffnung, Spanngriff, Leuchtstreifen an den Seiten
     part(group, GROOVE, [0.082, 0.03, 0.07], [0, 0.03, 0.05])
     part(group, FRAME, [0.09, 0.016, 0.03], [0, 0.04, 0.17])
-    part(group, accent, [0.084, 0.01, 0.22], [0, 0.04, -0.14])
+    part(group, accent, [0.084, 0.01, 0.22], [0, 0.037, -0.14])
     // Schaft: Stützrohr, Schaftkappe
     part(group, METAL, [0.04, 0.04, 0.12], [0, 0.0, 0.26])
     part(group, FRAME, [0.06, 0.1, 0.18], [0, -0.01, 0.34])
@@ -196,12 +204,12 @@ export class WeaponView {
     part(group, GRIP, [0.066, 0.06, 0.2], [0, -0.02, -0.28]) // Pumpgriff
     for (const z of [-0.2, -0.24, -0.28, -0.32, -0.36]) part(group, GROOVE, [0.07, 0.064, 0.008], [0, -0.02, z])
     part(group, GROOVE, [0.082, 0.03, 0.08], [0, 0.025, 0.02]) // Auswurföffnung
-    part(group, accent, [0.084, 0.01, 0.16], [0, 0.04, -0.12]) // Leuchtstreifen
+    part(group, accent, [0.084, 0.01, 0.16], [0, 0.037, -0.12]) // Leuchtstreifen
     // Schrotpatronen in der Seitenwand (Leuchtkappen in Teamfarbe)
     for (const z of [-0.06, -0.015, 0.03, 0.075]) part(group, accent, [0.088, 0.02, 0.02], [0, -0.025, z])
     // Abzugsbügel, Abzug, Griff
     part(group, FRAME, [0.012, 0.04, 0.012], [0, -0.085, 0.0])
-    part(group, FRAME, [0.012, 0.012, 0.1], [0, -0.103, 0.045])
+    part(group, FRAME, [0.01, 0.012, 0.1], [0, -0.103, 0.045])
     part(group, GROOVE, [0.01, 0.03, 0.012], [0, -0.07, 0.06])
     part(group, GRIP, [0.05, 0.14, 0.06], [0, -0.1, 0.15], 0.3)
     // Schaft
@@ -238,12 +246,12 @@ export class WeaponView {
     // Repetiergriff seitlich
     part(group, FRAME, [0.045, 0.014, 0.014], [0.05, 0.02, 0.1])
     part(group, GROOVE, [0.022, 0.022, 0.022], [0.078, 0.02, 0.1])
-    part(group, accent, [0.074, 0.01, 0.2], [0, 0.04, -0.02]) // Leuchtstreifen
+    part(group, accent, [0.074, 0.01, 0.18], [0, 0.04, -0.02]) // Leuchtstreifen
     // Magazin, Abzugsbügel, Abzug, Pistolengriff
     part(group, GRIP, [0.045, 0.1, 0.07], [0, -0.09, 0.03])
     part(group, accent, [0.047, 0.012, 0.05], [0, -0.14, 0.03])
     part(group, FRAME, [0.012, 0.04, 0.012], [0, -0.085, 0.1])
-    part(group, FRAME, [0.012, 0.012, 0.1], [0, -0.103, 0.145])
+    part(group, FRAME, [0.01, 0.012, 0.1], [0, -0.103, 0.145])
     part(group, GROOVE, [0.01, 0.03, 0.012], [0, -0.07, 0.16])
     part(group, GRIP, [0.05, 0.13, 0.06], [0, -0.1, 0.24], 0.3)
     // Schaft mit Wangenauflage und Schaftkappe
@@ -264,14 +272,14 @@ export class WeaponView {
     for (const z of [0.07, 0.095, 0.12, 0.145]) part(group, GROOVE, [0.089, 0.07, 0.01], [0, 0.02, z]) // Rillen hinten
     part(group, FRAME, [0.045, 0.045, 0.06], [0, 0.015, -0.39]) // Laufmündung
     part(group, accent, [0.054, 0.054, 0.012], [0, 0.015, -0.425]) // Mündungsring
-    part(group, FRAME, [0.07, 0.05, 0.36], [0, -0.045, -0.02]) // Rahmen
+    part(group, FRAME, [0.07, 0.05, 0.35], [0, -0.045, -0.025]) // Rahmen
     part(group, FRAME, [0.065, 0.035, 0.14], [0, -0.04, -0.22]) // Schiene vorn
     part(group, GRIP, [0.062, 0.17, 0.085], [0, -0.14, 0.095], 0.25) // Griff
     part(group, accent, [0.066, 0.012, 0.03], [0, -0.075, 0.12], 0.25) // Griffkante
     part(group, accent, [0.089, 0.012, 0.3], [0, 0.035, -0.1]) // Leuchtstreifen
     // Abzugsbügel, Abzug, Hahn
     part(group, FRAME, [0.014, 0.05, 0.014], [0, -0.09, -0.08])
-    part(group, FRAME, [0.014, 0.014, 0.11], [0, -0.115, -0.03])
+    part(group, FRAME, [0.012, 0.014, 0.11], [0, -0.115, -0.03])
     part(group, GROOVE, [0.012, 0.035, 0.014], [0, -0.08, 0.02])
     part(group, FRAME, [0.02, 0.028, 0.03], [0, 0.05, 0.19])
     // Visier: Korn vorn, Kimmenpfosten hinten (Oberkante y 0,085)
@@ -285,7 +293,7 @@ export class WeaponView {
   private buildSmg(accent: THREE.Material): Model {
     const group = new THREE.Group()
     part(group, METAL, [0.07, 0.08, 0.34], [0, 0.01, 0.0]) // Gehäuse
-    part(group, FRAME, [0.06, 0.04, 0.3], [0, -0.04, 0.02]) // unteres Gehäuse
+    part(group, FRAME, [0.06, 0.04, 0.29], [0, -0.04, 0.015]) // unteres Gehäuse
     part(group, FRAME, [0.065, 0.065, 0.2], [0, 0.01, -0.27]) // Lochmantel
     for (const z of [-0.2, -0.24, -0.28, -0.32]) part(group, GROOVE, [0.069, 0.03, 0.02], [0, 0.015, z]) // Lüftungslöcher
     part(group, METAL, [0.04, 0.04, 0.12], [0, 0.012, -0.43]) // Schalldämpfer
@@ -294,10 +302,10 @@ export class WeaponView {
     part(group, accent, [0.042, 0.012, 0.04], [0, -0.255, -0.05], 0.1) // Magazinkante
     part(group, GRIP, [0.05, 0.13, 0.06], [0, -0.1, 0.1], 0.3) // Griff
     part(group, GROOVE, [0.074, 0.03, 0.06], [0, 0.03, 0.03]) // Auswurföffnung
-    part(group, accent, [0.074, 0.01, 0.18], [0, 0.035, -0.07]) // Leuchtstreifen
+    part(group, accent, [0.078, 0.01, 0.18], [0, 0.035, -0.07]) // Leuchtstreifen
     // Abzugsbügel und Abzug
     part(group, FRAME, [0.012, 0.04, 0.012], [0, -0.085, -0.02])
-    part(group, FRAME, [0.012, 0.012, 0.09], [0, -0.103, 0.02])
+    part(group, FRAME, [0.01, 0.012, 0.09], [0, -0.103, 0.02])
     part(group, GROOVE, [0.01, 0.03, 0.012], [0, -0.07, 0.05])
     // Schulterstütze aus Draht mit Schaftkappe
     for (const x of [-0.03, 0.03]) part(group, FRAME, [0.012, 0.012, 0.12], [x, 0.0, 0.23])
@@ -323,7 +331,7 @@ export class WeaponView {
     part(group, blade, [0.012, 0.05, 0.07], [0, 0.017, -0.275])
     part(group, blade, [0.012, 0.03, 0.05], [0, 0.027, -0.335]) // Spitze
     part(group, accent, [0.014, 0.01, 0.2], [0, 0.015, -0.17]) // Leuchtrille
-    part(group, GROOVE, [0.014, 0.008, 0.2], [0, -0.0175, -0.16]) // Schneide
+    part(group, GROOVE, [0.014, 0.008, 0.2], [0, -0.0175, -0.165]) // Schneide
     // Flach zur Kamera gekippt, sonst sieht man nur die Klingenkante
     group.position.set(-0.03, -0.02, -0.12)
     group.rotation.set(0.3, 0.35, -1.1)
