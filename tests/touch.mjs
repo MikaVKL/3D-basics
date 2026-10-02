@@ -153,7 +153,7 @@ try {
 
   // Menü-Button oben links: Tippen öffnet das Menü, Tippen daneben setzt fort
   const menuBox = await page.locator('#menu-button').boundingBox()
-  check('Menü-Button oben links', menuBox.x < 40 && menuBox.y < 40, `${menuBox.x},${menuBox.y}`)
+  check('Menü-Button oben links, rechts neben dem Waffenfeld', menuBox.x > 100 && menuBox.x < 260 && menuBox.y < 40, `${menuBox.x},${menuBox.y}`)
   await page.touchscreen.tap(menuBox.x + menuBox.width / 2, menuBox.y + menuBox.height / 2)
   await wait(300)
   check('Menü-Button öffnet das Menü', await page.evaluate(() => !document.querySelector('#overlay').classList.contains('hidden')))
