@@ -246,8 +246,10 @@ body {
     top: var(--edge-top);
     bottom: auto;
     right: auto;
-    left: calc(var(--edge-left) + 48px); /* neben dem Menü-Button */
-    min-width: 120px;
+    left: var(--edge-left);
+    width: 160px; /* fest, damit der Menü-Button rechts daneben sitzt */
+    min-width: 0;
+    box-sizing: border-box;
   }
 }
 
@@ -1219,7 +1221,7 @@ body {
 #menu-button {
   position: absolute;
   top: var(--edge-top);
-  left: var(--edge-left);
+  left: calc(var(--edge-left) + 160px + 6px); /* rechts neben dem Waffenfeld */
   width: 44px;
   height: 44px;
   padding: 0;

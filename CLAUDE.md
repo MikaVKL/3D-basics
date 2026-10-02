@@ -191,8 +191,8 @@ Stolperfallen bei Headless-Tests:
   Trick-Weg, Öffnung 1,4 m); stehend passt man nicht durch.
 - Rampe B (2,8 m) liegt bündig an der Trennwand (kein Bord auf der Wandseite).
 - **Menü-Button (Touch)**: Zahnrad oben links (`#menu-button`, in
-  `#touch-controls`), öffnet das Pausenmenü (Touch hat kein ESC); das Waffenfeld
-  sitzt auf Touch daneben. Am Rechner nicht sichtbar.
+  `#touch-controls`), öffnet das Pausenmenü (Touch hat kein ESC); sitzt rechts neben dem Waffenfeld
+  (oben links, fest 160 px breit). Am Rechner nicht sichtbar.
 - **Eigene Waffe in Teamfarbe**: Leuchtteile der Ego-Waffe (`WeaponView.setTeamColor`) folgen `weapon.shooterTeam` (Rot/Blau, auch bei Teamwechsel) - gegen Verwechslung mit dem Gegner.
 - Ducken wird überall gehalten, auch auf Touch (Nutzerwunsch, kein Umschalter):
   Rutschen nur, solange gehalten.
