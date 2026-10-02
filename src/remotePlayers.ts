@@ -36,7 +36,7 @@ export class RemotePlayers {
   private readonly shootables: THREE.Object3D[]
   private readonly onHit: (id: PlayerId, headshot: boolean) => void
   // Schritt eines Gegners (für räumliche Schrittgeräusche)
-  onFootstep?: (position: THREE.Vector3) => void
+  onFootstep?: (position: THREE.Vector3, sprinting: boolean) => void
 
   // shootables: Liste der Waffe (Hüllen werden ein-/ausgetragen)
   constructor(
@@ -156,7 +156,7 @@ export class RemotePlayers {
     player.stepDistance += horizontal
     if (player.stepDistance >= STEP_DISTANCE) {
       player.stepDistance = 0
-      this.onFootstep?.(position.clone())
+      this.onFootstep?.(position.clone(), state.sprinting)
     }
   }
 

@@ -128,8 +128,29 @@ export const SYNTHS = {
     source.stop(t + 0.2)
   },
   jump: (ctx, out) => tone(ctx, out, 'sine', 220, 440, 0.12, 0.1),
-  land: (ctx, out, noise) => noiseBurst(ctx, out, noise, 'lowpass', 400, 0.9, 0.12),
-  step: (ctx, out, noise) => noiseBurst(ctx, out, noise, 'lowpass', 700, 0.7, 0.07),
+  land: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'lowpass', 400, 0.9, 0.12)
+    tone(ctx, out, 'sine', 110, 55, 0.5, 0.12)
+  },
+  landMetal: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.8, 0.1)
+    noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.5, 0.18)
+    tone(ctx, out, 'triangle', 420, 380, 0.25, 0.25)
+  },
+  // Schritte: jedes Mal leicht anders (Tonhöhe, Länge, Anschlag), sonst klingt
+  // es wie eine Maschine. Boden dumpf, Steg/Brücke (obere Ebene) hohl-metallisch.
+  step: (ctx, out, noise) => {
+    const k = 0.85 + Math.random() * 0.3
+    noiseBurst(ctx, out, noise, 'lowpass', 600 * k, 0.7, 0.06 + Math.random() * 0.03)
+    noiseBurst(ctx, out, noise, 'highpass', 3000, 0.15, 0.02)
+    tone(ctx, out, 'sine', 90 * k, 60, 0.25, 0.06)
+  },
+  stepMetal: (ctx, out, noise) => {
+    const k = 0.9 + Math.random() * 0.25
+    noiseBurst(ctx, out, noise, 'bandpass', 1800 * k, 0.45, 0.05)
+    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.35, 0.05)
+    tone(ctx, out, 'triangle', 330 * k, 300 * k, 0.12, 0.16)
+  },
   // Rutschen: abfallendes Schleifen über den Boden
   slide: (ctx, out, noise) => {
     const source = ctx.createBufferSource()

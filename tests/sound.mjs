@@ -125,6 +125,24 @@ try {
   const steps = (await takeSounds(page)).filter((s) => s === 'step').length
   check('Schritte beim Laufen', steps >= 2, `${steps} Schritte`)
 
+  // Obere Ebene (Steg): hohler Metallklang statt Bodenschritt, auch beim Landen
+  await teleport(page, 12, 2.8 + 1.7, -19)
+  await takeSounds(page)
+  await page.evaluate(() => {
+    __dusk.camera.rotation.set(0, -Math.PI / 2, 0, 'YXZ') // Blick nach Osten, den Steg entlang
+    __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
+    __dusk.player.setMoveInput(0, 1)
+  })
+  await wait(1500)
+  await page.evaluate(() => __dusk.player.setMoveInput(0, 0))
+  const upperSounds = await takeSounds(page)
+  const metalSteps = upperSounds.filter((s) => s === 'stepMetal').length
+  check('Steg: Metallschritte', metalSteps >= 1 && !upperSounds.includes('step'), `${metalSteps} Schritte, ${upperSounds.join()}`)
+  await teleport(page, 12, 2.8 + 1.7, -19)
+  await takeSounds(page)
+  await simulate('P.jump()')
+  check('Steg: Sprung + Metall-Landung', (await takeSounds(page)).join() === 'jump,landMetal')
+
   await teleport(page, 0, 1.7, 12)
   await page.evaluate(() => {
     __dusk.player.setCrouching(true)

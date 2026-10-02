@@ -309,12 +309,13 @@ weapon.onSwing = () => {
 weapon.onSwitch = (id) => {
   player.weapon = id
 }
-remotePlayers.onFootstep = (position) => sound.playAt('step', position, 0.8)
+remotePlayers.onFootstep = (position, sprinting) =>
+  sound.playAt(position.y >= UPPER_FLOOR_FROM ? 'stepMetal' : 'step', position, sprinting ? 1 : 0.7)
 player.onJump = () => sound.play('jump', 0.5)
 player.onSlide = () => sound.play('slide', 0.6)
 // Kleine Höhenwechsel (Rampe runter) sind keine Landung
 player.onLand = (fallSpeed) => {
-  if (fallSpeed > 3) sound.play('land', Math.min(1, fallSpeed / 10))
+  if (fallSpeed > 3) sound.play(player.feetHeight >= UPPER_FLOOR_FROM ? 'landMetal' : 'land', Math.min(1, fallSpeed / 10))
 }
 
 // M schaltet den Ton um (nicht beim Tippen im Namensfeld)
@@ -699,7 +700,7 @@ function updateOwnFootsteps() {
   stepDistance += moved
   if (stepDistance >= STEP_DISTANCE) {
     stepDistance = 0
-    sound.play('step', 0.5)
+    sound.play(player.feetHeight >= UPPER_FLOOR_FROM ? 'stepMetal' : 'step', player.getNetworkState().sprinting ? 0.65 : 0.45)
   }
 }
 
