@@ -43,6 +43,32 @@ try {
   const released = await read()
   check('Loslassen: Linsenbild weg, Waffe wieder da, Blickfeld 75°', released.scopeOpacity === 0 && released.gunVisible && Math.abs(released.fov - 75) < 0.3, JSON.stringify(released))
 
+  // Zielen ist träge: bis zum vollen Linsenbild dauert es > 0,25 s (Pistole ~0,11 s)
+  const times = await page.evaluate(() => {
+    const W = __dusk.weapon
+    const measure = (id) => {
+      W.switchTo(id)
+      W.switchRemaining = 0
+      W.setAiming(false)
+      for (let i = 0; i < 60; i++) W.update(1 / 60)
+      W.setAiming(true)
+      let frames = 0
+      while (W.aimAmount < 0.99 && frames < 120) {
+        W.update(1 / 60)
+        frames++
+      }
+      const t = frames / 60
+      W.setAiming(false)
+      for (let i = 0; i < 60; i++) W.update(1 / 60)
+      return t
+    }
+    const result = { sniper: measure('sniper'), pistol: measure('pistol') }
+    W.switchTo('sniper')
+    W.switchRemaining = 0
+    return result
+  })
+  check('Sniper zielt träge (0,3-0,5 s), Pistole schnell (< 0,15 s)', times.sniper >= 0.3 && times.sniper <= 0.5 && times.pistol < 0.15, JSON.stringify(times))
+
   // Treffer auf den Dummy (3, 0.8, -6) aus 5 m: 70
   await page.evaluate(() => {
     window.__dmg = []

@@ -28,7 +28,6 @@ const TRACER_MAX_DISTANCE = 60 // bei Schuss ins Leere
 // Die ersten Schüsse einer Salve treffen genau.
 const HEAT_DECAY = 4
 const PRECISE_SHOTS = 2
-const AIM_BLEND_SPEED = 9 // pro Sekunde (~0,11 s bis ganz gezoomt)
 const AIM_SPREAD_REDUCTION = 0.5 // beim Zielen halbe Streuung
 // Dauerfeuer holt verpasste Schüsse nach (sonst hinge die Feuerrate an den
 // FPS), aber höchstens so viel Rückstand
@@ -261,7 +260,8 @@ export class Weapon {
     this.view.lowered = 1 - Math.abs(2 * switchProgress - 1)
     this.view.reload = this.reloadRemaining > 0 ? 1 - this.reloadRemaining / this.stats.reloadTime : 0
     this.view.slide = this.slideAmount
-    const aimStep = AIM_BLEND_SPEED * deltaSeconds
+    // Ein schnell, aus noch schneller (Waffe weg = sofort wieder Hüftsicht)
+    const aimStep = this.stats.aimSpeed * (this.isAiming ? 1 : 1.6) * deltaSeconds
     this.aimAmount += Math.min(aimStep, Math.max(-aimStep, (this.isAiming ? 1 : 0) - this.aimAmount))
     this.view.aim = this.aimAmount
     // Im Zielfernrohr zeigt das Linsenbild statt der Waffe (Overlay in main.ts)

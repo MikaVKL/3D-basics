@@ -254,7 +254,9 @@ Stolperfallen bei Headless-Tests:
   Reichweite 150 m), schwere Pistole
   (fertig, Taste 6: 45, Kopf 90, 0,5 s, 7er, 1,8 s Nachladen, Tempo 97 %), Maschinenpistole
   (fertig, Taste 7: 8, 14/s auto, 25er, 1,6 s Nachladen, Reichweite 60 m, Tempo 105 %,
-  Streuung 0,009/Hitze bis 0,06);
+  Streuung 0,009/Hitze bis 0,06). Zielgeschwindigkeit je Waffe `aimSpeed` (1/s): Sniper 3
+  (~0,33 s bis zum Linsenbild), Schwere Pistole 7, Sturmgewehr/Shotgun 8, Pistole/Messer 9,
+  MP 10; Abzielen 1,6x schneller;
   **Waffenauswahl** (`src/loadoutScreen.ts`, Nutzerwunsch): Hauptmenü "Starten" -> Fenster
   mit Karten Primary (Sturmgewehr/Shotgun/Sniper) und Secondary (Pistole/Schwere
   Pistole/MP), Messer fest; "Zurück" ins Hauptmenü, "Spielen" startet. Ohne Wahl gilt

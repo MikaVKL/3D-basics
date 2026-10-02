@@ -16,6 +16,8 @@ export interface WeaponStats {
   maxSpread: number
   // Zielen (rechte Maustaste): Faktor auf das Blickfeld, 1 = kein Zielen (Messer)
   aimZoom: number
+  // Zielen: Tempo des Ein-/Ausblendens (1/s; 9 = ~0,11 s, kleiner = träger)
+  aimSpeed: number
   // Schrot: Anzahl Körner je Schuss (damage gilt je Korn) und Kegelradius (rad)
   pellets: number
   pelletSpread: number
@@ -40,6 +42,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0,
     maxSpread: 0,
     aimZoom: 0.8,
+    aimSpeed: 9,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -55,6 +58,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0.006,
     maxSpread: 0.035,
     aimZoom: 0.65,
+    aimSpeed: 8,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -70,6 +74,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0,
     maxSpread: 0,
     aimZoom: 1,
+    aimSpeed: 9,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -85,6 +90,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0,
     maxSpread: 0,
     aimZoom: 0.85,
+    aimSpeed: 8,
     pellets: 8,
     pelletSpread: 0.07,
     falloff: { start: 5, end: 16, min: 0.15 },
@@ -101,6 +107,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0,
     maxSpread: 0,
     aimZoom: 0.25,
+    aimSpeed: 3,
     pellets: 1,
     pelletSpread: 0,
     scoped: true,
@@ -118,6 +125,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0,
     maxSpread: 0,
     aimZoom: 0.78,
+    aimSpeed: 7,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -133,6 +141,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0.009, // schneller viel Streuung als das Sturmgewehr
     maxSpread: 0.06,
     aimZoom: 0.85,
+    aimSpeed: 10,
     pellets: 1,
     pelletSpread: 0,
   },
