@@ -274,8 +274,8 @@ export class NetworkClient {
     this.ping = null
   }
 
-  sendHit(target: PlayerId, headshot: boolean) {
-    this.send({ t: 'hit', target, headshot })
+  sendHit(target: PlayerId, headshot: boolean, pellets?: { hit: number; head: number }) {
+    this.send(pellets ? { t: 'hit', target, headshot, pellets: pellets.hit, headPellets: pellets.head } : { t: 'hit', target, headshot })
   }
 
   sendShot(from: Vec3, to: Vec3, hit: boolean) {

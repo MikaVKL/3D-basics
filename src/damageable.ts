@@ -4,5 +4,6 @@ export interface Damageable {
   readonly isAlive: boolean
   // z.B. Spawn-Schutz
   readonly invulnerable?: boolean
-  takeDamage(amount: number, headshot: boolean): void
+  // pellets: bei Schrot Körner dieses Schusses, die getroffen haben (headPellets am Kopf)
+  takeDamage(amount: number, headshot: boolean, pellets?: { hit: number; head: number }): void
 }

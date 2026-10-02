@@ -29,7 +29,7 @@ import {
   regenerateShield,
   type Vitals,
 } from '../src/shared/gameRules.ts'
-import { WEAPONS, DEFAULT_WEAPON, isWeaponId } from '../src/shared/weapons.ts'
+import { WEAPONS, DEFAULT_WEAPON, isWeaponId, damageFactor } from '../src/shared/weapons.ts'
 import type { Team } from '../src/team.ts'
 
 // Läuft direkt als TypeScript (Node-Type-Stripping, kein Build-Schritt)
@@ -502,7 +502,7 @@ wss.on('connection', (socket) => {
       if (isFiniteNumber(message.time)) send(socket, { t: 'pong', time: message.time })
       if (isFiniteNumber(message.rtt)) client.ping = Math.round(Math.min(9999, Math.max(0, message.rtt)))
     } else if (message.t === 'hit') {
-      handleHit(client, message.target, message.headshot === true)
+      handleHit(client, message.target, message.headshot === true, message.pellets, message.headPellets)
     } else if (message.t === 'shot') {
       handleShot(client, message.from, message.to, message.hit)
     } else if (message.t === 'setName') {
@@ -546,7 +546,7 @@ setInterval(() => {
 // Der Schütze meldet Treffer (er sieht Gegner ~100ms verzögert, eine
 // Server-Berechnung würde echte Treffer ablehnen); geprüft wird nur, was
 // ohne Lag-Ausgleich sicher geht
-function handleHit(shooter: Client, targetId: unknown, headshot: boolean) {
+function handleHit(shooter: Client, targetId: unknown, headshotFlag: boolean, rawPellets?: unknown, rawHeadPellets?: unknown) {
   const target = typeof targetId === 'number' ? clients.get(targetId) : undefined
   if (!target || target === shooter) return
   if (!isAlive(shooter) || !isAlive(target)) return
@@ -560,13 +560,23 @@ function handleHit(shooter: Client, targetId: unknown, headshot: boolean) {
   const weapon = WEAPONS[shooter.state.weapon]
   const a = shooter.state.position
   const b = target.state.position
-  if (Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) > weapon.range + HIT_RANGE_TOLERANCE) return
+  const distance = Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
+  if (distance > weapon.range + HIT_RANGE_TOLERANCE) return
   if (!takeRateToken(shooter.hitBudget, weapon.fireInterval, now)) return
+  // Körner (Schrot): Zahl getroffener Körner und davon Kopftreffer, begrenzt auf die Waffe;
+  // ohne Angabe (Einzelschuss) 1 Korn, Kopf laut headshot-Flag
+  const pelletsHit = isFiniteNumber(rawPellets) ? Math.min(weapon.pellets, Math.max(1, Math.floor(rawPellets))) : 1
+  const headPellets = isFiniteNumber(rawHeadPellets)
+    ? Math.min(pelletsHit, Math.max(0, Math.floor(rawHeadPellets)))
+    : headshotFlag ? pelletsHit : 0
+  const headshot = headPellets > 0
   // Angreifen beendet den eigenen Spawn-Schutz (Messer schickt keinen "shot")
   shooter.protectedUntil = 0
   if (headshot) shooter.headshots += 1
 
-  const killed = applyDamage(target.vitals, weapon.damage * (headshot ? HEADSHOT_MULTIPLIER : 1))
+  // Schaden fällt mit der Entfernung (nur Schrot); zugunsten des Schützen ~0,5 m Körperradius abziehen
+  const perPellet = weapon.damage * damageFactor(weapon, Math.max(0, distance - 0.5))
+  const killed = applyDamage(target.vitals, perPellet * (pelletsHit - headPellets + headPellets * HEADSHOT_MULTIPLIER))
   send(target.socket, { t: 'hurt', by: shooter.id })
   if (killed) {
     target.respawnAt = now + RESPAWN_DELAY * 1000

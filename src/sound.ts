@@ -70,6 +70,32 @@ export const SYNTHS = {
     tone(ctx, out, 'square', 700, 120, 0.22, 0.09)
     noiseBurst(ctx, out, noise, 'bandpass', 1400, 0.35, 0.07)
   },
+  // Shotgun: tiefer Knall mit langem Rauschen, kurz danach der Pumpgriff
+  shotgunShot: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'lowpass', 1600, 0.9, 0.28)
+    noiseBurst(ctx, out, noise, 'bandpass', 700, 0.5, 0.18)
+    tone(ctx, out, 'sawtooth', 320, 50, 0.45, 0.22)
+    tone(ctx, out, 'sine', 90, 35, 0.6, 0.3)
+  },
+  shotgunPump: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 1500, 0.5, 0.04)
+    tone(ctx, out, 'square', 200, 100, 0.14, 0.06)
+    noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.55, 0.035, 0.2)
+    tone(ctx, out, 'square', 260, 130, 0.14, 0.05, 0.2)
+  },
+  // Schrotpatrone einschieben (Start des Nachladens) und Pumpgriff am Ende
+  shotgunReloadOut: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 2000, 0.4, 0.03)
+    tone(ctx, out, 'triangle', 500, 300, 0.12, 0.07, 0.04)
+    noiseBurst(ctx, out, noise, 'bandpass', 2800, 0.35, 0.03, 0.4)
+    noiseBurst(ctx, out, noise, 'bandpass', 2600, 0.35, 0.03, 0.8)
+  },
+  shotgunReloadIn: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 1500, 0.5, 0.04)
+    tone(ctx, out, 'square', 190, 95, 0.14, 0.06)
+    noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.55, 0.035, 0.22)
+    tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.3) // fertig-"Ping"
+  },
   // Nachladen: Energiezelle löst sich (Anfang) und rastet wieder ein (Ende);
   // zwei getrennte Töne, damit sie zur Nachladezeit der Waffe passen
   reloadOut: (ctx, out, noise) => {

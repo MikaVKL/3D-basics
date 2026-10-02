@@ -159,14 +159,14 @@ function fadeScreen() {
   void screenFade.offsetWidth // Animation neu starten
   screenFade.classList.add('active')
 }
-const SHOT_SOUNDS = { pistol: 'shot', rifle: 'rifleShot', knife: 'knife' } as const
+const SHOT_SOUNDS = { pistol: 'shot', rifle: 'rifleShot', shotgun: 'shotgunShot', knife: 'knife' } as const
 const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#hitmarker')!,
   document.querySelector<HTMLDivElement>('#damage-indicators')!,
   document.querySelector<HTMLDivElement>('#damage-vignette')!
 )
-const remotePlayers = new RemotePlayers(scene, arena.shootables, (id, headshot) =>
-  network.sendHit(id, headshot)
+const remotePlayers = new RemotePlayers(scene, arena.shootables, (id, headshot, pellets) =>
+  network.sendHit(id, headshot, pellets)
 )
 // localStorage kann werfen (privater Modus) - dann ohne gemerkten Namen
 const NAME_STORAGE_KEY = 'duskArena.name'
@@ -291,14 +291,26 @@ weapon.onShot = (from, to, hit) => {
   sound.play(SHOT_SOUNDS[weapon.current], 0.7)
   effects.muzzleFlash(from)
   if (hit) effects.impactSparks(to)
+  // Pumpgriff nach dem Schuss, solange noch Patronen drin sind und die Waffe in der Hand bleibt
+  if (weapon.current === 'shotgun') {
+    setTimeout(() => {
+      if (weapon.current === 'shotgun' && weapon.getAmmoState().current > 0 && !weapon.getAmmoState().reloading) sound.play('shotgunPump', 0.5)
+    }, 400)
+  }
 }
 weapon.onEnemyHit = (kill, point, damage, headshot) => {
   hitFeedback.showHit(kill)
   hitFeedback.showDamageNumber(point, damage, headshot, camera)
   sound.play(kill ? 'kill' : headshot ? 'headshot' : 'hit')
 }
-weapon.onReload = () => sound.play(weapon.current === 'rifle' ? 'rifleReloadOut' : 'reloadOut', 0.6)
-weapon.onReloadDone = () => sound.play(weapon.current === 'rifle' ? 'rifleReloadIn' : 'reloadIn', 0.6)
+const RELOAD_SOUNDS = {
+  pistol: ['reloadOut', 'reloadIn'],
+  rifle: ['rifleReloadOut', 'rifleReloadIn'],
+  shotgun: ['shotgunReloadOut', 'shotgunReloadIn'],
+  knife: ['reloadOut', 'reloadIn'],
+} as const
+weapon.onReload = () => sound.play(RELOAD_SOUNDS[weapon.current][0], 0.6)
+weapon.onReloadDone = () => sound.play(RELOAD_SOUNDS[weapon.current][1], 0.6)
 weapon.onDraw = (id) => sound.play(id === 'knife' ? 'drawKnife' : 'drawGun', 0.5)
 weapon.onDryFire = () => sound.play('dryFire', 0.5)
 weapon.onSwing = () => {

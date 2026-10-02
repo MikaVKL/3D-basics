@@ -34,7 +34,7 @@ export class RemotePlayers {
 
   private readonly scene: THREE.Scene
   private readonly shootables: THREE.Object3D[]
-  private readonly onHit: (id: PlayerId, headshot: boolean) => void
+  private readonly onHit: (id: PlayerId, headshot: boolean, pellets?: { hit: number; head: number }) => void
   // Schritt eines Gegners (für räumliche Schrittgeräusche)
   onFootstep?: (position: THREE.Vector3, sprinting: boolean) => void
 
@@ -42,7 +42,7 @@ export class RemotePlayers {
   constructor(
     scene: THREE.Scene,
     shootables: THREE.Object3D[],
-    onHit: (id: PlayerId, headshot: boolean) => void
+    onHit: (id: PlayerId, headshot: boolean, pellets?: { hit: number; head: number }) => void
   ) {
     this.scene = scene
     this.shootables = shootables
@@ -95,9 +95,9 @@ export class RemotePlayers {
       get invulnerable() {
         return player.spawnProtected
       },
-      takeDamage: (_amount, headshot) => {
+      takeDamage: (_amount, headshot, pellets) => {
         player.avatar.flash()
-        this.onHit(id, headshot)
+        this.onHit(id, headshot, pellets)
       },
     }
     player.avatar.mesh.userData.damageable = damageable

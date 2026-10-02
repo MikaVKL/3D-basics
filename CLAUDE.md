@@ -108,6 +108,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Nachladen), Animation (Kippen, zweiphasiger Wechsel mit Modelltausch)
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
+- `npm run test:shotgun` – Shotgun: 8 Strahlen, 64 Schaden nah in einer Meldung, Schadens-
+  abfall nach Entfernung, Server rechnet Körner/Entfernung nach, begrenzt gefälschte Körnerzahl
 - `npm run test:weapons` – Wechsel (1/2/3, Mausrad, Q), Munition je Waffe,
   Nachladen, Dauerfeuer, Streuung, Tempo, Messer-Reichweite, Respawn,
   Server-Schaden/Ratenlimit/Reichweite, Waffe/Töne bei anderen, Kill-Feed-Symbol
@@ -236,6 +238,15 @@ Stolperfallen bei Headless-Tests:
   ~14° um das Fadenkreuz + 0,2 s Trefferfenster nach dem Klick, damit der Stich
   auch ohne perfektes Zielen/Timing trifft - wichtig für Touch). Wechsel 0,3 s, Respawn mit
   Pistole. Server prüft Reichweite je Waffe (+2 m Zuschlag für Verzögerung).
+  **Geplant (abgestimmt, in dieser Reihenfolge):** Shotgun (fertig: 8 Körner x 8, Faktor
+  1 bis 5 m, linear auf 0,15 bei 16 m, 6er-Magazin, 0,83 s; `hit`-Nachricht mit
+  `pellets`/`headPellets`, Server begrenzt auf die Waffe und mindert nach Entfernung;
+  andere sehen nur einen Strahl je Schuss), Sniper (70, Kopf 140, 0,8/s, 5er, Zoom
+  ~0,25 mit Zielfernrohr, Hüftfeuer streut stark, Tempo 85 %), schwere Pistole
+  (45, 2/s, 7er), Maschinenpistole (8, 14/s auto, 25er, Tempo 105 %, viel Streuung);
+  danach erst Waffenauswahl (Primary/Secondary/Messer) mit Bildschirm vor Beitritt und
+  nach dem Tod. Bis dahin liegen alle Waffen auf Tasten 1..n (`WEAPON_SLOTS`).
+  Neue Modelle mindestens auf dem Niveau von Pistole/Sturmgewehr (`gunMaterial`).
 - Bewegung (`player.ts`): horizontale Geschwindigkeit mit Schwung. Bis zum
   normalen Tempo der Haltung folgt man der Eingabe sofort (wie früher),
   nur der Überschuss wird gelenkt/abgebremst. Rutschen = Ducken im Sprint
@@ -354,7 +365,7 @@ Stolperfallen bei Headless-Tests:
   Server mit `off`, weil sie absichtlich teleportieren (Bot-Test und
   movement-enforce mit enforce). Neue Bewegungsmechaniken (schneller als
   13 m/s, größere Sprünge) müssen die Konstanten dort mit anheben,
-  sonst gibt es Rubber-Band. PROTOCOL_VERSION 18.
+  sonst gibt es Rubber-Band. PROTOCOL_VERSION 19.
 - **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
   gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
   getestet - Nutzen gering gegen Risiko. Nur nach Absprache.

@@ -4,7 +4,7 @@ import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
 import { TeamColor, type Team } from './team'
 import { HEADSHOT_MULTIPLIER } from './shared/gameRules'
-import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, isMelee, type WeaponId } from './shared/weapons'
+import { WEAPONS, WEAPON_SLOTS, DEFAULT_WEAPON, SWITCH_TIME, isMelee, damageFactor, type WeaponId } from './shared/weapons'
 
 // Hitscan aus der Bildschirmmitte, mehrere Waffen mit eigener Munition,
 // Nachladen, Wechsel, Dauerfeuer. Treffer laufen generisch über Damageable
@@ -16,6 +16,7 @@ const IMPACT_MARKER_LIFETIME = 2 // Sekunden
 const TRACER_STYLES: Record<WeaponId, { lifetime: number; width: number; glow: number }> = {
   pistol: { lifetime: 0.2, width: 1.7, glow: 0.75 },
   rifle: { lifetime: 0.12, width: 0.6, glow: 0.35 },
+  shotgun: { lifetime: 0.1, width: 0.45, glow: 0.3 }, // je Korn
   knife: { lifetime: 0.2, width: 1, glow: 0.5 }, // ungenutzt, Messer hat keinen Strahl
 }
 const TRACER_MAX_DISTANCE = 60 // bei Schuss ins Leere
@@ -331,6 +332,11 @@ export class Weapon {
     }
 
     const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
+    if (this.stats.pellets > 1) {
+      this.firePellets(muzzlePosition)
+      if (this.ammo === 0) this.reload()
+      return true
+    }
     if (hits.length > 0) {
       this.applyHit(hits[0], true)
       this.spawnTracer(muzzlePosition, hits[0].point, this.shooterTeam, this.weaponId)
@@ -347,6 +353,62 @@ export class Weapon {
       this.reload()
     }
     return true
+  }
+
+  // Schrot: jedes Korn ein eigener Strahl im Kegel; Treffer je Gegner werden zu einem
+  // Schaden zusammengefasst (eine Meldung je Gegner und Schuss)
+  private firePellets(muzzle: THREE.Vector3) {
+    const stats = this.stats
+    const quaternion = this.camera.getWorldQuaternion(new THREE.Quaternion())
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion)
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion)
+    const origin = this.raycaster.ray.origin.clone()
+    const forward = this.raycaster.ray.direction.clone()
+    const cone = stats.pelletSpread * (1 - AIM_SPREAD_REDUCTION * this.aimAmount)
+    const targets = new Map<Damageable, { damage: number; hit: number; head: number; point: THREE.Vector3 }>()
+    const direction = new THREE.Vector3()
+    let anyHit = false
+    let firstEnd: THREE.Vector3 | null = null
+
+    for (let i = 0; i < stats.pellets; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const radius = Math.sqrt(Math.random()) * cone
+      direction
+        .copy(forward)
+        .addScaledVector(right, Math.cos(angle) * radius)
+        .addScaledVector(up, Math.sin(angle) * radius)
+        .normalize()
+      this.raycaster.set(origin, direction)
+      this.raycaster.far = stats.range
+      const hit = this.raycaster.intersectObjects(this.shootables, false).find((h) => h.object.visible)
+      const end = hit ? hit.point.clone() : origin.clone().addScaledVector(direction, TRACER_MAX_DISTANCE)
+      firstEnd ??= end
+      this.spawnTracer(muzzle, end, this.shooterTeam, this.weaponId)
+      if (!hit) continue
+      anyHit = true
+
+      const damageable = hit.object.userData.damageable as Damageable | undefined
+      const targetTeam = hit.object.userData.team as Team | undefined
+      if (damageable && targetTeam !== this.shooterTeam && !damageable.invulnerable) {
+        const head = hit.object.userData.headshot === true
+        const entry = targets.get(damageable) ?? { damage: 0, hit: 0, head: 0, point: hit.point.clone() }
+        entry.damage += stats.damage * damageFactor(stats, hit.distance) * (head ? HEADSHOT_MULTIPLIER : 1)
+        entry.hit += 1
+        if (head) entry.head += 1
+        targets.set(damageable, entry)
+      } else {
+        this.spawnImpactMarker(hit)
+      }
+    }
+
+    for (const [damageable, entry] of targets) {
+      const wasAlive = damageable.isAlive
+      damageable.takeDamage(entry.damage, entry.head > 0, { hit: entry.hit, head: entry.head })
+      const killed = wasAlive && !damageable.isAlive
+      if (killed) this.onKill?.(this.shooterTeam)
+      this.onEnemyHit?.(killed, entry.point, entry.damage, entry.head > 0)
+    }
+    this.onShot?.(muzzle, firstEnd!, anyHit)
   }
 
   private applyHit(hit: THREE.Intersection, markImpact: boolean) {

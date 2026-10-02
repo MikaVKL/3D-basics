@@ -4,7 +4,7 @@ import type { Team } from '../team.ts'
 import type { WeaponId } from './weapons.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 18
+export const PROTOCOL_VERSION = 19
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -75,7 +75,8 @@ export type ClientMessage =
   | { t: 'setName'; name: string }
   // life = Nummer des Lebens; Zustände aus früheren Leben verwirft der Server
   | { t: 'state'; state: PlayerNetworkState; time: number; life: number }
-  | { t: 'hit'; target: PlayerId; headshot: boolean }
+  // Schrot: pellets = Körner dieses Schusses, die den Gegner trafen, headPellets davon am Kopf
+  | { t: 'hit'; target: PlayerId; headshot: boolean; pellets?: number; headPellets?: number }
   // Laufzeitmessung: Server schickt time unverändert als 'pong' zurück
   | { t: 'ping'; time: number; rtt: number | null } // rtt: zuletzt gemessener Ping
   // Nur für die Leuchtspur bei den anderen

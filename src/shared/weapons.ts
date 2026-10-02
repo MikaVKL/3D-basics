@@ -1,6 +1,6 @@
 // Waffenwerte für Client und Server (Server rechnet den Schaden selbst)
 
-export type WeaponId = 'pistol' | 'rifle' | 'knife'
+export type WeaponId = 'pistol' | 'rifle' | 'knife' | 'shotgun'
 
 export interface WeaponStats {
   label: string
@@ -16,6 +16,11 @@ export interface WeaponStats {
   maxSpread: number
   // Zielen (rechte Maustaste): Faktor auf das Blickfeld, 1 = kein Zielen (Messer)
   aimZoom: number
+  // Schrot: Anzahl Körner je Schuss (damage gilt je Korn) und Kegelradius (rad)
+  pellets: number
+  pelletSpread: number
+  // Schaden fällt zwischen start und end (Meter) linear auf den Faktor min
+  falloff?: { start: number; end: number; min: number }
 }
 
 export const WEAPONS: Record<WeaponId, WeaponStats> = {
@@ -31,6 +36,8 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0,
     maxSpread: 0,
     aimZoom: 0.8,
+    pellets: 1,
+    pelletSpread: 0,
   },
   rifle: {
     label: 'Sturmgewehr',
@@ -44,6 +51,8 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0.006,
     maxSpread: 0.035,
     aimZoom: 0.65,
+    pellets: 1,
+    pelletSpread: 0,
   },
   knife: {
     label: 'Messer',
@@ -57,11 +66,30 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     spreadPerHeat: 0,
     maxSpread: 0,
     aimZoom: 1,
+    pellets: 1,
+    pelletSpread: 0,
+  },
+  shotgun: {
+    label: 'Shotgun',
+    damage: 8, // je Korn, 8 Körner = 64 aus nächster Nähe
+    fireInterval: 0.83,
+    automatic: false,
+    magazine: 6,
+    reloadTime: 2.4,
+    range: 30,
+    moveSpeed: 0.95,
+    spreadPerHeat: 0,
+    maxSpread: 0,
+    aimZoom: 0.85,
+    pellets: 8,
+    pelletSpread: 0.07,
+    falloff: { start: 5, end: 16, min: 0.15 },
   },
 }
 
 // Reihenfolge = Tasten 1, 2, ...
-export const WEAPON_SLOTS: WeaponId[] = ['pistol', 'rifle', 'knife']
+// Vorübergehend alle Waffen auf Tasten 1.. (bis die Auswahl vor dem Beitritt kommt)
+export const WEAPON_SLOTS: WeaponId[] = ['pistol', 'rifle', 'knife', 'shotgun']
 export const DEFAULT_WEAPON: WeaponId = 'pistol'
 export const SWITCH_TIME = 0.3 // Sekunden
 
@@ -71,4 +99,13 @@ export function isMelee(id: WeaponId): boolean {
 
 export function isWeaponId(value: unknown): value is WeaponId {
   return typeof value === 'string' && Object.hasOwn(WEAPONS, value)
+}
+
+// Schadensfaktor nach Entfernung (Schrot verliert auf Distanz stark)
+export function damageFactor(weapon: WeaponStats, distance: number): number {
+  const falloff = weapon.falloff
+  if (!falloff || distance <= falloff.start) return 1
+  if (distance >= falloff.end) return falloff.min
+  const t = (distance - falloff.start) / (falloff.end - falloff.start)
+  return 1 - t * (1 - falloff.min)
 }
