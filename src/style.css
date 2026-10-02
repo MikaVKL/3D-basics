@@ -1217,7 +1217,7 @@ body {
   z-index: 4; /* unter dem Overlay */
 }
 
-/* Menü-Button oben links (Touch hat kein ESC) */
+/* Menü-Button oben links (Touch hat kein ESC), Holo-Look wie die anderen Buttons */
 #menu-button {
   position: absolute;
   top: var(--edge-top);
@@ -1225,18 +1225,18 @@ body {
   width: 44px;
   height: 44px;
   padding: 0;
-  font-size: 1.5rem;
+  border-radius: 50%;
+  border: 2px solid rgba(51, 230, 204, 0.6);
+  background: rgba(51, 230, 204, 0.1);
+  color: #d6fff8;
+  font-size: 1.4rem;
   line-height: 1;
-  color: var(--c-text);
-  background: var(--panel);
-  border: var(--panel-border);
-  border-radius: var(--radius);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
 #menu-button:active {
-  border-color: var(--c-neon);
+  background: rgba(51, 230, 204, 0.3);
 }
 
 #touch-controls.hidden {
