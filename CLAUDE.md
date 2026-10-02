@@ -232,7 +232,9 @@ Stolperfallen bei Headless-Tests:
   Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
 - Waffen (abgestimmt): 1 Pistole (20, 5/s, 12er, Tempo 100 %),
   2 Sturmgewehr (12, 10/s auto, 30er, 92 %, Streuung ab dem 4. Schuss),
-  3 Messer (50, 2/s, 2,5 m, 115 %, Kopf auch 2x). Wechsel 0,3 s, Respawn mit
+  3 Messer (50, 2/s, 2,5 m, 115 %, Kopf auch 2x; Zielhilfe: Strahlen-Ringe bis
+  ~14° um das Fadenkreuz + 0,2 s Trefferfenster nach dem Klick, damit der Stich
+  auch ohne perfektes Zielen/Timing trifft - wichtig für Touch). Wechsel 0,3 s, Respawn mit
   Pistole. Server prüft Reichweite je Waffe (+2 m Zuschlag für Verzögerung).
 - Bewegung (`player.ts`): horizontale Geschwindigkeit mit Schwung. Bis zum
   normalen Tempo der Haltung folgt man der Eingabe sofort (wie früher),

@@ -57,9 +57,16 @@ interface Tracer {
   lifetime: number
 }
 
+// Messer-Zielhilfe: Ringe (rad, ~6° und ~14°) mit je 8 Strahlen um das Fadenkreuz
+const MELEE_ASSIST_RINGS = [0.1, 0.25]
+const MELEE_ASSIST_RAYS = 8
+// So lange nach dem Klick (s) trifft der Stich noch, wenn ein Gegner in Reichweite kommt
+const MELEE_HIT_WINDOW = 0.2
+
 export class Weapon {
   private raycaster = new THREE.Raycaster()
   private cooldownRemaining = 0
+  private meleeWindowRemaining = 0
   private impactMarkers: ImpactMarker[] = []
 
   private markerGeometry = new THREE.SphereGeometry(0.04, 8, 8)
@@ -194,6 +201,7 @@ export class Weapon {
     this.triggerHeld = false
     this.shotQueued = false
     this.aimWanted = false
+    this.meleeWindowRemaining = 0
   }
 
   setAiming(aiming: boolean) {
@@ -223,6 +231,7 @@ export class Weapon {
   }
 
   update(deltaSeconds: number) {
+    this.updateMeleeWindow(deltaSeconds)
     const autoFire = this.triggerHeld && this.stats.automatic
     this.cooldownRemaining -= deltaSeconds
     if (!autoFire) this.cooldownRemaining = Math.max(0, this.cooldownRemaining)
@@ -311,8 +320,12 @@ export class Weapon {
       .filter((hit) => hit.object.visible)
 
     if (melee) {
-      // Keine Leuchtspur, keine Einschlag-Markierung
-      if (hits.length > 0) this.applyHit(hits[0], false)
+      // Keine Leuchtspur, keine Einschlag-Markierung. Der Stich trifft auch
+      // knapp neben dem Fadenkreuz (Zielhilfe), sonst braucht er perfektes Zielen.
+      const target = this.isMeleeTarget(hits[0]) ? hits[0] : this.findMeleeAssistHit()
+      if (target) this.applyHit(target, false)
+      // Kein Ziel im Moment des Klicks: der Stich bleibt kurz "aktiv" (update)
+      else this.meleeWindowRemaining = MELEE_HIT_WINDOW
       this.onSwing?.()
       return true
     }
@@ -385,6 +398,24 @@ export class Weapon {
     return isMelee(this.weaponId)
   }
 
+  private updateMeleeWindow(deltaSeconds: number) {
+    if (this.meleeWindowRemaining <= 0) return
+    this.meleeWindowRemaining -= deltaSeconds
+    if (!this.isMelee) {
+      this.meleeWindowRemaining = 0
+      return
+    }
+    this.camera.updateMatrixWorld()
+    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
+    this.raycaster.far = this.stats.range
+    const center = this.raycaster.intersectObjects(this.shootables, false).find((h) => h.object.visible)
+    const target = this.isMeleeTarget(center) ? center : this.findMeleeAssistHit()
+    if (target) {
+      this.meleeWindowRemaining = 0
+      this.applyHit(target, false)
+    }
+  }
+
   // Fürs Fadenkreuz: träfe ein Stich jetzt einen Gegner?
   meleeTargetInRange(): boolean {
     if (!this.isMelee) return false
@@ -392,8 +423,37 @@ export class Weapon {
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
     this.raycaster.far = this.stats.range
     const hit = this.raycaster.intersectObjects(this.shootables, false).find((h) => h.object.visible)
-    const damageable = hit?.object.userData.damageable as Damageable | undefined
-    return !!damageable && damageable.isAlive && !damageable.invulnerable && hit!.object.userData.team !== this.shooterTeam
+    return this.isMeleeTarget(hit) || this.findMeleeAssistHit() !== null
+  }
+
+  private isMeleeTarget(hit: THREE.Intersection | undefined): hit is THREE.Intersection {
+    if (!hit) return false
+    const damageable = hit.object.userData.damageable as Damageable | undefined
+    return !!damageable && damageable.isAlive && !damageable.invulnerable && hit.object.userData.team !== this.shooterTeam
+  }
+
+  // Zielhilfe fürs Messer: Strahlen in Ringen um die Blickrichtung, der
+  // Gegner mit dem kleinsten Winkel zum Fadenkreuz zählt. Wände dazwischen
+  // blocken wie sonst (jeder Strahl nimmt seinen ersten Treffer).
+  private findMeleeAssistHit(): THREE.Intersection | null {
+    const quaternion = this.camera.getWorldQuaternion(new THREE.Quaternion())
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion)
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion)
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion)
+    this.raycaster.far = this.stats.range
+    for (const radius of MELEE_ASSIST_RINGS) {
+      for (let i = 0; i < MELEE_ASSIST_RAYS; i++) {
+        const angle = (i / MELEE_ASSIST_RAYS) * Math.PI * 2
+        this.raycaster.ray.direction
+          .copy(forward)
+          .addScaledVector(right, Math.cos(angle) * radius)
+          .addScaledVector(up, Math.sin(angle) * radius)
+          .normalize()
+        const hit = this.raycaster.intersectObjects(this.shootables, false).find((h) => h.object.visible)
+        if (this.isMeleeTarget(hit)) return hit
+      }
+    }
+    return null
   }
 
   // Zufällige Abweichung im Kegel, abhängig von der Hitze

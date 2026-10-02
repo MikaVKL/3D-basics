@@ -182,12 +182,57 @@ try {
   await teleport(page, 3, 1.7, -2)
   await wait(200)
   await shootAt(page, [3, 0.8, -6])
+  await wait(400) // Trefferfenster des Stichs (0,2 s) abwarten
   await teleport(page, 3, 1.7, -4)
   await wait(200)
   await shootAt(page, [3, 0.8, -6])
   const stabs = await page.evaluate(() => ({ hits: window.__stabs, swings: window.__swings, tracers: __dusk.weapon.tracers.length }))
   check('Messer: 4 m daneben, 2 m trifft mit 50', stabs.hits.join() === '50' && stabs.swings === 2, JSON.stringify(stabs))
   check('Messer: keine Leuchtspur', stabs.tracers === 0)
+
+  // Zielhilfe und Trefferfenster: Stich trifft auch knapp daneben, und wenn der
+  // Gegner erst kurz nach dem Klick in Reichweite kommt (Handy: kein perfektes Timing)
+  const stabTest = (script) =>
+    page.evaluate((code) => {
+      const t = __dusk.arena.shootables.find((m) => m.userData.damageable && m.position.x === 3 && m.position.z === -6)
+      const reset = () => {
+        const d = t.userData.damageable
+        d.vitals = { health: 100, shield: 25, shieldRegenCooldown: 0 }
+        d.respawnRemaining = 0
+        t.visible = true
+      }
+      const aim = (x, y, z) => {
+        __dusk.camera.lookAt(x, y, z)
+        __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
+      }
+      window.__stabs = []
+      return new Function('P', 'W', 'reset', 'aim', code)(__dusk.player, __dusk.weapon, reset, aim)
+    }, script)
+  const side = await stabTest(`
+    const out = []
+    for (const dx of [0.5, 0.7, 1.2]) {
+      reset(); P.spawn({ x: 3, y: 1.7, z: -4, clone() { return this } })
+      aim(3 + dx, 0.8, -6); W.cooldownRemaining = 0; W.tryShoot(); out.push(window.__stabs.length)
+      window.__stabs.length = 0
+    }
+    return out`)
+  check('Messer: 0,5 m und 0,7 m neben dem Fadenkreuz (2 m) treffen, 1,2 m nicht', side.join() === '1,1,0', side.join())
+  const late = await stabTest(`
+    reset(); P.spawn({ x: 3, y: 1.7, z: 0, clone() { return this } })
+    aim(3, 0.8, -6); W.cooldownRemaining = 0; W.tryShoot() // Gegner 6 m weg: kein Treffer im Klick
+    const atClick = window.__stabs.length
+    P.spawn({ x: 3, y: 1.7, z: -4, clone() { return this } }) // kommt in Reichweite
+    aim(3, 0.8, -6); W.update(0.1)
+    return [atClick, window.__stabs.length]`)
+  check('Messer: Gegner kommt 0,1 s nach dem Klick in Reichweite - Treffer', late.join() === '0,1', late.join())
+  const tooLate = await stabTest(`
+    reset(); P.spawn({ x: 3, y: 1.7, z: 0, clone() { return this } })
+    aim(3, 0.8, -6); W.cooldownRemaining = 0; W.tryShoot()
+    W.update(0.3) // Fenster (0,2 s) vorbei
+    P.spawn({ x: 3, y: 1.7, z: -4, clone() { return this } })
+    aim(3, 0.8, -6); W.update(0.05)
+    return window.__stabs.length`)
+  check('Messer: nach Ablauf des Fensters (0,3 s) kein nachträglicher Treffer', tooLate === 0, String(tooLate))
 
   // Respawn: Startwaffe, volle Magazine
   await page.evaluate(() => {
