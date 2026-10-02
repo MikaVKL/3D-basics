@@ -501,6 +501,7 @@ if (isTouchDevice) {
   )
   void touchInput // arbeitet über seine Event-Listener
 
+  document.querySelector('#menu-button')!.addEventListener('click', () => setActive(false))
   overlay.addEventListener('click', activateFromOverlay)
 } else {
   const desktopInput = new DesktopInput(renderer.domElement, player, lookControl, weapon, (locked) => {

@@ -246,7 +246,8 @@ body {
     top: var(--edge-top);
     bottom: auto;
     right: auto;
-    left: var(--edge-left);
+    left: calc(var(--edge-left) + 48px); /* neben dem Menü-Button */
+    min-width: 120px;
   }
 }
 
@@ -594,7 +595,7 @@ body {
 
   /* feste Namensspalte: lange Namen werden gekürzt, sonst wird der Banner zu breit */
   .round-stat-row {
-    grid-template-columns: 1.4em 7.5em 2em 2em 3em;
+    grid-template-columns: 1.4em 6.5em 1.8em 1.8em 2.6em;
   }
 }
 
@@ -1212,6 +1213,28 @@ body {
   position: fixed;
   inset: 0;
   z-index: 4; /* unter dem Overlay */
+}
+
+/* Menü-Button oben links (Touch hat kein ESC) */
+#menu-button {
+  position: absolute;
+  top: var(--edge-top);
+  left: var(--edge-left);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--c-text);
+  background: var(--panel);
+  border: var(--panel-border);
+  border-radius: var(--radius);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#menu-button:active {
+  border-color: var(--c-neon);
 }
 
 #touch-controls.hidden {

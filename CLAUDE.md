@@ -190,6 +190,9 @@ Stolperfallen bei Headless-Tests:
 - Fenster-Deckungswand ist per **Duck-Sprung durchkletterbar** (gewollter
   Trick-Weg, Öffnung 1,4 m); stehend passt man nicht durch.
 - Rampe B (2,8 m) liegt bündig an der Trennwand (kein Bord auf der Wandseite).
+- **Menü-Button (Touch)**: Zahnrad oben links (`#menu-button`, in
+  `#touch-controls`), öffnet das Pausenmenü (Touch hat kein ESC); das Waffenfeld
+  sitzt auf Touch daneben. Am Rechner nicht sichtbar.
 - Ducken wird überall gehalten, auch auf Touch (Nutzerwunsch, kein Umschalter):
   Rutschen nur, solange gehalten.
 - Punktetabelle per Tab gedrückt halten bzw. Tippen auf den Punktestand –
@@ -378,6 +381,11 @@ Stolperfallen bei Headless-Tests:
 - Idee (Nutzer, nicht wichtig, nur vermerkt): **Waffe inspizieren** (Taste, z. B.
   F): kurze Animation, die Waffe dreht sich im Blick - rein kosmetisch, wie in
   Valorant/CS. Nicht gebaut.
+- Idee (Nutzer, nur für später vermerkt, nicht gebaut): **Loadout-Auswahl**
+  wie in The Finals - Bildschirm im Titelmenü vor dem Beitritt und nach jedem
+  Tod: Skin, Primärwaffe, Sekundärwaffe, Gadget (evtl. zweites Gadget).
+  Gadgets gibt es noch nicht; Waffen/Respawn-Pistole müssten dafür im
+  Protokoll und in der Server-Prüfung (Schaden/Rate je Waffe) mitwachsen.
 - Ganz am Ende, nicht vorher anfangen: Raum-Codes (eigene Räume). Der Server
   hält Spieler, Punkte und Runde global (`clients`, `scores`, `nextRoundAt`
   in `server/index.ts`) - dafür müsste das in eine Raum-Klasse.

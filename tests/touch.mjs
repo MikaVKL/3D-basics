@@ -150,6 +150,16 @@ try {
   const jumpsAfter = await page.evaluate(() => window.__jumps)
   check('Sprung halten: hüpft mehrfach', jumpsHeld >= 3, `${jumpsHeld} Sprünge in 2,5 s`)
   check('Loslassen: keine weiteren Sprünge', jumpsAfter - jumpsHeld <= 1, `${jumpsAfter - jumpsHeld} danach`)
+
+  // Menü-Button oben links: Tippen öffnet das Menü, Tippen daneben setzt fort
+  const menuBox = await page.locator('#menu-button').boundingBox()
+  check('Menü-Button oben links', menuBox.x < 40 && menuBox.y < 40, `${menuBox.x},${menuBox.y}`)
+  await page.touchscreen.tap(menuBox.x + menuBox.width / 2, menuBox.y + menuBox.height / 2)
+  await wait(300)
+  check('Menü-Button öffnet das Menü', await page.evaluate(() => !document.querySelector('#overlay').classList.contains('hidden')))
+  await page.touchscreen.tap(300, 200)
+  await wait(300)
+  check('Tippen setzt das Spiel fort', await page.evaluate(() => document.querySelector('#overlay').classList.contains('hidden')))
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()
