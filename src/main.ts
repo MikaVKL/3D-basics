@@ -413,6 +413,7 @@ const settingFormat: Record<NumericSettingKey, (value: number) => string> = {
   sensitivity: (value) => `${value.toFixed(2)}×`,
   fov: (value) => `${Math.round(value)}°`,
   volume: (value) => `${Math.round(value * 100)} %`,
+  music: (value) => `${Math.round(value * 100)} %`,
 }
 
 function applySettings() {
@@ -421,6 +422,7 @@ function applySettings() {
   camera.updateProjectionMatrix()
   slideView.setBaseFov(settings.fov)
   sound.setVolume(settings.volume)
+  sound.setMusicVolume(settings.music)
   minimap.setVisible(settings.minimap)
 }
 

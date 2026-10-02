@@ -18,7 +18,7 @@ const setSlider = (page, key, value) =>
 const readUi = (page) =>
   page.evaluate(() => {
     const out = {}
-    for (const key of ['sensitivity', 'fov', 'volume']) {
+    for (const key of ['sensitivity', 'fov', 'volume', 'music']) {
       out[key] = { value: Number(document.querySelector(`#setting-${key}`).value), label: document.querySelector(`#setting-${key}-value`).textContent }
     }
     return out
@@ -39,7 +39,7 @@ try {
 
   const ui = await readUi(page)
   check('Standardwerte 1,00× / 75° / 100 %', ui.sensitivity.value === 1 && ui.fov.value === 75 && ui.volume.value === 1 && ui.sensitivity.label === '1.00×' && ui.fov.label === '75°' && ui.volume.label === '100 %', JSON.stringify(ui))
-  check('Regler-Bereiche gesetzt', await page.evaluate(() => ['sensitivity', 'fov', 'volume'].every((k) => Number(document.querySelector(`#setting-${k}`).max) > Number(document.querySelector(`#setting-${k}`).min))))
+  check('Regler-Bereiche gesetzt', await page.evaluate(() => ['sensitivity', 'fov', 'volume', 'music'].every((k) => Number(document.querySelector(`#setting-${k}`).max) > Number(document.querySelector(`#setting-${k}`).min))))
 
   // Bedienung mit der Tastatur (Regler fokussieren, Pfeil nach rechts)
   await page.focus('#setting-sensitivity')
@@ -67,11 +67,13 @@ try {
 
   // Ton: Audio startet erst nach dem Klick auf Weiter
   await setSlider(page, 'volume', 0.5)
+  await setSlider(page, 'music', 0.25)
   await page.click('#settings-back-button')
   await page.click('#resume-button')
   await wait(400)
   const gain = () => page.evaluate(() => __dusk.sound.master.gain.value)
   check('Lautstärke 50 % halbiert die Gesamtlautstärke', Math.abs((await gain()) - 0.3) < 0.001, `${await gain()}`)
+  check('Musik-Regler 25 % wirkt nur auf die Musik', Math.abs(await page.evaluate(() => __dusk.sound.musicGain.gain.value) - 0.125) < 0.001)
   await page.evaluate(() => __dusk.sound.toggleMute())
   const muted = await gain()
   await page.evaluate(() => __dusk.sound.toggleMute())

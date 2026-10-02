@@ -55,6 +55,31 @@ try {
     check(`Sound "${name}" hörbar und sauber`, peak > 0.02 && peak < 1.2 && invalid === 0, `Spitze ${peak.toFixed(2)}`)
   }
 
+  // Musik: ein Loop (8 Takte) offline gerendert - hörbar, nicht übersteuert, sauber
+  const music = await page.evaluate(async () => {
+    const { scheduleBar, BAR_SECONDS, LOOP_BARS } = await import('/3D-basics/src/music.ts')
+    const { createNoiseBuffer } = await import('/3D-basics/src/sound.ts')
+    const ctx = new OfflineAudioContext(1, Math.ceil(44100 * BAR_SECONDS * LOOP_BARS), 44100)
+    const noise = createNoiseBuffer(ctx)
+    for (let bar = 0; bar < LOOP_BARS; bar++) scheduleBar(ctx, ctx.destination, noise, bar, bar * BAR_SECONDS)
+    const data = (await ctx.startRendering()).getChannelData(0)
+    let peak = 0
+    let invalid = 0
+    const barPeaks = []
+    const perBar = Math.floor(data.length / LOOP_BARS)
+    for (let b = 0; b < LOOP_BARS; b++) {
+      let bp = 0
+      for (let i = b * perBar; i < (b + 1) * perBar; i++) {
+        if (!Number.isFinite(data[i])) invalid++
+        else bp = Math.max(bp, Math.abs(data[i]))
+      }
+      barPeaks.push(bp)
+      peak = Math.max(peak, bp)
+    }
+    return { peak, invalid, quietest: Math.min(...barPeaks), seconds: BAR_SECONDS * LOOP_BARS }
+  })
+  check('Musik: 8-Takte-Loop hörbar, nicht übersteuert, sauber', music.peak > 0.1 && music.peak < 0.9 && music.invalid === 0 && music.quietest > 0.05, `Spitze ${music.peak.toFixed(2)}, leisester Takt ${music.quietest.toFixed(2)}, ${music.seconds.toFixed(0)} s`)
+
   // Räumlich: Hörer im Ursprung, Blick nach -z (Web-Audio-Standard)
   const spatial = await page.evaluate(async () => {
     const { SYNTHS, createNoiseBuffer, createPanner } = await import('/3D-basics/src/sound.ts')
@@ -88,6 +113,7 @@ try {
   await play(page)
   await wait(300)
   check('Audio nach Klick auf "Spielen" aktiv', await page.evaluate(() => __dusk.sound.ctx?.state === 'running'))
+  check('Musik läuft nach dem Start', await page.evaluate(() => __dusk.sound.music?.playing === true))
   await spySounds(page)
 
   await teleport(page, 3, 1.7, -2) // vor dem Dummy bei (3, 0.8, -6)

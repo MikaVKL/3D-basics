@@ -3,10 +3,12 @@
 // OfflineAudioContext (Tests prüfen so, dass jeder Sound hörbar ist).
 
 import * as THREE from 'three'
+import { Music } from './music'
 
 type Synth = (ctx: BaseAudioContext, out: AudioNode, noise: AudioBuffer) => void
 
 const MUTE_STORAGE_KEY = 'duskArena.muted'
+const MUSIC_LEVEL = 0.5 // Musik liegt bei Regler 100 % noch deutlich unter den Effekten
 
 function tone(
   ctx: BaseAudioContext,
@@ -207,8 +209,11 @@ export class SoundFx {
   private ctx: AudioContext | null = null
   private master: GainNode | null = null
   private noise: AudioBuffer | null = null
+  private musicGain: GainNode | null = null
+  music: Music | null = null
   muted = false
   volume = 1 // Einstellung 0..1, wirkt auf die Gesamtlautstärke
+  musicVolume = 0.5 // Einstellung 0..1, nur die Hintergrundmusik
 
   constructor() {
     try {
@@ -226,6 +231,11 @@ export class SoundFx {
       this.master.gain.value = this.masterGain()
       this.master.connect(this.ctx.destination)
       this.noise = createNoiseBuffer(this.ctx)
+      this.musicGain = this.ctx.createGain()
+      this.musicGain.gain.value = this.musicVolume * MUSIC_LEVEL
+      this.musicGain.connect(this.master)
+      this.music = new Music(this.ctx, this.musicGain, this.noise)
+      this.music.start()
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume()
   }
@@ -237,6 +247,11 @@ export class SoundFx {
   setVolume(volume: number) {
     this.volume = volume
     if (this.master) this.master.gain.value = this.masterGain()
+  }
+
+  setMusicVolume(volume: number) {
+    this.musicVolume = volume
+    if (this.musicGain) this.musicGain.gain.value = volume * MUSIC_LEVEL
   }
 
   toggleMute() {

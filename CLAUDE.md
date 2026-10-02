@@ -51,7 +51,11 @@ Weiterarbeiten wissen muss.
   Treffer-Prüfung (Schütze meldet, Server rechnet Schaden nach der Waffe im
   letzten Zustand, Feuerrate per Token-Bucket), Runden, Team-Ausgleich,
   AFK/Geister-Entfernung. Läuft direkt als TypeScript (Node ≥ 22.18).
-- `src/sound.ts` – synthetisierte Sounds (Web Audio, keine Dateien)
+- `src/sound.ts` – synthetisierte Sounds (Web Audio, keine Dateien); Schritte/Landung
+  mit Variation und Untergrund (Boden/Steg ab Fußhöhe 2 m), Nachladen je Waffe
+- `src/music.ts` – Hintergrundmusik: synthetisierter Synthwave-Loop (96 BPM,
+  a-Moll, 8 Takte: Pad, Bass, Arpeggio, leises Schlagzeug), `scheduleBar()` auch
+  offline testbar; Einstellung "Musik" (Standard 50 %, wirkt zusätzlich ×0,5)
 - `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall), Kamera-Ruck
   und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
 - `src/weaponIcons.ts` – Waffen-Umrisse (SVG) für Kill-Feed und Waffenfeld
