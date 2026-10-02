@@ -1,10 +1,10 @@
 // Nachrichten Client <-> Server (von beiden importiert: kein Three.js/DOM)
 
 import type { Team } from '../team.ts'
-import type { WeaponId } from './weapons.ts'
+import type { Loadout, WeaponId } from './weapons.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 19
+export const PROTOCOL_VERSION = 20
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -71,7 +71,10 @@ export interface RoundStat {
 }
 
 export type ClientMessage =
-  | { t: 'hello'; version: number; name: string }
+  // loadout: gewählte Waffen für dieses Leben (fehlt/ungültig = Standard)
+  | { t: 'hello'; version: number; name: string; loadout?: Loadout }
+  // Neue Wahl: gilt ab dem nächsten Spawn
+  | { t: 'loadout'; loadout: Loadout }
   | { t: 'setName'; name: string }
   // life = Nummer des Lebens; Zustände aus früheren Leben verwirft der Server
   | { t: 'state'; state: PlayerNetworkState; time: number; life: number }

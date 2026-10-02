@@ -194,6 +194,7 @@ nameInput.addEventListener('change', () => {
 const network: NetworkClient = new NetworkClient({
   getLocalState: () => player.getNetworkState(),
   getName: () => nameInput.value,
+  getLoadout: () => loadoutScreen.loadout,
   onWelcome: (team, spawnIndex, scores, killsToWin) => {
     scoreGoal.textContent = `Erstes Team mit ${killsToWin} Kills gewinnt`
     setLocalTeam(team)
@@ -413,6 +414,7 @@ const loadoutScreen = new LoadoutScreen(
   document.querySelector<HTMLDivElement>('#loadout-primary')!,
   document.querySelector<HTMLDivElement>('#loadout-secondary')!
 )
+loadoutScreen.onChange = (loadout) => network.sendLoadout(loadout)
 // Erster "Spielen"-Klick hat das Spiel gestartet: ab dann gibt es "Weiter" statt "Starten"
 let started = false
 

@@ -108,6 +108,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Nachladen), Animation (Kippen, zweiphasiger Wechsel mit Modelltausch)
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
+- `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
+  gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als
   beim Sturmgewehr, Tempo 105 %, Töne, Server 8 je Treffer + Ratenlimit
 - `npm run test:heavy` – Schwere Pistole: Taste 6, 45 Schaden, 0,5 s Feuerpause, Töne, Server 45/90
@@ -379,7 +381,7 @@ Stolperfallen bei Headless-Tests:
   Server mit `off`, weil sie absichtlich teleportieren (Bot-Test und
   movement-enforce mit enforce). Neue Bewegungsmechaniken (schneller als
   13 m/s, größere Sprünge) müssen die Konstanten dort mit anheben,
-  sonst gibt es Rubber-Band. PROTOCOL_VERSION 19.
+  sonst gibt es Rubber-Band. PROTOCOL_VERSION 20.
 - **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
   gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
   getestet - Nutzen gering gegen Risiko. Nur nach Absprache.

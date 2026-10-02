@@ -29,7 +29,7 @@ import {
   regenerateShield,
   type Vitals,
 } from '../src/shared/gameRules.ts'
-import { WEAPONS, DEFAULT_WEAPON, isWeaponId, damageFactor } from '../src/shared/weapons.ts'
+import { WEAPONS, DEFAULT_LOADOUT, isWeaponId, isLoadout, loadoutSlots, damageFactor, type Loadout } from '../src/shared/weapons.ts'
 import type { Team } from '../src/team.ts'
 
 // Läuft direkt als TypeScript (Node-Type-Stripping, kein Build-Schritt)
@@ -63,6 +63,9 @@ interface Client {
   stateTime: number // Client-Uhr zum Zeitpunkt des letzten Zustands
   // Zählt Respawns; Zustände aus einem früheren Leben werden verworfen
   life: number
+  // Gewählte Waffen: loadout gilt in diesem Leben, pendingLoadout ab dem nächsten Spawn
+  loadout: Loadout
+  pendingLoadout: Loadout
   vitals: Vitals
   respawnAt: number | null // performance.now()-Zeitpunkt, solange tot
   protectedUntil: number // Spawn-Schutz bis zu diesem performance.now()-Zeitpunkt
@@ -212,7 +215,7 @@ function isFiniteNumber(value: unknown): value is number {
 
 // Nur bekannte, plausible Felder - kein Client soll beliebige Daten an
 // alle weiterreichen können
-function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
+function sanitizeState(raw: unknown, team: Team, loadout: Loadout): PlayerNetworkState | null {
   if (typeof raw !== 'object' || raw === null) return null
   const s = raw as Record<string, any>
   const p = s.position
@@ -242,7 +245,8 @@ function sanitizeState(raw: unknown, team: Team): PlayerNetworkState | null {
     maxShield: s.maxShield,
     // Team bestimmt der Server
     team,
-    weapon: isWeaponId(s.weapon) ? s.weapon : DEFAULT_WEAPON,
+    // Nur Waffen aus dem gewählten Loadout (sonst die erste), sonst gäbe man sich unterwegs die stärkste
+    weapon: isWeaponId(s.weapon) && loadoutSlots(loadout).includes(s.weapon) ? s.weapon : loadoutSlots(loadout)[0],
   }
 }
 
@@ -334,6 +338,7 @@ function respawn(client: Client, now: number) {
   // Sofort am Spawn führen, sonst sehen andere kurz die alte Position
   if (client.state) client.state = { ...client.state, position: { ...SPAWN_POINTS[spawnIndex] } }
   client.life += 1
+  client.loadout = client.pendingLoadout
   client.movement = createMovementCheck(SPAWN_POINTS[spawnIndex], client.life, now)
   broadcast({ t: 'respawn', id: client.id, spawnIndex, life: client.life, team: client.team })
 }
@@ -422,6 +427,9 @@ wss.on('connection', (socket) => {
         return
       }
 
+      const loadout = isLoadout(message.loadout)
+        ? { primary: message.loadout.primary, secondary: message.loadout.secondary }
+        : { ...DEFAULT_LOADOUT }
       const team = pickTeam()
       const spawnIndex = pickSpawnIndex(team)
       const id = nextPlayerId++
@@ -437,6 +445,8 @@ wss.on('connection', (socket) => {
         state: null,
         stateTime: 0,
         life: 0,
+        loadout,
+        pendingLoadout: loadout,
         vitals: fullVitals(),
         respawnAt: null,
         protectedUntil: performance.now() + SPAWN_PROTECTION * 1000,
@@ -472,9 +482,13 @@ wss.on('connection', (socket) => {
       return
     }
 
-    if (message.t === 'state') {
+    if (message.t === 'loadout') {
+      if (isLoadout(message.loadout)) {
+        client.pendingLoadout = { primary: message.loadout.primary, secondary: message.loadout.secondary }
+      }
+    } else if (message.t === 'state') {
       if (message.life !== client.life || !isFiniteNumber(message.time)) return
-      const state = sanitizeState(message.state, client.team)
+      const state = sanitizeState(message.state, client.team, client.loadout)
       if (state) {
         const now = performance.now()
         if (MOVEMENT_MODE !== 'off' && !checkMovement(client.movement, state.position, now)) {

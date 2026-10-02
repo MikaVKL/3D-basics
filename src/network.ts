@@ -14,7 +14,7 @@ import {
   type KickReason,
 } from './shared/protocol'
 import type { Team } from './team'
-import type { WeaponId } from './shared/weapons'
+import type { Loadout, WeaponId } from './shared/weapons'
 
 // idle = Server vorhanden, aber nicht beigetreten (Startbildschirm/Menü)
 export type ConnectionStatus = 'offline' | 'idle' | 'connecting' | 'online' | 'full' | 'outdated'
@@ -33,6 +33,7 @@ function resolveServerUrl(): string | null {
 export interface NetworkHandlers {
   getLocalState: () => PlayerNetworkState
   getName: () => string
+  getLoadout: () => Loadout
   onWelcome: (team: Team, spawnIndex: number, scores: Scores, killsToWin: number) => void
   // Snapshot ohne den eigenen Eintrag
   onSnapshot: (players: SnapshotEntry[]) => void
@@ -150,7 +151,7 @@ export class NetworkClient {
     this.socket = socket
 
     socket.addEventListener('open', () => {
-      this.send({ t: 'hello', version: PROTOCOL_VERSION, name: this.handlers.getName() })
+      this.send({ t: 'hello', version: PROTOCOL_VERSION, name: this.handlers.getName(), loadout: this.handlers.getLoadout() })
     })
 
     socket.addEventListener('message', (event) => {
@@ -272,6 +273,10 @@ export class NetworkClient {
   private resetPing() {
     this.pingSamples = []
     this.ping = null
+  }
+
+  sendLoadout(loadout: Loadout) {
+    this.send({ t: 'loadout', loadout })
   }
 
   sendHit(target: PlayerId, headshot: boolean, pellets?: { hit: number; head: number }) {
