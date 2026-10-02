@@ -55,7 +55,7 @@ try {
     check(`Sound "${name}" hörbar und sauber`, peak > 0.02 && peak < 1.2 && invalid === 0, `Spitze ${peak.toFixed(2)}`)
   }
 
-  // Musik: ein Loop (8 Takte) offline gerendert - hörbar, nicht übersteuert, sauber
+  // Musik: ein Loop (16 Takte) offline gerendert - hörbar, nicht übersteuert, sauber
   const music = await page.evaluate(async () => {
     const { scheduleBar, BAR_SECONDS, LOOP_BARS } = await import('/3D-basics/src/music.ts')
     const { createNoiseBuffer } = await import('/3D-basics/src/sound.ts')
@@ -78,7 +78,7 @@ try {
     }
     return { peak, invalid, quietest: Math.min(...barPeaks), seconds: BAR_SECONDS * LOOP_BARS }
   })
-  check('Musik: 8-Takte-Loop hörbar, nicht übersteuert, sauber', music.peak > 0.1 && music.peak < 0.9 && music.invalid === 0 && music.quietest > 0.05, `Spitze ${music.peak.toFixed(2)}, leisester Takt ${music.quietest.toFixed(2)}, ${music.seconds.toFixed(0)} s`)
+  check('Musik: kompletter Loop (16 Takte, 140 BPM) hörbar, nicht übersteuert, sauber', music.peak > 0.1 && music.peak < 0.9 && music.invalid === 0 && music.quietest > 0.05, `Spitze ${music.peak.toFixed(2)}, leisester Takt ${music.quietest.toFixed(2)}, ${music.seconds.toFixed(0)} s`)
 
   // Räumlich: Hörer im Ursprung, Blick nach -z (Web-Audio-Standard)
   const spatial = await page.evaluate(async () => {

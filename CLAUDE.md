@@ -53,9 +53,11 @@ Weiterarbeiten wissen muss.
   AFK/Geister-Entfernung. Läuft direkt als TypeScript (Node ≥ 22.18).
 - `src/sound.ts` – synthetisierte Sounds (Web Audio, keine Dateien); Schritte/Landung
   mit Variation und Untergrund (Boden/Steg ab Fußhöhe 2 m), Nachladen je Waffe
-- `src/music.ts` – Hintergrundmusik: synthetisierter Synthwave-Loop (96 BPM,
-  a-Moll, 8 Takte: Pad, Bass, Arpeggio, leises Schlagzeug), `scheduleBar()` auch
-  offline testbar; Einstellung "Musik" (Standard 50 %, wirkt zusätzlich ×0,5)
+- `src/music.ts` – Hintergrundmusik: synthetisierter, treibender Loop (140 BPM, a-Moll,
+  16 Takte: Sechzehntel-Bass + Sub, scharfe Synkopen-Melodie, Kick auf jedem Schlag, Snare
+  auf 2/4, 16tel-Hats, Snare-Wirbel vor dem Phrasenende, leiser Pad), `scheduleBar()` auch
+  offline testbar; Einstellung "Musik" (Standard 50 %, wirkt zusätzlich ×0,5). Vorher
+  ruhiger Synthwave bei 96 BPM (Nutzer: schneller/aggressiver)
 - `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall), Kamera-Ruck
   und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
 - `src/weaponIcons.ts` – Waffen-Umrisse (SVG) für Kill-Feed und Waffenfeld
