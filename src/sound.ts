@@ -235,13 +235,14 @@ export const SYNTHS = {
     noiseBurst(ctx, out, noise, 'lowpass', 400, 0.9, 0.12)
     tone(ctx, out, 'sine', 110, 55, 0.5, 0.12)
   },
+  // Obere Ebene: fester, etwas heller als der Boden, aber ohne Nachklingen (kein "Blechdosen"-Ton)
   landMetal: (ctx, out, noise) => {
-    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.8, 0.1)
-    noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.5, 0.18)
-    tone(ctx, out, 'triangle', 420, 380, 0.25, 0.25)
+    noiseBurst(ctx, out, noise, 'lowpass', 700, 0.85, 0.11)
+    noiseBurst(ctx, out, noise, 'bandpass', 1400, 0.2, 0.05)
+    tone(ctx, out, 'sine', 100, 50, 0.55, 0.11)
   },
   // Schritte: jedes Mal leicht anders (Tonhöhe, Länge, Anschlag), sonst klingt
-  // es wie eine Maschine. Boden dumpf, Steg/Brücke (obere Ebene) hohl-metallisch.
+  // es wie eine Maschine. Boden dumpf, obere Ebene (Steg/Brücke) fester und heller, aber ohne Klingeln.
   step: (ctx, out, noise) => {
     const k = 0.85 + Math.random() * 0.3
     noiseBurst(ctx, out, noise, 'lowpass', 600 * k, 0.7, 0.06 + Math.random() * 0.03)
@@ -250,9 +251,9 @@ export const SYNTHS = {
   },
   stepMetal: (ctx, out, noise) => {
     const k = 0.9 + Math.random() * 0.25
-    noiseBurst(ctx, out, noise, 'bandpass', 1800 * k, 0.45, 0.05)
-    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.35, 0.05)
-    tone(ctx, out, 'triangle', 330 * k, 300 * k, 0.12, 0.16)
+    noiseBurst(ctx, out, noise, 'lowpass', 850 * k, 0.65, 0.055)
+    noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.12, 0.02)
+    tone(ctx, out, 'sine', 105 * k, 65, 0.3, 0.06)
   },
   // Rutschen: abfallendes Schleifen über den Boden
   slide: (ctx, out, noise) => {

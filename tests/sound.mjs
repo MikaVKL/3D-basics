@@ -55,6 +55,48 @@ try {
     check(`Sound "${name}" hörbar und sauber`, peak > 0.02 && peak < 1.2 && invalid === 0, `Spitze ${peak.toFixed(2)}`)
   }
 
+  // Obere Ebene: kein Klingeln wie eine Blechdose. Ein klingender Ton hat ein spitzes Spektrum
+  // (großer Energieanteil in wenigen Frequenzbins im Abklang ab 0,03 s), Rauschen und Wumms nicht.
+  const tonal = await page.evaluate(async () => {
+    const { SYNTHS, createNoiseBuffer } = await import('/3D-basics/src/sound.ts')
+    const result = {}
+    const N = 2048
+    for (const name of ['stepMetal', 'landMetal', 'step', 'land']) {
+      let worst = 0
+      for (let run = 0; run < 6; run++) {
+        const ctx = new OfflineAudioContext(1, 44100 * 0.4, 44100)
+        SYNTHS[name](ctx, ctx.destination, createNoiseBuffer(ctx))
+        const data = (await ctx.startRendering()).getChannelData(0)
+        const from = Math.floor(44100 * 0.03)
+        const mags = new Float64Array(N / 2)
+        let total = 0
+        for (let k = 12; k < N / 2; k++) { // ab ~260 Hz: der tiefe Tritt zählt nicht als Klingeln
+          let re = 0
+          let im = 0
+          for (let n = 0; n < N; n++) {
+            const w = 0.5 - 0.5 * Math.cos((2 * Math.PI * n) / N)
+            const v = data[from + n] * w
+            re += v * Math.cos((2 * Math.PI * k * n) / N)
+            im -= v * Math.sin((2 * Math.PI * k * n) / N)
+          }
+          mags[k] = re * re + im * im
+          total += mags[k]
+        }
+        if (total < 1e-8) continue // nichts mehr da
+        let best = 0
+        for (let k = 14; k < N / 2 - 3; k++) {
+          let sum = 0
+          for (let j = -2; j <= 2; j++) sum += mags[k + j]
+          best = Math.max(best, sum / total)
+        }
+        worst = Math.max(worst, best)
+      }
+      result[name] = worst
+    }
+    return result
+  })
+  check('Obere Ebene klingt nicht (spitzer Ton im Abklang < 60 % der Energie; vorher 99 % und 90 %)', tonal.stepMetal < 0.6 && tonal.landMetal < 0.6, JSON.stringify(Object.fromEntries(Object.entries(tonal).map(([k, v]) => [k, Number(v.toFixed(2))]))))
+
   // Musik: ein Loop (16 Takte) offline gerendert - hörbar, nicht übersteuert, sauber
   const music = await page.evaluate(async () => {
     const { scheduleBar, BAR_SECONDS, LOOP_BARS } = await import('/3D-basics/src/music.ts')
