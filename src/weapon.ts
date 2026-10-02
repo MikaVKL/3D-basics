@@ -16,6 +16,7 @@ const IMPACT_MARKER_LIFETIME = 2 // Sekunden
 const TRACER_STYLES: Record<WeaponId, { lifetime: number; width: number; glow: number }> = {
   pistol: { lifetime: 0.2, width: 1.7, glow: 0.75 },
   rifle: { lifetime: 0.12, width: 0.6, glow: 0.35 },
+  sniper: { lifetime: 0.35, width: 1.3, glow: 0.7 },
   shotgun: { lifetime: 0.1, width: 0.45, glow: 0.3 }, // je Korn
   knife: { lifetime: 0.2, width: 1, glow: 0.5 }, // ungenutzt, Messer hat keinen Strahl
 }
@@ -220,6 +221,11 @@ export class Weapon {
   }
 
   // Blickfeld-Faktor des aktuellen Zielens (1 = nicht gezoomt)
+  // 0..1: wie weit das Zielfernrohr-Bild eingeblendet ist (nur Waffen mit scoped)
+  get scopeAmount(): number {
+    return this.stats.scoped ? Math.min(1, Math.max(0, (this.aimAmount - 0.6) / 0.4)) : 0
+  }
+
   get zoomFactor(): number {
     return 1 + (this.stats.aimZoom - 1) * this.aimAmount
   }
@@ -251,6 +257,8 @@ export class Weapon {
     const aimStep = AIM_BLEND_SPEED * deltaSeconds
     this.aimAmount += Math.min(aimStep, Math.max(-aimStep, (this.isAiming ? 1 : 0) - this.aimAmount))
     this.view.aim = this.aimAmount
+    // Im Zielfernrohr zeigt das Linsenbild statt der Waffe (Overlay in main.ts)
+    this.view.group.visible = this.scopeAmount < 0.5
     this.view.update(deltaSeconds)
 
     if (this.reloadRemaining > 0) {
@@ -453,7 +461,8 @@ export class Weapon {
   // Streuung (rad), die der nächste Schuss hätte - auch fürs Fadenkreuz
   get currentSpread(): number {
     const spread = Math.min(this.stats.maxSpread, Math.max(0, this.heat - PRECISE_SHOTS) * this.stats.spreadPerHeat)
-    return spread * (1 - AIM_SPREAD_REDUCTION * this.aimAmount)
+    const hip = (this.stats.hipSpread ?? 0) * (1 - this.aimAmount)
+    return spread * (1 - AIM_SPREAD_REDUCTION * this.aimAmount) + hip
   }
 
   get isMelee(): boolean {

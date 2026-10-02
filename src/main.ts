@@ -159,7 +159,7 @@ function fadeScreen() {
   void screenFade.offsetWidth // Animation neu starten
   screenFade.classList.add('active')
 }
-const SHOT_SOUNDS = { pistol: 'shot', rifle: 'rifleShot', shotgun: 'shotgunShot', knife: 'knife' } as const
+const SHOT_SOUNDS = { pistol: 'shot', rifle: 'rifleShot', shotgun: 'shotgunShot', sniper: 'sniperShot', knife: 'knife' } as const
 const hitFeedback = new HitFeedback(
   document.querySelector<HTMLDivElement>('#hitmarker')!,
   document.querySelector<HTMLDivElement>('#damage-indicators')!,
@@ -292,6 +292,11 @@ weapon.onShot = (from, to, hit) => {
   effects.muzzleFlash(from)
   if (hit) effects.impactSparks(to)
   // Pumpgriff nach dem Schuss, solange noch Patronen drin sind und die Waffe in der Hand bleibt
+  if (weapon.current === 'sniper') {
+    setTimeout(() => {
+      if (weapon.current === 'sniper' && weapon.getAmmoState().current > 0 && !weapon.getAmmoState().reloading) sound.play('sniperBolt', 0.5)
+    }, 550)
+  }
   if (weapon.current === 'shotgun') {
     setTimeout(() => {
       if (weapon.current === 'shotgun' && weapon.getAmmoState().current > 0 && !weapon.getAmmoState().reloading) sound.play('shotgunPump', 0.5)
@@ -307,6 +312,7 @@ const RELOAD_SOUNDS = {
   pistol: ['reloadOut', 'reloadIn'],
   rifle: ['rifleReloadOut', 'rifleReloadIn'],
   shotgun: ['shotgunReloadOut', 'shotgunReloadIn'],
+  sniper: ['sniperReloadOut', 'sniperReloadIn'],
   knife: ['reloadOut', 'reloadIn'],
 } as const
 weapon.onReload = () => sound.play(RELOAD_SOUNDS[weapon.current][0], 0.6)
@@ -640,7 +646,12 @@ let shownWeapon: WeaponId | null = null
 const crosshair = document.querySelector<HTMLDivElement>('#crosshair')!
 const CROSSHAIR_BASE_GAP = 4 // px
 // Lücke = echte Streuung als Bildschirmabstand (Winkel -> Pixel über das FOV)
+const scopeOverlay = document.querySelector<HTMLDivElement>('#scope')!
 function updateCrosshair() {
+  // Zielfernrohr: Linsenbild statt Fadenkreuz
+  const scope = player.isAlive ? weapon.scopeAmount : 0
+  scopeOverlay.style.opacity = scope.toFixed(2)
+  crosshair.style.visibility = scope > 0.5 ? 'hidden' : ''
   const melee = weapon.isMelee
   crosshair.classList.toggle('melee', melee)
   crosshair.classList.toggle('in-range', melee && player.isAlive && weapon.meleeTargetInRange())

@@ -107,6 +107,7 @@ export class WeaponView {
       pistol: this.buildPistol(body, accent),
       rifle: this.buildRifle(body, accent),
       shotgun: this.buildShotgun(accent),
+      sniper: this.buildSniper(accent),
       knife: this.buildKnife(body, accent),
     }
     this.current = this.models.pistol
@@ -211,6 +212,46 @@ export class WeaponView {
     part(group, METAL, [0.02, 0.025, 0.02], [0.022, 0.0625, 0.12])
     group.position.set(-0.02, -0.04, -0.08)
     return this.finishModel(group, -0.72, 1.2, false, 0.075)
+  }
+
+  // Scharfschützengewehr mit Zielfernrohr (beim Zielen zeigt main.ts das Linsenbild, das Modell blendet aus)
+  private buildSniper(accent: THREE.Material): Model {
+    const group = new THREE.Group()
+    part(group, METAL, [0.07, 0.075, 0.34], [0, 0.01, 0.05]) // Gehäuse
+    part(group, FRAME, [0.06, 0.04, 0.28], [0, -0.04, 0.06]) // unteres Gehäuse
+    part(group, FRAME, [0.06, 0.06, 0.22], [0, 0.01, -0.3]) // Handschutz
+    for (const z of [-0.22, -0.27, -0.32, -0.37]) part(group, GROOVE, [0.064, 0.025, 0.02], [0, 0.01, z])
+    part(group, FRAME, [0.03, 0.03, 0.4], [0, 0.02, -0.6]) // Lauf
+    part(group, METAL, [0.045, 0.045, 0.08], [0, 0.02, -0.82]) // Mündungsbremse
+    for (const z of [-0.8, -0.83]) part(group, GROOVE, [0.05, 0.02, 0.012], [0, 0.02, z])
+    part(group, accent, [0.05, 0.05, 0.012], [0, 0.02, -0.865]) // Mündungsring
+    // Zielfernrohr: Tubus, Objektiv und Okular, zwei Halterungen, Höhenturm
+    part(group, METAL, [0.04, 0.04, 0.3], [0, 0.098, -0.02])
+    part(group, FRAME, [0.054, 0.054, 0.07], [0, 0.098, -0.2]) // Objektiv
+    part(group, accent, [0.034, 0.034, 0.006], [0, 0.098, -0.238]) // Linse
+    part(group, FRAME, [0.05, 0.05, 0.05], [0, 0.098, 0.15]) // Okular
+    part(group, FRAME, [0.02, 0.03, 0.03], [0, 0.065, -0.1])
+    part(group, FRAME, [0.02, 0.03, 0.03], [0, 0.065, 0.08])
+    part(group, GROOVE, [0.03, 0.02, 0.03], [0, 0.128, -0.02])
+    // Repetiergriff seitlich
+    part(group, FRAME, [0.045, 0.014, 0.014], [0.05, 0.02, 0.1])
+    part(group, GROOVE, [0.022, 0.022, 0.022], [0.078, 0.02, 0.1])
+    part(group, accent, [0.074, 0.01, 0.2], [0, 0.04, -0.02]) // Leuchtstreifen
+    // Magazin, Abzugsbügel, Abzug, Pistolengriff
+    part(group, GRIP, [0.045, 0.1, 0.07], [0, -0.09, 0.03])
+    part(group, accent, [0.047, 0.012, 0.05], [0, -0.14, 0.03])
+    part(group, FRAME, [0.012, 0.04, 0.012], [0, -0.085, 0.1])
+    part(group, FRAME, [0.012, 0.012, 0.1], [0, -0.103, 0.145])
+    part(group, GROOVE, [0.01, 0.03, 0.012], [0, -0.07, 0.16])
+    part(group, GRIP, [0.05, 0.13, 0.06], [0, -0.1, 0.24], 0.3)
+    // Schaft mit Wangenauflage und Schaftkappe
+    part(group, FRAME, [0.06, 0.09, 0.26], [0, -0.005, 0.44])
+    part(group, GRIP, [0.055, 0.03, 0.18], [0, 0.055, 0.42])
+    part(group, GRIP, [0.065, 0.11, 0.02], [0, -0.005, 0.58])
+    // Zweibein, eingeklappt
+    for (const x of [-0.035, 0.035]) part(group, FRAME, [0.01, 0.01, 0.16], [x, -0.03, -0.42])
+    group.position.set(-0.02, -0.04, -0.08)
+    return this.finishModel(group, -0.88, 1.5, false, 0.098)
   }
 
   private buildKnife(body: THREE.Material, accent: THREE.Material): Model {

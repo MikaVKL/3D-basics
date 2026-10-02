@@ -108,6 +108,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Nachladen), Animation (Kippen, zweiphasiger Wechsel mit Modelltausch)
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
+- `npm run test:sniper` – Sniper: Zoom 18,75°, Linsenbild statt Waffe/Fadenkreuz, Streuung
+  hüfte 0,05 / gezielt 0, 70 Körper, Server 70/140 auf 60 m, Knall- und Repetierton
 - `npm run test:shotgun` – Shotgun: 8 Strahlen, 64 Schaden nah in einer Meldung, Schadens-
   abfall nach Entfernung, Server rechnet Körner/Entfernung nach, begrenzt gefälschte Körnerzahl
 - `npm run test:weapons` – Wechsel (1/2/3, Mausrad, Q), Munition je Waffe,
@@ -241,8 +243,10 @@ Stolperfallen bei Headless-Tests:
   **Geplant (abgestimmt, in dieser Reihenfolge):** Shotgun (fertig: 8 Körner x 8, Faktor
   1 bis 5 m, linear auf 0,15 bei 16 m, 6er-Magazin, 0,83 s; `hit`-Nachricht mit
   `pellets`/`headPellets`, Server begrenzt auf die Waffe und mindert nach Entfernung;
-  andere sehen nur einen Strahl je Schuss), Sniper (70, Kopf 140, 0,8/s, 5er, Zoom
-  ~0,25 mit Zielfernrohr, Hüftfeuer streut stark, Tempo 85 %), schwere Pistole
+  andere sehen nur einen Strahl je Schuss), Sniper (fertig, Taste 5: 70, Kopf 140,
+  1,25 s, 5er, Zoom 0,25 mit Linsenbild-Overlay `#scope`, Waffe blendet beim Zielen
+  aus, Hüftfeuer streut 0,05 rad (`hipSpread`, schwindet mit dem Zielen), Tempo 85 %,
+  Reichweite 150 m), schwere Pistole
   (45, 2/s, 7er), Maschinenpistole (8, 14/s auto, 25er, Tempo 105 %, viel Streuung);
   danach erst Waffenauswahl (Primary/Secondary/Messer) mit Bildschirm vor Beitritt und
   nach dem Tod. Bis dahin liegen alle Waffen auf Tasten 1..n (`WEAPON_SLOTS`).

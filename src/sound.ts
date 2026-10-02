@@ -96,6 +96,33 @@ export const SYNTHS = {
     noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.55, 0.035, 0.22)
     tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.3) // fertig-"Ping"
   },
+  // Sniper: harter Knall mit Nachhall, danach der Repetiergriff (sniperBolt)
+  sniperShot: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'highpass', 3000, 0.4, 0.05)
+    tone(ctx, out, 'sawtooth', 1100, 70, 0.3, 0.3)
+    noiseBurst(ctx, out, noise, 'lowpass', 900, 0.5, 0.35)
+    tone(ctx, out, 'sine', 80, 30, 0.35, 0.4)
+    noiseBurst(ctx, out, noise, 'lowpass', 400, 0.15, 0.5, 0.12) // Nachhall
+  },
+  sniperBolt: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 1800, 0.5, 0.04)
+    tone(ctx, out, 'square', 320, 150, 0.14, 0.06)
+    noiseBurst(ctx, out, noise, 'bandpass', 1400, 0.3, 0.05, 0.12) // Hülse fällt
+    noiseBurst(ctx, out, noise, 'bandpass', 2400, 0.55, 0.04, 0.26)
+    tone(ctx, out, 'square', 240, 110, 0.15, 0.06, 0.26)
+  },
+  sniperReloadOut: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.4, 0.04)
+    tone(ctx, out, 'square', 300, 130, 0.13, 0.1, 0.03)
+    noiseBurst(ctx, out, noise, 'lowpass', 450, 0.45, 0.1, 0.1)
+  },
+  sniperReloadIn: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.5, 0.09)
+    tone(ctx, out, 'square', 200, 100, 0.12, 0.07)
+    noiseBurst(ctx, out, noise, 'bandpass', 2400, 0.5, 0.04, 0.2) // Repetiergriff
+    tone(ctx, out, 'square', 230, 105, 0.14, 0.06, 0.34)
+    tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.45) // fertig-"Ping"
+  },
   // Nachladen: Energiezelle löst sich (Anfang) und rastet wieder ein (Ende);
   // zwei getrennte Töne, damit sie zur Nachladezeit der Waffe passen
   reloadOut: (ctx, out, noise) => {

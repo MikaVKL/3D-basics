@@ -1,6 +1,6 @@
 // Waffenwerte für Client und Server (Server rechnet den Schaden selbst)
 
-export type WeaponId = 'pistol' | 'rifle' | 'knife' | 'shotgun'
+export type WeaponId = 'pistol' | 'rifle' | 'knife' | 'shotgun' | 'sniper'
 
 export interface WeaponStats {
   label: string
@@ -21,6 +21,10 @@ export interface WeaponStats {
   pelletSpread: number
   // Schaden fällt zwischen start und end (Meter) linear auf den Faktor min
   falloff?: { start: number; end: number; min: number }
+  // Zielfernrohr: beim Zielen Linsenbild statt Waffenmodell; hipSpread = Streuung (rad) ohne Zielen,
+  // sie schwindet mit dem Zielen auf 0
+  scoped?: boolean
+  hipSpread?: number
 }
 
 export const WEAPONS: Record<WeaponId, WeaponStats> = {
@@ -85,11 +89,28 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     pelletSpread: 0.07,
     falloff: { start: 5, end: 16, min: 0.15 },
   },
+  sniper: {
+    label: 'Sniper',
+    damage: 70, // Kopf x2 = 140 = Ein-Schuss-Kill
+    fireInterval: 1.25,
+    automatic: false,
+    magazine: 5,
+    reloadTime: 3,
+    range: 150,
+    moveSpeed: 0.85,
+    spreadPerHeat: 0,
+    maxSpread: 0,
+    aimZoom: 0.25,
+    pellets: 1,
+    pelletSpread: 0,
+    scoped: true,
+    hipSpread: 0.05,
+  },
 }
 
 // Reihenfolge = Tasten 1, 2, ...
 // Vorübergehend alle Waffen auf Tasten 1.. (bis die Auswahl vor dem Beitritt kommt)
-export const WEAPON_SLOTS: WeaponId[] = ['pistol', 'rifle', 'knife', 'shotgun']
+export const WEAPON_SLOTS: WeaponId[] = ['pistol', 'rifle', 'knife', 'shotgun', 'sniper']
 export const DEFAULT_WEAPON: WeaponId = 'pistol'
 export const SWITCH_TIME = 0.3 // Sekunden
 

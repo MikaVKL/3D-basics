@@ -37,6 +37,36 @@ body {
 
 /* Fadenkreuz: 4 Striche, Lücke (--gap) folgt der echten Streuung.
    Messer: Punkt + Ring, leuchtet bei Gegner in Reichweite. */
+/* Zielfernrohr: schwarzer Rand mit rundem Sichtfeld, feines Fadenkreuz. Deckkraft
+   kommt aus main.ts (Zoom-Fortschritt), unter allem anderen HUD. */
+#scope {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at center, transparent 0, transparent 40vmin, rgba(0, 0, 0, 0.55) 40.4vmin, #000 41.5vmin);
+}
+
+#scope i {
+  position: absolute;
+  background: rgba(10, 14, 20, 0.9);
+}
+
+#scope .h {
+  left: calc(50% - 40vmin);
+  width: 80vmin;
+  top: calc(50% - 0.5px);
+  height: 1px;
+}
+
+#scope .v {
+  top: calc(50% - 40vmin);
+  height: 80vmin;
+  left: calc(50% - 0.5px);
+  width: 1px;
+}
+
 #crosshair {
   --gap: 4px;
   position: fixed;
