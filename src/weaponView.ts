@@ -22,6 +22,16 @@ const STAB_REACH = 0.22
 // Helles Korn (wie der weiße Punkt an echten Visieren): sonst geht es im Dunkel der Waffe unter
 const SIGHT_DOT = new THREE.MeshStandardMaterial({ color: 0xf2f6fa, emissive: 0xf2f6fa, emissiveIntensity: 0.5 })
 
+// Gemeinsame Waffenmaterialien: heller Schlitten/Gehäuse, dunklerer Rahmen, dunkler Griff,
+// Rillen. Sie leuchten leicht mit, sonst wären sie im Dämmerlicht nur schwarze Schatten.
+function gunMaterial(color: number, roughness: number, metalness: number, glow: number) {
+  return new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive: color, emissiveIntensity: glow })
+}
+const METAL = gunMaterial(0x7a8ba2, 0.4, 0.5, 0.3)
+const FRAME = gunMaterial(0x4c596b, 0.45, 0.5, 0.3)
+const GRIP = gunMaterial(0x3a4350, 0.85, 0.1, 0.4)
+const GROOVE = gunMaterial(0x1a2028, 0.6, 0.4, 0)
+
 interface Model {
   group: THREE.Group
   // Unsichtbarer Punkt am Lauf-Ende (Start der Leuchtspur)
@@ -111,13 +121,13 @@ export class WeaponView {
   private buildPistol(body: THREE.Material, accent: THREE.Material): Model {
     const group = new THREE.Group()
     // Zweifarbig wie eine echte Pistole: dunkler Schlitten, hellerer Rahmen, schwarzer Griff
-    const slide = new THREE.MeshStandardMaterial({ color: 0x7a8ba2, roughness: 0.4, metalness: 0.5, emissive: 0x7a8ba2, emissiveIntensity: 0.3 })
-    const grip = new THREE.MeshStandardMaterial({ color: 0x3a4350, roughness: 0.85, metalness: 0.1, emissive: 0x3a4350, emissiveIntensity: 0.4 })
-    const groove = new THREE.MeshStandardMaterial({ color: 0x1a2028, roughness: 0.6, metalness: 0.4 })
+    const slide = METAL
+    const grip = GRIP
+    const groove = GROOVE
     part(group, slide, [0.07, 0.075, 0.49], [0, 0.0175, -0.085]) // Schlitten
     part(group, body, [0.032, 0.032, 0.05], [0, 0.015, -0.355]) // Laufmündung
     part(group, accent, [0.04, 0.04, 0.012], [0, 0.015, -0.385]) // Mündungsring
-    const frame = new THREE.MeshStandardMaterial({ color: 0x4c596b, roughness: 0.45, metalness: 0.5, emissive: 0x4c596b, emissiveIntensity: 0.3 })
+    const frame = FRAME
     part(group, frame, [0.06, 0.04, 0.34], [0, -0.04, -0.01]) // Rahmen
     part(group, frame, [0.055, 0.03, 0.12], [0, -0.035, -0.2]) // Rahmen vorn (Schiene)
     part(group, grip, [0.056, 0.16, 0.075], [0, -0.13, 0.09], 0.25) // Griff
@@ -139,28 +149,51 @@ export class WeaponView {
   }
 
   private buildRifle(body: THREE.Material, accent: THREE.Material): Model {
+    void body
     const group = new THREE.Group()
-    part(group, body, [0.08, 0.11, 0.55], [0, 0, -0.05])
-    part(group, body, [0.035, 0.035, 0.25], [0, 0.02, -0.44])
-    part(group, body, [0.05, 0.17, 0.08], [0, -0.13, -0.12], -0.2) // Magazin
-    part(group, body, [0.05, 0.14, 0.06], [0, -0.1, 0.12], 0.3) // Griff
-    part(group, body, [0.06, 0.1, 0.18], [0, -0.01, 0.3]) // Schaft
-    part(group, accent, [0.01, 0.02, 0.36], [-0.042, 0.02, -0.1])
-    part(group, SIGHT_DOT, [0.03, 0.05, 0.03], [0, 0.075, -0.5]) // Korn
-    // Kimme: zwei Pfosten auf dem Gehäuse, Oberkante wie das Korn (y 0,1)
-    part(group, body, [0.02, 0.045, 0.03], [-0.025, 0.0775, 0.1])
-    part(group, body, [0.02, 0.045, 0.03], [0.025, 0.0775, 0.1])
+    part(group, METAL, [0.08, 0.07, 0.4], [0, 0.02, -0.02]) // oberes Gehäuse
+    part(group, FRAME, [0.075, 0.05, 0.32], [0, -0.04, 0]) // unteres Gehäuse
+    part(group, FRAME, [0.07, 0.07, 0.28], [0, 0.01, -0.36]) // Handschutz
+    for (const z of [-0.29, -0.34, -0.39, -0.44]) part(group, GROOVE, [0.074, 0.025, 0.022], [0, 0.015, z]) // Lüftungsschlitze
+    part(group, FRAME, [0.03, 0.03, 0.1], [0, 0.02, -0.54]) // Lauf
+    part(group, accent, [0.04, 0.04, 0.012], [0, 0.02, -0.592]) // Mündungsring
+    part(group, GRIP, [0.05, 0.17, 0.08], [0, -0.13, -0.12], -0.2) // Magazin
+    part(group, accent, [0.052, 0.012, 0.06], [0, -0.22, -0.145], -0.2) // Magazinkante
+    part(group, GRIP, [0.05, 0.14, 0.06], [0, -0.1, 0.12], 0.3) // Griff
+    // Abzugsbügel und Abzug
+    part(group, FRAME, [0.012, 0.04, 0.012], [0, -0.085, 0.0])
+    part(group, FRAME, [0.012, 0.012, 0.1], [0, -0.103, 0.045])
+    part(group, GROOVE, [0.01, 0.03, 0.012], [0, -0.07, 0.06])
+    // Auswurföffnung, Spanngriff, Leuchtstreifen an den Seiten
+    part(group, GROOVE, [0.082, 0.03, 0.07], [0, 0.03, 0.05])
+    part(group, FRAME, [0.09, 0.016, 0.03], [0, 0.04, 0.17])
+    part(group, accent, [0.084, 0.01, 0.22], [0, 0.04, -0.14])
+    // Schaft: Stützrohr, Schaftkappe
+    part(group, METAL, [0.04, 0.04, 0.12], [0, 0.0, 0.26])
+    part(group, FRAME, [0.06, 0.1, 0.18], [0, -0.01, 0.34])
+    part(group, GRIP, [0.065, 0.11, 0.02], [0, -0.01, 0.44])
+    // Visier: Korn vorn, Kimme hinten (Oberkante y 0,1)
+    part(group, SIGHT_DOT, [0.03, 0.05, 0.03], [0, 0.075, -0.5])
+    part(group, METAL, [0.02, 0.045, 0.03], [-0.025, 0.0775, 0.1])
+    part(group, METAL, [0.02, 0.045, 0.03], [0.025, 0.0775, 0.1])
     group.position.set(-0.02, -0.04, -0.08)
     return this.finishModel(group, -0.57, 0.6, false, 0.1)
   }
 
   private buildKnife(body: THREE.Material, accent: THREE.Material): Model {
+    void body
     const group = new THREE.Group()
-    const blade = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, roughness: 0.35, metalness: 0.2 })
-    part(group, body, [0.04, 0.045, 0.12], [0, 0, 0.02]) // Griff
-    part(group, accent, [0.045, 0.09, 0.02], [0, 0.01, -0.05]) // Parierstange
-    part(group, blade, [0.012, 0.065, 0.22], [0, 0.01, -0.17])
-    part(group, blade, [0.012, 0.035, 0.06], [0, 0.025, -0.3]) // Spitze
+    const blade = new THREE.MeshStandardMaterial({ color: 0xdfe6ee, roughness: 0.3, metalness: 0.3, emissive: 0xdfe6ee, emissiveIntensity: 0.2 })
+    part(group, GRIP, [0.04, 0.045, 0.12], [0, 0, 0.02]) // Griff
+    for (const z of [-0.01, 0.025, 0.06]) part(group, GROOVE, [0.044, 0.049, 0.01], [0, 0, z]) // Griffrillen
+    part(group, FRAME, [0.05, 0.05, 0.025], [0, 0, 0.095]) // Knauf
+    part(group, METAL, [0.048, 0.1, 0.022], [0, 0.01, -0.05]) // Parierstange
+    part(group, accent, [0.052, 0.012, 0.026], [0, 0.065, -0.05]) // Leuchtkante oben
+    part(group, blade, [0.012, 0.065, 0.18], [0, 0.01, -0.15]) // Klinge
+    part(group, blade, [0.012, 0.05, 0.07], [0, 0.017, -0.275])
+    part(group, blade, [0.012, 0.03, 0.05], [0, 0.027, -0.335]) // Spitze
+    part(group, accent, [0.014, 0.01, 0.2], [0, 0.015, -0.17]) // Leuchtrille
+    part(group, GROOVE, [0.014, 0.008, 0.2], [0, -0.0175, -0.16]) // Schneide
     // Flach zur Kamera gekippt, sonst sieht man nur die Klingenkante
     group.position.set(-0.03, -0.02, -0.12)
     group.rotation.set(0.3, 0.35, -1.1)
