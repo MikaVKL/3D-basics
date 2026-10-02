@@ -713,7 +713,7 @@ const scopeOverlay = document.querySelector<HTMLDivElement>('#scope')!
 function updateCrosshair() {
   // Zielfernrohr: Linsenbild statt Fadenkreuz
   const scope = player.isAlive ? weapon.scopeAmount : 0
-  scopeOverlay.style.opacity = scope.toFixed(2)
+  scopeOverlay.style.setProperty('--scope', scope.toFixed(2))
   crosshair.style.visibility = scope > 0.5 ? 'hidden' : ''
   const melee = weapon.isMelee
   crosshair.classList.toggle('melee', melee)

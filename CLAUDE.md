@@ -249,8 +249,9 @@ Stolperfallen bei Headless-Tests:
   1 bis 5 m, linear auf 0,15 bei 16 m, 6er-Magazin, 0,83 s; `hit`-Nachricht mit
   `pellets`/`headPellets`, Server begrenzt auf die Waffe und mindert nach Entfernung;
   andere sehen nur einen Strahl je Schuss), Sniper (fertig, Taste 5: 70, Kopf 140,
-  1,25 s, 5er, Zoom 0,25 mit Linsenbild-Overlay `#scope`, Waffe blendet beim Zielen
-  aus, Hüftfeuer streut 0,05 rad (`hipSpread`, schwindet mit dem Zielen), Tempo 85 %,
+  1,25 s, 5er, Zoom 0,25 mit Linsenbild-Overlay `#scope` (nur der Kreis scharf, außen
+  `backdrop-filter`-Blur + Abdunklung; Deckkraft über `--scope` an den Kindern, ein Eltern-
+  Opacity < 1 würde den Blur unterdrücken), Waffe blendet beim Zielen aus, Hüftfeuer streut 0,05 rad (`hipSpread`, schwindet mit dem Zielen), Tempo 85 %,
   Reichweite 150 m), schwere Pistole
   (fertig, Taste 6: 45, Kopf 90, 0,5 s, 7er, 1,8 s Nachladen, Tempo 97 %), Maschinenpistole
   (fertig, Taste 7: 8, 14/s auto, 25er, 1,6 s Nachladen, Reichweite 60 m, Tempo 105 %,

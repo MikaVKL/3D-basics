@@ -25,7 +25,7 @@ try {
       max: __dusk.weapon.getAmmoState().max,
       fov: __dusk.camera.fov,
       spread: __dusk.weapon.currentSpread,
-      scopeOpacity: Number(document.querySelector('#scope').style.opacity || 0),
+      scopeOpacity: Number(document.querySelector('#scope').style.getPropertyValue('--scope') || 0),
       gunVisible: __dusk.weapon.view.group.visible,
       crosshair: getComputedStyle(document.querySelector('#crosshair')).visibility,
     }))
