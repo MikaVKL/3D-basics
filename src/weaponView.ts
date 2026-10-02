@@ -110,15 +110,31 @@ export class WeaponView {
 
   private buildPistol(body: THREE.Material, accent: THREE.Material): Model {
     const group = new THREE.Group()
-    part(group, body, [0.09, 0.1, 0.32], [0, 0, 0])
-    part(group, body, [0.04, 0.04, 0.22], [0, 0.02, -0.27])
-    part(group, body, [0.06, 0.16, 0.07], [0, -0.11, 0.09], 0.3)
-    part(group, accent, [0.095, 0.015, 0.06], [0, 0.055, 0.05])
-    // Visier: Korn vorn auf dem Lauf, zwei Kimmenpfosten hinten auf dem Schlitten
+    // Zweifarbig wie eine echte Pistole: dunkler Schlitten, hellerer Rahmen, schwarzer Griff
+    const slide = new THREE.MeshStandardMaterial({ color: 0x7a8ba2, roughness: 0.4, metalness: 0.5, emissive: 0x7a8ba2, emissiveIntensity: 0.3 })
+    const grip = new THREE.MeshStandardMaterial({ color: 0x3a4350, roughness: 0.85, metalness: 0.1, emissive: 0x3a4350, emissiveIntensity: 0.4 })
+    const groove = new THREE.MeshStandardMaterial({ color: 0x1a2028, roughness: 0.6, metalness: 0.4 })
+    part(group, slide, [0.07, 0.075, 0.49], [0, 0.0175, -0.085]) // Schlitten
+    part(group, body, [0.032, 0.032, 0.05], [0, 0.015, -0.355]) // Laufmündung
+    part(group, accent, [0.04, 0.04, 0.012], [0, 0.015, -0.385]) // Mündungsring
+    const frame = new THREE.MeshStandardMaterial({ color: 0x4c596b, roughness: 0.45, metalness: 0.5, emissive: 0x4c596b, emissiveIntensity: 0.3 })
+    part(group, frame, [0.06, 0.04, 0.34], [0, -0.04, -0.01]) // Rahmen
+    part(group, frame, [0.055, 0.03, 0.12], [0, -0.035, -0.2]) // Rahmen vorn (Schiene)
+    part(group, grip, [0.056, 0.16, 0.075], [0, -0.13, 0.09], 0.25) // Griff
+    // Abzugsbügel und Abzug
+    part(group, frame, [0.012, 0.05, 0.012], [0, -0.085, -0.07])
+    part(group, frame, [0.012, 0.012, 0.1], [0, -0.108, -0.015])
+    part(group, groove, [0.01, 0.03, 0.012], [0, -0.075, 0.02])
+    // Rillen am hinteren Schlitten und Leuchtstreifen an den Seiten (statt Fleck oben)
+    for (const z of [0.08, 0.105, 0.13]) part(group, groove, [0.074, 0.06, 0.01], [0, 0.0175, z])
+    part(group, accent, [0.074, 0.01, 0.26], [0, 0.03, -0.12])
+    part(group, accent, [0.062, 0.012, 0.02], [0, -0.075, 0.12], 0.25) // Griffkante
+    part(group, frame, [0.016, 0.022, 0.024], [0, 0.045, 0.172]) // Hahn
+    // Visier: Korn vorn auf dem Schlitten, zwei Kimmenpfosten hinten
     // (alle Oberkanten bei y 0,075, damit die Visierlinie parallel zum Lauf liegt)
-    part(group, SIGHT_DOT, [0.014, 0.035, 0.02], [0, 0.0575, -0.37])
-    part(group, body, [0.02, 0.025, 0.02], [-0.022, 0.0625, 0.14])
-    part(group, body, [0.02, 0.025, 0.02], [0.022, 0.0625, 0.14])
+    part(group, SIGHT_DOT, [0.014, 0.035, 0.02], [0, 0.0575, -0.31])
+    part(group, slide, [0.02, 0.025, 0.02], [-0.022, 0.0625, 0.14])
+    part(group, slide, [0.02, 0.025, 0.02], [0.022, 0.0625, 0.14])
     return this.finishModel(group, -0.4, 1, false, 0.075)
   }
 
