@@ -359,6 +359,12 @@ Stolperfallen bei Headless-Tests:
   pausieren es und es geht danach weiter, Messer/Tod/Menü beenden es; Button-
   Zustand folgt `weapon.aimRequested` in `main.ts`; `test:touch`/`test:layout`
   prüfen ihn). Am Rechner bleibt es Halten.
+- **Ziehen und Wippen** (`weaponView.ts`): Wechsel = Absenken der alten Waffe (`LOWER_TIME`
+  0,15 s) + Ziehen der neuen (`drawTime` je Waffe: Pistole/MP 0,15, Sturmgewehr/Messer 0,2,
+  Schwere Pistole 0,25, Shotgun 0,3, Sniper 0,4 s). `drawPose()` gibt jeder Waffe eine
+  eigene Bewegung (Messer wirbelt, Shotgun pumpt mit Ton bei 60 %, Sniper wiegt nach mit
+  Repetierton ...). Beim Gehen wippt die Waffe (`walkSpeed`/`onGround` über
+  `weapon.setMotion`), Sprinten stärker, Luft aus, Zielen fast aus.
 - **Nachladen/Wechsel** (Ton + Animation): Nachladen hat zwei Töne (`reloadOut`
   am Start, `reloadIn` bei Ende, daher passend zur Dauer jeder Waffe) und kippt
   die Waffe zur Mitte (`WeaponView.reload`). Der Wechsel ist zweiphasig: altes

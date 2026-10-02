@@ -323,6 +323,10 @@ weapon.onReload = () => sound.play(RELOAD_SOUNDS[weapon.current][0], 0.6)
 weapon.onReloadDone = () => sound.play(RELOAD_SOUNDS[weapon.current][1], 0.6)
 weapon.onDraw = (id) => sound.play(id === 'knife' ? 'drawKnife' : 'drawGun', 0.5)
 weapon.onDryFire = () => sound.play('dryFire', 0.5)
+weapon.onDrawAccent = (id) => {
+  if (id === 'shotgun') sound.play('shotgunPump', 0.5)
+  else if (id === 'sniper') sound.play('sniperBolt', 0.5)
+}
 weapon.onSwing = () => {
   sound.play('knife', 0.7)
   // Für den Ton bei den anderen (keine Leuchtspur)
@@ -824,6 +828,7 @@ function animate() {
   if (player.isAlive && !wasAlive) startLife()
   if (!player.isAlive) weapon.cancelFire()
   wasAlive = player.isAlive
+  weapon.setMotion(player.isAlive && isActive ? player.horizontalSpeed : 0, player.isOnGround)
   weapon.update(deltaSeconds)
   for (const target of targets) {
     target.update(deltaSeconds, camera)

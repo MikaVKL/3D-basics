@@ -4,7 +4,7 @@ import { WeaponView } from './weaponView'
 import type { Damageable } from './damageable'
 import { TeamColor, type Team } from './team'
 import { HEADSHOT_MULTIPLIER } from './shared/gameRules'
-import { WEAPONS, ALL_WEAPONS, DEFAULT_LOADOUT, SWITCH_TIME, isMelee, damageFactor, loadoutSlots, type Loadout, type WeaponId } from './shared/weapons'
+import { WEAPONS, ALL_WEAPONS, DEFAULT_LOADOUT, LOWER_TIME, switchTime, isMelee, damageFactor, loadoutSlots, type Loadout, type WeaponId } from './shared/weapons'
 
 // Hitscan aus der Bildschirmmitte, mehrere Waffen mit eigener Munition,
 // Nachladen, Wechsel, Dauerfeuer. Treffer laufen generisch über Damageable
@@ -28,6 +28,9 @@ const TRACER_MAX_DISTANCE = 60 // bei Schuss ins Leere
 // Die ersten Schüsse einer Salve treffen genau.
 const HEAT_DECAY = 4
 const PRECISE_SHOTS = 2
+function easeOut(t: number): number {
+  return 1 - (1 - t) * (1 - t)
+}
 const AIM_SPREAD_REDUCTION = 0.5 // beim Zielen halbe Streuung
 // Dauerfeuer holt verpasste Schüsse nach (sonst hinge die Feuerrate an den
 // FPS), aber höchstens so viel Rückstand
@@ -99,6 +102,9 @@ export class Weapon {
   onSwitch?: (weapon: WeaponId) => void
   // Neue Waffe ist in der Hand (Tiefpunkt des Wechsels): Ton fürs Ziehen
   onDraw?: (weapon: WeaponId) => void
+  // Mitten im Ziehen (60 %): Pumpen/Repetieren bei Shotgun und Sniper
+  onDrawAccent?: (weapon: WeaponId) => void
+  private drawAccentPending = false
   // Abdrücken, obwohl nicht geschossen werden kann (Nachladen)
   onDryFire?: () => void
   // Waffe, deren Modell gerade gezeigt wird; wechselt erst beim Tiefpunkt
@@ -171,7 +177,8 @@ export class Weapon {
     this.weaponId = id
     // Nachladen bricht ab (Munition bleibt wie sie war)
     this.reloadRemaining = 0
-    this.switchRemaining = SWITCH_TIME
+    this.switchRemaining = switchTime(id)
+    this.drawAccentPending = true
     this.heat = 0
     this.shotQueued = false
     // Zweiphasig: altes Modell sinkt, beim Tiefpunkt (update) kommt das neue
@@ -227,6 +234,12 @@ export class Weapon {
   }
 
   // Blickfeld-Faktor des aktuellen Zielens (1 = nicht gezoomt)
+  // Für das Wippen beim Gehen
+  setMotion(horizontalSpeed: number, onGround: boolean) {
+    this.view.walkSpeed = horizontalSpeed
+    this.view.onGround = onGround
+  }
+
   // 0..1: wie weit das Zielfernrohr-Bild eingeblendet ist (nur Waffen mit scoped)
   get scopeAmount(): number {
     return this.stats.scoped ? Math.min(1, Math.max(0, (this.aimAmount - 0.6) / 0.4)) : 0
@@ -251,13 +264,27 @@ export class Weapon {
     this.switchRemaining = Math.max(0, this.switchRemaining - deltaSeconds)
     this.heat = Math.max(0, this.heat - HEAT_DECAY * deltaSeconds)
     // Wechsel: oben -> unten (Tiefpunkt: Modell tauscht, Zieh-Ton) -> oben
-    const switchProgress = this.switchRemaining / SWITCH_TIME
-    if (this.pendingModel !== null && switchProgress <= 0.5) {
+    const drawTime = WEAPONS[this.weaponId].drawTime
+    if (this.pendingModel !== null && this.switchRemaining <= drawTime) {
       this.view.setWeapon(this.pendingModel)
       this.onDraw?.(this.pendingModel)
       this.pendingModel = null
     }
-    this.view.lowered = 1 - Math.abs(2 * switchProgress - 1)
+    if (this.switchRemaining > drawTime) {
+      // Absenken der alten Waffe
+      this.view.lowered = Math.min(1, Math.max(0, 1 - (this.switchRemaining - drawTime) / LOWER_TIME))
+      this.view.draw = 1
+    } else {
+      // Ziehen der neuen: draw 0 -> 1, die Waffe kommt hoch
+      this.view.draw = this.switchRemaining > 0 ? 1 - this.switchRemaining / drawTime : 1
+      this.view.lowered = 1 - easeOut(this.view.draw)
+      // Waffenspezifischer Ton mitten im Ziehen (Pumpgriff, Repetiergriff)
+      if (this.drawAccentPending && this.view.draw >= 0.6) {
+        this.drawAccentPending = false
+        this.onDrawAccent?.(this.weaponId)
+      }
+    }
+    if (this.switchRemaining === 0) this.view.lowered = 0
     this.view.reload = this.reloadRemaining > 0 ? 1 - this.reloadRemaining / this.stats.reloadTime : 0
     this.view.slide = this.slideAmount
     // Ein schnell, aus noch schneller (Waffe weg = sofort wieder Hüftsicht)

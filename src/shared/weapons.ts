@@ -18,6 +18,8 @@ export interface WeaponStats {
   aimZoom: number
   // Zielen: Tempo des Ein-/Ausblendens (1/s; 9 = ~0,11 s, kleiner = träger)
   aimSpeed: number
+  // Waffe ziehen (Wechsel): Dauer des Hochkommens in s, nach dem Absenken der alten Waffe (LOWER_TIME)
+  drawTime: number
   // Schrot: Anzahl Körner je Schuss (damage gilt je Korn) und Kegelradius (rad)
   pellets: number
   pelletSpread: number
@@ -43,6 +45,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     maxSpread: 0,
     aimZoom: 0.8,
     aimSpeed: 9,
+    drawTime: 0.15,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -59,6 +62,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     maxSpread: 0.035,
     aimZoom: 0.65,
     aimSpeed: 8,
+    drawTime: 0.2,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -75,6 +79,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     maxSpread: 0,
     aimZoom: 1,
     aimSpeed: 9,
+    drawTime: 0.2,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -91,6 +96,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     maxSpread: 0,
     aimZoom: 0.85,
     aimSpeed: 8,
+    drawTime: 0.3,
     pellets: 8,
     pelletSpread: 0.07,
     falloff: { start: 5, end: 16, min: 0.15 },
@@ -108,6 +114,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     maxSpread: 0,
     aimZoom: 0.25,
     aimSpeed: 3,
+    drawTime: 0.4,
     pellets: 1,
     pelletSpread: 0,
     scoped: true,
@@ -126,6 +133,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     maxSpread: 0,
     aimZoom: 0.78,
     aimSpeed: 7,
+    drawTime: 0.25,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -142,6 +150,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     maxSpread: 0.06,
     aimZoom: 0.85,
     aimSpeed: 10,
+    drawTime: 0.15,
     pellets: 1,
     pelletSpread: 0,
   },
@@ -171,7 +180,11 @@ export function loadoutSlots(loadout: Loadout): WeaponId[] {
 }
 
 export const ALL_WEAPONS = Object.keys(WEAPONS) as WeaponId[]
-export const SWITCH_TIME = 0.3 // Sekunden
+export const LOWER_TIME = 0.15 // Sekunden: alte Waffe sinkt
+// Gesamtdauer eines Wechsels auf diese Waffe
+export function switchTime(id: WeaponId): number {
+  return LOWER_TIME + WEAPONS[id].drawTime
+}
 
 export function isMelee(id: WeaponId): boolean {
   return WEAPONS[id].magazine === 0

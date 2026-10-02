@@ -62,6 +62,50 @@ function part(
   group.add(mesh)
 }
 
+// Zieh-Bewegung je Waffe (zusätzlich zum Hochkommen): d 0 -> 1. Pistole schwingt von der
+// Seite ein, Sturmgewehr schiebt nach vorn und kippt, Shotgun pumpt, Sniper wiegt schwer nach,
+// Schwere Pistole federt, MP flickt, Messer wirbelt um die Längsachse.
+function drawPose(id: WeaponId, d: number) {
+  const rest = 1 - d
+  const pose = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 }
+  switch (id) {
+    case 'pistol':
+      pose.ry = 0.3 * rest * rest
+      pose.rz = -0.2 * rest
+      break
+    case 'rifle':
+      pose.z = 0.1 * rest
+      pose.rz = 0.3 * rest
+      pose.rx = -0.15 * rest
+      break
+    case 'shotgun': {
+      // Pumpbewegung im letzten Drittel: ein Stück zurück und wieder vor
+      const p = Math.min(1, Math.max(0, (d - 0.55) / 0.45))
+      pose.z = 0.05 * Math.sin(p * Math.PI * 2)
+      pose.rz = 0.2 * rest
+      break
+    }
+    case 'sniper':
+      pose.y = 0.02 * Math.sin(d * Math.PI * 3) * rest
+      pose.rz = 0.15 * rest
+      pose.rx = -0.1 * rest
+      break
+    case 'heavyPistol':
+      pose.y = -0.035 * Math.sin(d * Math.PI * 2) * rest
+      pose.rx = 0.1 * Math.sin(d * Math.PI * 2) * rest
+      break
+    case 'smg':
+      pose.ry = -0.4 * rest * rest
+      pose.rx = -0.2 * rest
+      break
+    case 'knife':
+      pose.rz = -Math.PI * 1.5 * rest * rest
+      pose.z = 0.05 * rest
+      break
+  }
+  return pose
+}
+
 // Nachlade-Bewegung: 0..1 Fortschritt -> Stärke der Pose (weich ein/aus)
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
@@ -92,6 +136,14 @@ export class WeaponView {
   aim = 0
   // Fortschritt des Nachladens 0..1 (0 = nicht beim Nachladen)
   reload = 0
+  // Ziehen der Waffe: 0 -> 1 (1 = fertig/nicht beim Ziehen), für die waffenspezifische Bewegung
+  draw = 1
+  // Laufen: Tempo (m/s) und ob am Boden, setzt main.ts; die Waffe wippt dann leicht
+  walkSpeed = 0
+  onGround = true
+  private currentId: WeaponId = 'pistol'
+  private walkPhase = 0
+  private walkAmount = 0
 
   constructor(camera: THREE.Camera) {
     this.group.position.copy(REST_POSITION)
@@ -350,6 +402,7 @@ export class WeaponView {
   }
 
   setWeapon(id: WeaponId) {
+    this.currentId = id
     for (const [modelId, model] of Object.entries(this.models)) model.group.visible = modelId === id
     this.current = this.models[id]
     this.recoilRemaining = 0
@@ -372,22 +425,31 @@ export class WeaponView {
     // kleinen Ruck beim Magazin-Lösen (30 %) und beim Einrasten (75 %)
     const reloadPose = reloadEnvelope(this.reload)
     const reloadJolt = reloadBump(this.reload, 0.3) + reloadBump(this.reload, 0.75)
-    this.group.position.y = restY - SWITCH_DROP * this.lowered - 0.05 * this.slide - 0.04 * reloadPose - 0.025 * reloadJolt
-    this.group.rotation.y = REST_ROTATION_Y * (1 - this.aim)
+    const pose = drawPose(this.currentId, this.draw)
+    // Wippen beim Gehen: Schritt-Takt aus dem Tempo, weich ein/aus, beim Zielen fast weg
+    const walking = this.onGround && this.walkSpeed > 0.5 ? Math.min(1.5, this.walkSpeed / 6) : 0
+    this.walkAmount += (walking - this.walkAmount) * Math.min(1, deltaSeconds * 8)
+    this.walkPhase += deltaSeconds * (2.2 + this.walkSpeed * 0.75) * (this.walkAmount > 0.02 ? 1 : 0)
+    const bob = this.walkAmount * (1 - 0.85 * this.aim)
+    const bobX = Math.cos(this.walkPhase) * 0.008 * bob
+    const bobY = -Math.abs(Math.sin(this.walkPhase)) * 0.012 * bob
+    const bobRoll = Math.cos(this.walkPhase) * 0.012 * bob
+    this.group.position.y = restY - SWITCH_DROP * this.lowered - 0.05 * this.slide - 0.04 * reloadPose - 0.025 * reloadJolt + pose.y + bobY
+    this.group.rotation.y = REST_ROTATION_Y * (1 - this.aim) + pose.ry
     // Beim Wechsel leicht zur Seite kippen, damit das Absenken nicht steif wirkt
-    this.group.rotation.z = 0.35 * this.slide + 0.3 * this.lowered - 0.55 * reloadPose
+    this.group.rotation.z = 0.35 * this.slide + 0.3 * this.lowered - 0.55 * reloadPose + pose.rz + bobRoll
     if (this.current.stab) {
       // Schnell vor, langsamer zurück
       const t = 1 - this.recoilRemaining / STAB_DURATION // 0 -> 1
       const thrust = this.recoilRemaining > 0 ? (t < 0.3 ? t / 0.3 : (1 - t) / 0.7) : 0
-      this.group.position.z = restZ - STAB_REACH * thrust
-      this.group.position.x = restX - 0.12 * thrust
-      this.group.rotation.x = -this.lowered * 0.6
+      this.group.position.z = restZ - STAB_REACH * thrust + pose.z
+      this.group.position.x = restX - 0.12 * thrust + bobX
+      this.group.rotation.x = -this.lowered * 0.6 + pose.rx
       return
     }
     const recoil = (this.recoilRemaining / RECOIL_DURATION) * this.current.recoilScale // 1 -> 0
-    this.group.position.x = restX - 0.05 * reloadPose
-    this.group.position.z = restZ + RECOIL_KICK_Z * recoil + 0.03 * reloadJolt
-    this.group.rotation.x = -RECOIL_KICK_ROTATION * recoil - this.lowered * 0.6 + 0.35 * reloadPose - 0.08 * reloadJolt
+    this.group.position.x = restX - 0.05 * reloadPose + bobX + pose.x
+    this.group.position.z = restZ + RECOIL_KICK_Z * recoil + 0.03 * reloadJolt + pose.z
+    this.group.rotation.x = -RECOIL_KICK_ROTATION * recoil - this.lowered * 0.6 + 0.35 * reloadPose - 0.08 * reloadJolt + pose.rx
   }
 }
