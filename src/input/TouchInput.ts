@@ -110,18 +110,14 @@ export class TouchInput {
       this.weapon.reload()
     })
 
-    // Zielen: halten, loslassen = Hüftfeuer (wie die rechte Maustaste)
-    const setAiming = (aiming: boolean) => {
-      this.weapon.setAiming(aiming)
-      aimButton.classList.toggle('active', aiming)
-    }
+    // Zielen: Tippen schaltet um (anders als am Rechner, wo man die Taste hält).
+    // Der Button-Zustand wird in main.ts aus dem Waffenzustand nachgeführt,
+    // weil Tod/Menü das Zielen von selbst beenden.
     aimButton.addEventListener('touchstart', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      if (this.player.isAlive) setAiming(true)
+      if (this.player.isAlive) this.weapon.setAiming(!this.weapon.aimRequested)
     })
-    aimButton.addEventListener('touchend', () => setAiming(false))
-    aimButton.addEventListener('touchcancel', () => setAiming(false))
 
     // Halten wie am Rechner: Rutschen/Ducken nur solange der Finger drauf ist
     crouchButton.addEventListener('touchstart', (e) => {

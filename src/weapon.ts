@@ -190,6 +190,11 @@ export class Weapon {
     this.aimWanted = aiming
   }
 
+  // Zielen ist gewünscht (auch während Nachladen/Wechsel, wo es noch pausiert)
+  get aimRequested(): boolean {
+    return this.aimWanted
+  }
+
   // Zielt gerade (gehalten, und weder Messer noch Wechsel/Nachladen)
   get isAiming(): boolean {
     return this.aimWanted && !this.isMelee && this.switchRemaining === 0 && this.reloadRemaining === 0

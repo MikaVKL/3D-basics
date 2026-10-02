@@ -332,6 +332,7 @@ if (import.meta.env.DEV) {
 // (manche Laptops haben Touchscreen UND Maus)
 
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches
+const aimButtonEl = document.querySelector<HTMLButtonElement>('#aim-button')!
 
 const overlay = document.querySelector<HTMLDivElement>('#overlay')!
 const overlayInstruction = document.querySelector<HTMLParagraphElement>('#overlay-instruction')!
@@ -758,6 +759,11 @@ function animate() {
   // Zielen: Blickfeld zoomt, Empfindlichkeit und Tempo folgen
   slideView.zoom = weapon.zoomFactor
   lookControl.setZoomScale(Math.tan((settings.fov * weapon.zoomFactor * Math.PI) / 360) / Math.tan((settings.fov * Math.PI) / 360))
+  if (isTouchDevice) {
+    // Umschalter: Messer beendet das Zielen, sonst zoomt es beim Zurückwechseln unerwartet
+    if (weapon.isMelee && weapon.aimRequested) weapon.setAiming(false)
+    aimButtonEl.classList.toggle('active', weapon.aimRequested)
+  }
   player.setAiming(weapon.isAiming)
   slideView.apply(camera, player.isSliding && player.isAlive, deltaSeconds)
   weapon.slideAmount = slideView.amount
