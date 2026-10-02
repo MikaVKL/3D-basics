@@ -78,7 +78,7 @@ export class Weapon {
   private shootables: THREE.Object3D[]
   private view: WeaponView
   // Online vom Server zugeteilt
-  shooterTeam: Team
+  private team!: Team
   private onKill?: (killerTeam: Team) => void
   // Jeder Schuss (Mündung -> Einschlag), für die Leuchtspur bei anderen
   onShot?: (from: THREE.Vector3, to: THREE.Vector3, hit: boolean) => void
@@ -110,6 +110,16 @@ export class Weapon {
   // Zielen: gewünscht (Taste gehalten) und tatsächlich (0..1, blendet weich ein)
   private aimWanted = false
   aimAmount = 0
+
+  get shooterTeam(): Team {
+    return this.team
+  }
+
+  // Eigene Waffe leuchtet immer in der eigenen Teamfarbe (gegen Verwechslung)
+  set shooterTeam(team: Team) {
+    this.team = team
+    this.view.setTeamColor(TeamColor[team])
+  }
 
   constructor(
     camera: THREE.Camera,

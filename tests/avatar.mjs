@@ -16,6 +16,13 @@ try {
   await wait(3800) // Beitritt + Spawn-Schutz
   const bId = await B.evaluate(() => __dusk.network.localId)
 
+  // Eigene Waffe leuchtet in der eigenen Teamfarbe
+  for (const [label, page] of [['A', A], ['B', B]]) {
+    const own = await page.evaluate(() => ({ team: __dusk.player.team, accent: __dusk.weapon.view.accent.color.getHexString(), glow: __dusk.weapon.view.accent.emissive.getHexString() }))
+    const want = own.team === 'red' ? 'ff4d5a' : '4da6ff'
+    check(`Waffe von ${label} in Teamfarbe (${own.team})`, own.accent === want && own.glow === want, `${own.accent}/${own.glow}`)
+  }
+
   // Wie A die Figur von B sieht
   const avatarOfB = () =>
     A.evaluate((id) => {

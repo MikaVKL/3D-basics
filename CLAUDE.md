@@ -193,6 +193,7 @@ Stolperfallen bei Headless-Tests:
 - **Menü-Button (Touch)**: Zahnrad oben links (`#menu-button`, in
   `#touch-controls`), öffnet das Pausenmenü (Touch hat kein ESC); das Waffenfeld
   sitzt auf Touch daneben. Am Rechner nicht sichtbar.
+- **Eigene Waffe in Teamfarbe**: Leuchtteile der Ego-Waffe (`WeaponView.setTeamColor`) folgen `weapon.shooterTeam` (Rot/Blau, auch bei Teamwechsel) - gegen Verwechslung mit dem Gegner.
 - Ducken wird überall gehalten, auch auf Touch (Nutzerwunsch, kein Umschalter):
   Rutschen nur, solange gehalten.
 - Punktetabelle per Tab gedrückt halten bzw. Tippen auf den Punktestand –

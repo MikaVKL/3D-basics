@@ -67,6 +67,7 @@ export class WeaponView {
   readonly group = new THREE.Group()
   private readonly models: Record<WeaponId, Model>
   private current: Model
+  private readonly accent: THREE.MeshStandardMaterial
   private recoilRemaining = 0
   // 0 = im Anschlag, 1 = ganz abgesenkt (Waffenwechsel)
   lowered = 0
@@ -91,6 +92,7 @@ export class WeaponView {
       emissive: Palette.accentNeon,
       emissiveIntensity: 0.8,
     })
+    this.accent = accent
     this.models = {
       pistol: this.buildPistol(body, accent),
       rifle: this.buildRifle(body, accent),
@@ -99,6 +101,11 @@ export class WeaponView {
     this.current = this.models.pistol
     this.setWeapon('pistol')
     camera.add(this.group)
+  }
+
+  setTeamColor(color: number) {
+    this.accent.color.setHex(color)
+    this.accent.emissive.setHex(color)
   }
 
   private buildPistol(body: THREE.Material, accent: THREE.Material): Model {
