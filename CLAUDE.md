@@ -116,7 +116,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   aus, wie oft man kurz nach dem Spawn getroffen wird/stirbt.
 - `npm run test:touch` – Touch-Steuerung (Handy-Emulation): Ducken-Button
   halten = ducken/rutschen, loslassen = aufstehen; Schießen halten + wischen =
-  zielen; Sprung halten = weiterhüpfen
+  zielen; Sprung halten = weiterhüpfen; Zielen-Button halten = zielen
 - `npm run test:ping` – Ping-Anzeige: Messwert (auch mit 200 ms simuliert),
   Farbe, ausgeblendet ohne Verbindung, Ping-Spalte in der Tab-Tabelle,
   Spielerliste bei stabilem Ping selten verschickt
@@ -314,8 +314,9 @@ Stolperfallen bei Headless-Tests:
   die gehaltene Taste zielt danach weiter; Tod/Menü beenden es (`cancelFire`).
   Visier: Kimme (2 Pfosten) und helles Korn am Modell, `aimX/aimY` je Modell
   richtet die Visierlinie unter die Bildmitte aus. Gegner sehen das Zielen nicht
-  (kein Protokoll). Offen, bewusst zurückgestellt (Nutzer: Laptop zuerst, nicht
-  Mobile): Touch-Button zum Zielen, Umschalter statt Halten in den Einstellungen.
+  (kein Protokoll). Touch: Zielen-Button (`#aim-button`, halten, links neben dem
+  Schießen-Button; `test:touch`/`test:layout` prüfen ihn). Offen, zurückgestellt:
+  Umschalter statt Halten in den Einstellungen.
 - **Nachladen/Wechsel** (Ton + Animation): Nachladen hat zwei Töne (`reloadOut`
   am Start, `reloadIn` bei Ende, daher passend zur Dauer jeder Waffe) und kippt
   die Waffe zur Mitte (`WeaponView.reload`). Der Wechsel ist zweiphasig: altes

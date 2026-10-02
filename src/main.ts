@@ -492,6 +492,7 @@ if (isTouchDevice) {
       reloadButton: document.querySelector<HTMLButtonElement>('#reload-button')!,
       crouchButton: document.querySelector<HTMLButtonElement>('#crouch-button')!,
       switchButton: document.querySelector<HTMLButtonElement>('#switch-button')!,
+      aimButton: document.querySelector<HTMLButtonElement>('#aim-button')!,
     },
     player,
     lookControl,

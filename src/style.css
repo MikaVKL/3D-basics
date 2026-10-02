@@ -1305,6 +1305,27 @@ body {
   background: rgba(51, 230, 204, 0.35);
 }
 
+/* Zielen (halten): links neben dem Schießen-Button, gleiche Höhe wie Springen */
+#aim-button {
+  position: fixed;
+  right: calc(28px + 216px * var(--btn));
+  bottom: calc(28px + 8px * var(--btn));
+  width: calc(64px * var(--btn));
+  height: calc(64px * var(--btn));
+  border-radius: 50%;
+  border: 2px solid rgba(51, 230, 204, 0.6);
+  background: rgba(51, 230, 204, 0.1);
+  color: #d6fff8;
+  font-size: calc(1.7rem * var(--btn));
+  z-index: 6;
+  touch-action: none;
+}
+
+#aim-button.active {
+  background: rgba(51, 230, 204, 0.4);
+  border-color: rgba(51, 230, 204, 0.95);
+}
+
 #reload-button {
   position: fixed;
   right: calc(28px + 128px * var(--btn));

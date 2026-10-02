@@ -23,6 +23,7 @@ interface TouchElements {
   reloadButton: HTMLElement
   crouchButton: HTMLElement
   switchButton: HTMLElement
+  aimButton: HTMLElement
 }
 
 export class TouchInput {
@@ -48,7 +49,7 @@ export class TouchInput {
     this.lookControl = lookControl
     this.weapon = weapon
 
-    const { moveZone, lookZone, jumpButton, shootButton, reloadButton, crouchButton, switchButton } = elements
+    const { moveZone, lookZone, jumpButton, shootButton, reloadButton, crouchButton, switchButton, aimButton } = elements
 
     moveZone.addEventListener('touchstart', (e) => this.onMoveStart(e), { passive: false })
     moveZone.addEventListener('touchmove', (e) => this.onMoveMove(e), { passive: false })
@@ -108,6 +109,19 @@ export class TouchInput {
       e.stopPropagation()
       this.weapon.reload()
     })
+
+    // Zielen: halten, loslassen = Hüftfeuer (wie die rechte Maustaste)
+    const setAiming = (aiming: boolean) => {
+      this.weapon.setAiming(aiming)
+      aimButton.classList.toggle('active', aiming)
+    }
+    aimButton.addEventListener('touchstart', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (this.player.isAlive) setAiming(true)
+    })
+    aimButton.addEventListener('touchend', () => setAiming(false))
+    aimButton.addEventListener('touchcancel', () => setAiming(false))
 
     // Halten wie am Rechner: Rutschen/Ducken nur solange der Finger drauf ist
     crouchButton.addEventListener('touchstart', (e) => {

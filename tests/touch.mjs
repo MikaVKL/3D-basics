@@ -65,6 +65,31 @@ try {
   check('Halten im Sprint: rutscht', sliding.sliding, JSON.stringify(sliding))
   check('Loslassen beendet das Rutschen sofort', !afterRelease.sliding)
   check('danach wieder aufrecht', Math.abs(standing.eye - 1.7) < 0.01, `Augenhöhe ${standing.eye.toFixed(2)}`)
+  // Zielen-Button: halten = zielen (Zoom, Waffe mittig), loslassen = Hüftfeuer
+  const aimBox = await page.locator('#aim-button').boundingBox()
+  const aimPoint = { x: aimBox.x + aimBox.width / 2, y: aimBox.y + aimBox.height / 2, id: 3 }
+  await page.evaluate(() => {
+    __dusk.player.spawn({ x: -8, y: 1.7, z: 12, clone() { return this } })
+    __dusk.weapon.switchTo('pistol')
+    __dusk.weapon.switchRemaining = 0
+  })
+  await wait(400)
+  const aimState = () => page.evaluate(() => ({ aiming: __dusk.weapon.isAiming, fov: __dusk.camera.fov, gunX: __dusk.weapon.view.group.position.x, active: document.querySelector('#aim-button').classList.contains('active') }))
+  const beforeAim = await aimState()
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [aimPoint] })
+  await wait(700)
+  const aimed = await aimState()
+  check('Zielen halten: Zoom 75 -> 60°, Waffe mittig, Button leuchtet', aimed.aiming && Math.abs(aimed.fov - 60) < 0.5 && Math.abs(aimed.gunX) < 0.01 && aimed.active && !beforeAim.aiming, JSON.stringify(aimed))
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await wait(700)
+  const unaimed = await aimState()
+  check('Zielen loslassen: Blickfeld und Waffe zurück, Button aus', !unaimed.aiming && Math.abs(unaimed.fov - 75) < 0.5 && unaimed.gunX > 0.2 && !unaimed.active, JSON.stringify(unaimed))
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [aimPoint] })
+  await wait(400)
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] })
+  await wait(500)
+  check('Touch-Abbruch beendet das Zielen', !(await aimState()).aiming)
+
   // Schießen-Button: gedrückt halten und wischen = schießen und zielen
   const shootBox = await page.locator('#shoot-button').boundingBox()
   const shootPoint = { x: shootBox.x + shootBox.width / 2, y: shootBox.y + shootBox.height / 2, id: 2 }
