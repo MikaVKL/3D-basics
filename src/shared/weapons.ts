@@ -139,15 +139,16 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
   },
   smg: {
     label: 'Maschinenpistole',
-    damage: 8,
-    fireInterval: 1 / 14,
+    damage: 7,
+    fireInterval: 1 / 12,
     automatic: true,
     magazine: 25,
-    reloadTime: 1.6,
-    range: 60,
-    moveSpeed: 1.05,
-    spreadPerHeat: 0.009, // schneller viel Streuung als das Sturmgewehr
-    maxSpread: 0.06,
+    reloadTime: 2,
+    range: 50,
+    moveSpeed: 1.03,
+    spreadPerHeat: 0.012, // streut schneller und stärker als das Sturmgewehr
+    maxSpread: 0.07,
+    falloff: { start: 8, end: 30, min: 0.45 }, // nur auf kurze Distanz stark
     aimZoom: 0.85,
     aimSpeed: 10,
     drawTime: 0.15,

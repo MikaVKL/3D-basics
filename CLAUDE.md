@@ -108,6 +108,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Nachladen), Animation (Kippen, zweiphasiger Wechsel mit Modelltausch)
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
+- `npm run test:balance` – Waffen-Balance (reine Rechnung): DPS und Zeit bis zum Tod je Waffe
+  auf 5/20 m, prüft u. a. MP nah nicht schneller als Pistole, Falloff, Kopftreffer-Verhältnis
 - `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
   gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als
@@ -254,8 +256,10 @@ Stolperfallen bei Headless-Tests:
   Opacity < 1 würde den Blur unterdrücken), Waffe blendet beim Zielen aus, Hüftfeuer streut 0,05 rad (`hipSpread`, schwindet mit dem Zielen), Tempo 85 %,
   Reichweite 150 m), schwere Pistole
   (fertig, Taste 6: 45, Kopf 90, 0,5 s, 7er, 1,8 s Nachladen, Tempo 97 %), Maschinenpistole
-  (fertig, Taste 7: 8, 14/s auto, 25er, 1,6 s Nachladen, Reichweite 60 m, Tempo 105 %,
-  Streuung 0,009/Hitze bis 0,06). Zielgeschwindigkeit je Waffe `aimSpeed` (1/s): Sniper 3
+  (fertig, nach Nutzerrückmeldung "zu stark, Pistole sinnlos" abgeschwächt: 7, 12/s auto,
+  25er, 2 s Nachladen, Reichweite 50 m, Tempo 103 %, Streuung 0,012/Hitze bis 0,07,
+  Schadensabfall 8..30 m auf 45 %; nah langsamer als die Pistole (TTK 1,42 s gegen 1,20 s),
+  dafür automatisch und mobil; `npm run test:balance` hält die Verhältnisse fest). Zielgeschwindigkeit je Waffe `aimSpeed` (1/s): Sniper 3
   (~0,33 s bis zum Linsenbild), Schwere Pistole 7, Sturmgewehr/Shotgun 8, Pistole/Messer 9,
   MP 10; Abzielen 1,6x schneller;
   **Waffenauswahl** (`src/loadoutScreen.ts`, Nutzerwunsch): Hauptmenü "Starten" -> Fenster
