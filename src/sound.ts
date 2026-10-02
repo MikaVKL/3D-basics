@@ -80,6 +80,21 @@ export const SYNTHS = {
     noiseBurst(ctx, out, noise, 'bandpass', 3000, 0.4, 0.03, 0.09)
     tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.13) // fertig-"Ping"
   },
+  // Sturmgewehr: schwerer - Magazin klackt aus dem Schacht, am Ende rastet es
+  // ein und der Spannhebel ratscht (zweiteilig, "chk-chk")
+  rifleReloadOut: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 1800, 0.45, 0.04)
+    tone(ctx, out, 'square', 260, 110, 0.14, 0.12, 0.03)
+    noiseBurst(ctx, out, noise, 'lowpass', 400, 0.5, 0.1, 0.1)
+    noiseBurst(ctx, out, noise, 'highpass', 3500, 0.2, 0.03, 0.2) // Magazin streift
+  },
+  rifleReloadIn: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.55, 0.09)
+    tone(ctx, out, 'square', 180, 90, 0.12, 0.08)
+    noiseBurst(ctx, out, noise, 'bandpass', 2400, 0.45, 0.025, 0.14) // Hebel zurück
+    noiseBurst(ctx, out, noise, 'bandpass', 3200, 0.5, 0.025, 0.24) // Hebel vor
+    tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.3) // fertig-"Ping"
+  },
   // Waffe ziehen (Wechsel): Luftzug, dann Klick / beim Messer ein helles Zischen
   drawGun: (ctx, out, noise) => {
     noiseBurst(ctx, out, noise, 'highpass', 1200, 0.3, 0.09)

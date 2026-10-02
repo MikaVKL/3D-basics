@@ -67,7 +67,7 @@ try {
   await page.evaluate(() => { __dusk.weapon.ammo = 5; __dusk.weapon.reload() })
   const rifleFrames = await run(2.2)
   const rifleAll = rifleFrames.flatMap((f, i) => f.sounds.map((s) => [s, i / 60]))
-  const rifleDone = rifleAll.find(([s]) => s === 'reloadIn')
+  const rifleDone = rifleAll.find(([s]) => s === 'rifleReloadIn')
   check('Sturmgewehr: Einrast-Ton nach 2,0 s (nicht nach 1,2 s)', !!rifleDone && Math.abs(rifleDone[1] - 2) < 0.05, JSON.stringify(rifleAll))
 
   // --- Abdrücken beim Nachladen: Klick (nur beim Drücken, nicht dauernd) ---
