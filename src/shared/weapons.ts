@@ -1,6 +1,6 @@
 // Waffenwerte für Client und Server (Server rechnet den Schaden selbst)
 
-export type WeaponId = 'pistol' | 'rifle' | 'knife' | 'shotgun' | 'sniper' | 'heavyPistol'
+export type WeaponId = 'pistol' | 'rifle' | 'knife' | 'shotgun' | 'sniper' | 'heavyPistol' | 'smg'
 
 export interface WeaponStats {
   label: string
@@ -121,11 +121,26 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     pellets: 1,
     pelletSpread: 0,
   },
+  smg: {
+    label: 'Maschinenpistole',
+    damage: 8,
+    fireInterval: 1 / 14,
+    automatic: true,
+    magazine: 25,
+    reloadTime: 1.6,
+    range: 60,
+    moveSpeed: 1.05,
+    spreadPerHeat: 0.009, // schneller viel Streuung als das Sturmgewehr
+    maxSpread: 0.06,
+    aimZoom: 0.85,
+    pellets: 1,
+    pelletSpread: 0,
+  },
 }
 
 // Reihenfolge = Tasten 1, 2, ...
 // Vorübergehend alle Waffen auf Tasten 1.. (bis die Auswahl vor dem Beitritt kommt)
-export const WEAPON_SLOTS: WeaponId[] = ['pistol', 'rifle', 'knife', 'shotgun', 'sniper', 'heavyPistol']
+export const WEAPON_SLOTS: WeaponId[] = ['pistol', 'rifle', 'knife', 'shotgun', 'sniper', 'heavyPistol', 'smg']
 export const DEFAULT_WEAPON: WeaponId = 'pistol'
 export const SWITCH_TIME = 0.3 // Sekunden
 

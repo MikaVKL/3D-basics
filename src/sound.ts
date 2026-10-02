@@ -141,6 +141,21 @@ export const SYNTHS = {
     noiseBurst(ctx, out, noise, 'bandpass', 2600, 0.5, 0.03, 0.16) // Schlitten
     tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.22) // fertig-"Ping"
   },
+  // Maschinenpistole: kurz und hell, noch schneller als das Sturmgewehr
+  smgShot: (ctx, out, noise) => {
+    tone(ctx, out, 'square', 950, 200, 0.18, 0.06)
+    noiseBurst(ctx, out, noise, 'bandpass', 2000, 0.3, 0.045)
+  },
+  smgReloadOut: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 2400, 0.4, 0.03)
+    tone(ctx, out, 'square', 380, 160, 0.11, 0.08, 0.03)
+    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.4, 0.07, 0.08)
+  },
+  smgReloadIn: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'lowpass', 600, 0.45, 0.07)
+    noiseBurst(ctx, out, noise, 'bandpass', 3000, 0.4, 0.03, 0.1) // Spannen
+    tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.15) // fertig-"Ping"
+  },
   // Nachladen: Energiezelle löst sich (Anfang) und rastet wieder ein (Ende);
   // zwei getrennte Töne, damit sie zur Nachladezeit der Waffe passen
   reloadOut: (ctx, out, noise) => {

@@ -108,6 +108,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Nachladen), Animation (Kippen, zweiphasiger Wechsel mit Modelltausch)
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
+- `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als
+  beim Sturmgewehr, Tempo 105 %, Töne, Server 8 je Treffer + Ratenlimit
 - `npm run test:heavy` – Schwere Pistole: Taste 6, 45 Schaden, 0,5 s Feuerpause, Töne, Server 45/90
 - `npm run test:sniper` – Sniper: Zoom 18,75°, Linsenbild statt Waffe/Fadenkreuz, Streuung
   hüfte 0,05 / gezielt 0, 70 Körper, Server 70/140 auf 60 m, Knall- und Repetierton
@@ -248,7 +250,9 @@ Stolperfallen bei Headless-Tests:
   1,25 s, 5er, Zoom 0,25 mit Linsenbild-Overlay `#scope`, Waffe blendet beim Zielen
   aus, Hüftfeuer streut 0,05 rad (`hipSpread`, schwindet mit dem Zielen), Tempo 85 %,
   Reichweite 150 m), schwere Pistole
-  (fertig, Taste 6: 45, Kopf 90, 0,5 s, 7er, 1,8 s Nachladen, Tempo 97 %), Maschinenpistole (8, 14/s auto, 25er, Tempo 105 %, viel Streuung);
+  (fertig, Taste 6: 45, Kopf 90, 0,5 s, 7er, 1,8 s Nachladen, Tempo 97 %), Maschinenpistole
+  (fertig, Taste 7: 8, 14/s auto, 25er, 1,6 s Nachladen, Reichweite 60 m, Tempo 105 %,
+  Streuung 0,009/Hitze bis 0,06);
   danach erst Waffenauswahl (Primary/Secondary/Messer) mit Bildschirm vor Beitritt und
   nach dem Tod. Bis dahin liegen alle Waffen auf Tasten 1..n (`WEAPON_SLOTS`).
   Neue Modelle mindestens auf dem Niveau von Pistole/Sturmgewehr (`gunMaterial`).

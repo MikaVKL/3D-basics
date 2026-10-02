@@ -109,6 +109,7 @@ export class WeaponView {
       shotgun: this.buildShotgun(accent),
       sniper: this.buildSniper(accent),
       heavyPistol: this.buildHeavyPistol(accent),
+      smg: this.buildSmg(accent),
       knife: this.buildKnife(body, accent),
     }
     this.current = this.models.pistol
@@ -278,6 +279,35 @@ export class WeaponView {
     part(group, METAL, [0.02, 0.03, 0.02], [-0.026, 0.07, 0.14])
     part(group, METAL, [0.02, 0.03, 0.02], [0.026, 0.07, 0.14])
     return this.finishModel(group, -0.44, 1.4, false, 0.085)
+  }
+
+  // Maschinenpistole: kurzes Gehäuse, Lochmantel mit Schalldämpfer, langes Stangenmagazin, Drahtschulterstütze
+  private buildSmg(accent: THREE.Material): Model {
+    const group = new THREE.Group()
+    part(group, METAL, [0.07, 0.08, 0.34], [0, 0.01, 0.0]) // Gehäuse
+    part(group, FRAME, [0.06, 0.04, 0.3], [0, -0.04, 0.02]) // unteres Gehäuse
+    part(group, FRAME, [0.065, 0.065, 0.2], [0, 0.01, -0.27]) // Lochmantel
+    for (const z of [-0.2, -0.24, -0.28, -0.32]) part(group, GROOVE, [0.069, 0.03, 0.02], [0, 0.015, z]) // Lüftungslöcher
+    part(group, METAL, [0.04, 0.04, 0.12], [0, 0.012, -0.43]) // Schalldämpfer
+    part(group, accent, [0.05, 0.05, 0.012], [0, 0.012, -0.496]) // Mündungsring
+    part(group, GRIP, [0.04, 0.2, 0.055], [0, -0.15, -0.04], 0.1) // Stangenmagazin
+    part(group, accent, [0.042, 0.012, 0.04], [0, -0.255, -0.05], 0.1) // Magazinkante
+    part(group, GRIP, [0.05, 0.13, 0.06], [0, -0.1, 0.1], 0.3) // Griff
+    part(group, GROOVE, [0.074, 0.03, 0.06], [0, 0.03, 0.03]) // Auswurföffnung
+    part(group, accent, [0.074, 0.01, 0.18], [0, 0.035, -0.07]) // Leuchtstreifen
+    // Abzugsbügel und Abzug
+    part(group, FRAME, [0.012, 0.04, 0.012], [0, -0.085, -0.02])
+    part(group, FRAME, [0.012, 0.012, 0.09], [0, -0.103, 0.02])
+    part(group, GROOVE, [0.01, 0.03, 0.012], [0, -0.07, 0.05])
+    // Schulterstütze aus Draht mit Schaftkappe
+    for (const x of [-0.03, 0.03]) part(group, FRAME, [0.012, 0.012, 0.12], [x, 0.0, 0.23])
+    part(group, GRIP, [0.07, 0.08, 0.015], [0, 0.0, 0.295])
+    // Visier: Korn auf dem Mantel, Kimmenpfosten hinten (Oberkante y 0,08)
+    part(group, SIGHT_DOT, [0.016, 0.0375, 0.02], [0, 0.061, -0.32])
+    part(group, METAL, [0.02, 0.03, 0.02], [-0.022, 0.065, 0.12])
+    part(group, METAL, [0.02, 0.03, 0.02], [0.022, 0.065, 0.12])
+    group.position.set(-0.02, -0.04, -0.08)
+    return this.finishModel(group, -0.5, 0.5, false, 0.08)
   }
 
   private buildKnife(body: THREE.Material, accent: THREE.Material): Model {
