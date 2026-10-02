@@ -47,6 +47,22 @@ function part(
   group.add(mesh)
 }
 
+// Nachlade-Bewegung: 0..1 Fortschritt -> Stärke der Pose (weich ein/aus)
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
+
+function reloadEnvelope(progress: number): number {
+  if (progress <= 0) return 0
+  return smoothstep(0, 0.15, progress) * (1 - smoothstep(0.8, 1, progress))
+}
+
+// Kurzer Ruck um einen Zeitpunkt des Nachladens
+function reloadBump(progress: number, at: number): number {
+  return progress <= 0 ? 0 : Math.exp(-(((progress - at) / 0.05) ** 2))
+}
+
 export class WeaponView {
   readonly group = new THREE.Group()
   private readonly models: Record<WeaponId, Model>
@@ -58,6 +74,8 @@ export class WeaponView {
   slide = 0
   // 0..1 beim Zielen: Waffe wandert in die Bildmitte
   aim = 0
+  // Fortschritt des Nachladens 0..1 (0 = nicht beim Nachladen)
+  reload = 0
 
   constructor(camera: THREE.Camera) {
     this.group.position.copy(REST_POSITION)
@@ -156,9 +174,14 @@ export class WeaponView {
     const restX = REST_POSITION.x + (this.current.aimX - REST_POSITION.x) * this.aim
     const restY = REST_POSITION.y + (this.current.aimY - REST_POSITION.y) * this.aim
     const restZ = REST_POSITION.z + (AIM_Z - REST_POSITION.z) * this.aim
-    this.group.position.y = restY - SWITCH_DROP * this.lowered - 0.05 * this.slide
+    // Nachladen: Waffe kippt zur Seite und hoch (weich ein/aus), mit einem
+    // kleinen Ruck beim Magazin-Lösen (30 %) und beim Einrasten (75 %)
+    const reloadPose = reloadEnvelope(this.reload)
+    const reloadJolt = reloadBump(this.reload, 0.3) + reloadBump(this.reload, 0.75)
+    this.group.position.y = restY - SWITCH_DROP * this.lowered - 0.05 * this.slide - 0.04 * reloadPose - 0.025 * reloadJolt
     this.group.rotation.y = REST_ROTATION_Y * (1 - this.aim)
-    this.group.rotation.z = 0.35 * this.slide
+    // Beim Wechsel leicht zur Seite kippen, damit das Absenken nicht steif wirkt
+    this.group.rotation.z = 0.35 * this.slide + 0.3 * this.lowered - 0.55 * reloadPose
     if (this.current.stab) {
       // Schnell vor, langsamer zurück
       const t = 1 - this.recoilRemaining / STAB_DURATION // 0 -> 1
@@ -169,8 +192,8 @@ export class WeaponView {
       return
     }
     const recoil = (this.recoilRemaining / RECOIL_DURATION) * this.current.recoilScale // 1 -> 0
-    this.group.position.x = restX
-    this.group.position.z = restZ + RECOIL_KICK_Z * recoil
-    this.group.rotation.x = -RECOIL_KICK_ROTATION * recoil - this.lowered * 0.6
+    this.group.position.x = restX - 0.05 * reloadPose
+    this.group.position.z = restZ + RECOIL_KICK_Z * recoil + 0.03 * reloadJolt
+    this.group.rotation.x = -RECOIL_KICK_ROTATION * recoil - this.lowered * 0.6 + 0.35 * reloadPose - 0.08 * reloadJolt
   }
 }

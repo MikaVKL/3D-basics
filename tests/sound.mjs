@@ -103,7 +103,7 @@ try {
     __dusk.weapon.ammo = 3
     __dusk.weapon.reload()
   })
-  check('Nachladen', (await takeSounds(page)).join() === 'reload')
+  check('Nachladen: Magazin-löst-Ton', (await takeSounds(page)).join() === 'reloadOut')
 
   // Physik direkt simulieren (Headless rendert zu langsam für echte Frames)
   const simulate = (setup) =>

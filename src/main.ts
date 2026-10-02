@@ -297,7 +297,10 @@ weapon.onEnemyHit = (kill, point, damage, headshot) => {
   hitFeedback.showDamageNumber(point, damage, headshot, camera)
   sound.play(kill ? 'kill' : headshot ? 'headshot' : 'hit')
 }
-weapon.onReload = () => sound.play('reload', 0.6)
+weapon.onReload = () => sound.play('reloadOut', 0.6)
+weapon.onReloadDone = () => sound.play('reloadIn', 0.6)
+weapon.onDraw = (id) => sound.play(id === 'knife' ? 'drawKnife' : 'drawGun', 0.5)
+weapon.onDryFire = () => sound.play('dryFire', 0.5)
 weapon.onSwing = () => {
   sound.play('knife', 0.7)
   // Für den Ton bei den anderen (keine Leuchtspur)

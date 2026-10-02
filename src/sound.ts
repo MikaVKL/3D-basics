@@ -68,10 +68,32 @@ export const SYNTHS = {
     tone(ctx, out, 'square', 700, 120, 0.22, 0.09)
     noiseBurst(ctx, out, noise, 'bandpass', 1400, 0.35, 0.07)
   },
-  reload: (ctx, out, noise) => {
-    noiseBurst(ctx, out, noise, 'bandpass', 3000, 0.4, 0.04)
-    noiseBurst(ctx, out, noise, 'bandpass', 2200, 0.4, 0.05, 0.45)
-    tone(ctx, out, 'square', 500, 900, 0.12, 0.08, 1.05)
+  // Nachladen: Energiezelle löst sich (Anfang) und rastet wieder ein (Ende);
+  // zwei getrennte Töne, damit sie zur Nachladezeit der Waffe passen
+  reloadOut: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 2600, 0.4, 0.03)
+    tone(ctx, out, 'square', 420, 170, 0.12, 0.09, 0.03)
+    noiseBurst(ctx, out, noise, 'lowpass', 500, 0.4, 0.08, 0.08)
+  },
+  reloadIn: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'lowpass', 600, 0.45, 0.07)
+    noiseBurst(ctx, out, noise, 'bandpass', 3000, 0.4, 0.03, 0.09)
+    tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.13) // fertig-"Ping"
+  },
+  // Waffe ziehen (Wechsel): Luftzug, dann Klick / beim Messer ein helles Zischen
+  drawGun: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'highpass', 1200, 0.3, 0.09)
+    noiseBurst(ctx, out, noise, 'bandpass', 2800, 0.4, 0.03, 0.07)
+    tone(ctx, out, 'triangle', 320, 200, 0.1, 0.05, 0.07)
+  },
+  drawKnife: (ctx, out, noise) => {
+    tone(ctx, out, 'sine', 2200, 3300, 0.1, 0.14)
+    noiseBurst(ctx, out, noise, 'highpass', 4000, 0.25, 0.12)
+  },
+  // Abdrücken ohne Schuss (z. B. beim Nachladen): leiser Klick
+  dryFire: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 3500, 0.35, 0.015)
+    tone(ctx, out, 'square', 1200, 900, 0.05, 0.02)
   },
   hit: (ctx, out) => tone(ctx, out, 'sine', 1900, 1700, 0.3, 0.06),
   // Heller Doppel-"Ping", klar vom normalen Treffer unterscheidbar

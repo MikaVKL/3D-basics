@@ -99,6 +99,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:aim` – Zielen (rechte Maustaste halten): Zoom je Waffe, Empfind-
   lichkeit folgt dem Zoom, halbe Streuung, 75 % Tempo, kein Sprint, Waffe
   mittig, Abbruch bei Nachladen/Messer/Tod, Einstellungs-Blickfeld als Basis
+- `npm run test:reload` – Nachladen/Wechsel: Töne (Magazin raus am Start, rein
+  am Ende der Nachladezeit, Zieh-Ton am Tiefpunkt, Klick beim Abdrücken im
+  Nachladen), Animation (Kippen, zweiphasiger Wechsel mit Modelltausch)
 - `npm run test:headshot` – Kopftreffer 2× (auch geduckt), Schadenszahlen,
   Ton, Kill-Feed-Markierung und -Dauer
 - `npm run test:weapons` – Wechsel (1/2/3, Mausrad, Q), Munition je Waffe,
@@ -313,6 +316,14 @@ Stolperfallen bei Headless-Tests:
   richtet die Visierlinie unter die Bildmitte aus. Gegner sehen das Zielen nicht
   (kein Protokoll). Offen, bewusst zurückgestellt (Nutzer: Laptop zuerst, nicht
   Mobile): Touch-Button zum Zielen, Umschalter statt Halten in den Einstellungen.
+- **Nachladen/Wechsel** (Ton + Animation): Nachladen hat zwei Töne (`reloadOut`
+  am Start, `reloadIn` bei Ende, daher passend zur Dauer jeder Waffe) und kippt
+  die Waffe zur Mitte (`WeaponView.reload`). Der Wechsel ist zweiphasig: altes
+  Modell sinkt, beim Tiefpunkt (`switchRemaining` = 50 %) tauscht das Modell und
+  `onDraw` spielt `drawGun`/`drawKnife`, dann steigt die neue (`lowered` =
+  Dreieck statt Rampe). Abdrücken im Nachladen: `dryFire`-Klick (nur beim
+  Drücken). Respawn setzt das Modell sofort ohne Ton. Andere Spieler hören
+  das nicht (kein Protokoll).
 - **Stamina**: 5 s Dauersprint (Abfluss 20/s, Regeneration 15/s), auf Nutzerwunsch.
 - **Laserstrahl (Leuchtspur) bleibt** (Nutzer mag ihn): heller weißer Kern +
   additiver Schein in der Teamfarbe des Schützen, 0,2 s, quadratisch

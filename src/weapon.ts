@@ -85,7 +85,14 @@ export class Weapon {
   // Für Hitmarker und Schadenszahl; kill nur lokal erkannt (Dummies), online meldet der Server
   onEnemyHit?: (kill: boolean, point: THREE.Vector3, damage: number, headshot: boolean) => void
   onReload?: () => void
+  onReloadDone?: () => void
   onSwitch?: (weapon: WeaponId) => void
+  // Neue Waffe ist in der Hand (Tiefpunkt des Wechsels): Ton fürs Ziehen
+  onDraw?: (weapon: WeaponId) => void
+  // Abdrücken, obwohl nicht geschossen werden kann (Nachladen)
+  onDryFire?: () => void
+  // Waffe, deren Modell gerade gezeigt wird; wechselt erst beim Tiefpunkt
+  private pendingModel: WeaponId | null = null
   // 0..1, Waffe neigt sich beim Rutschen (setzt main.ts)
   slideAmount = 0
   // Messerstich (getroffen oder nicht), für den Ton
@@ -144,7 +151,8 @@ export class Weapon {
     this.switchRemaining = SWITCH_TIME
     this.heat = 0
     this.shotQueued = false
-    this.view.setWeapon(id)
+    // Zweiphasig: altes Modell sinkt, beim Tiefpunkt (update) kommt das neue
+    this.pendingModel = id
     this.onSwitch?.(id)
   }
 
@@ -165,6 +173,9 @@ export class Weapon {
     this.previousWeapon = WEAPON_SLOTS[1]
     this.reloadRemaining = 0
     this.switchRemaining = 0
+    // Kein Wechsel-Ablauf beim Respawn: Modell sofort, ohne Ton
+    this.view.setWeapon(this.weaponId)
+    this.pendingModel = null
     this.cancelFire()
   }
 
@@ -192,6 +203,7 @@ export class Weapon {
   // Gedrückt halten: Dauerfeuer nur bei automatischen Waffen
   setTrigger(pressed: boolean) {
     this.triggerHeld = pressed
+    if (pressed && this.reloadRemaining > 0 && !this.isMelee) this.onDryFire?.()
     if (pressed && !this.tryShoot() && this.cooldownRemaining > 0) this.shotQueued = true
   }
 
@@ -201,7 +213,15 @@ export class Weapon {
     if (!autoFire) this.cooldownRemaining = Math.max(0, this.cooldownRemaining)
     this.switchRemaining = Math.max(0, this.switchRemaining - deltaSeconds)
     this.heat = Math.max(0, this.heat - HEAT_DECAY * deltaSeconds)
-    this.view.lowered = this.switchRemaining / SWITCH_TIME
+    // Wechsel: oben -> unten (Tiefpunkt: Modell tauscht, Zieh-Ton) -> oben
+    const switchProgress = this.switchRemaining / SWITCH_TIME
+    if (this.pendingModel !== null && switchProgress <= 0.5) {
+      this.view.setWeapon(this.pendingModel)
+      this.onDraw?.(this.pendingModel)
+      this.pendingModel = null
+    }
+    this.view.lowered = 1 - Math.abs(2 * switchProgress - 1)
+    this.view.reload = this.reloadRemaining > 0 ? 1 - this.reloadRemaining / this.stats.reloadTime : 0
     this.view.slide = this.slideAmount
     const aimStep = AIM_BLEND_SPEED * deltaSeconds
     this.aimAmount += Math.min(aimStep, Math.max(-aimStep, (this.isAiming ? 1 : 0) - this.aimAmount))
@@ -212,6 +232,7 @@ export class Weapon {
       this.reloadRemaining = Math.max(0, this.reloadRemaining - deltaSeconds)
       if (this.reloadRemaining === 0) {
         this.ammo = this.stats.magazine
+        this.onReloadDone?.()
       }
     }
     if (this.shotQueued && this.cooldownRemaining <= 0) {
