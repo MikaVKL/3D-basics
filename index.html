@@ -10,7 +10,7 @@
     <div id="app"></div>
 
     <!-- Fadenkreuz in der Bildschirmmitte -->
-    <div id="scope"><div class="blur"></div><div class="ring"></div><i class="h"></i><i class="v"></i></div>
+    <div id="scope"><div class="ring"></div><i class="h"></i><i class="v"></i></div>
     <div id="crosshair"><i class="top"></i><i class="bottom"></i><i class="left"></i><i class="right"></i><b></b></div>
     <div id="hitmarker"></div>
     <div id="damage-indicators"></div>
@@ -165,6 +165,11 @@
             <label for="setting-minimap">Minimap (N)</label>
             <input id="setting-minimap" type="checkbox" />
             <output id="setting-minimap-value"></output>
+          </div>
+          <div class="setting-row">
+            <label for="setting-scopeblur">Scope-Unschärfe</label>
+            <input id="setting-scopeblur" type="checkbox" />
+            <output id="setting-scopeblur-value"></output>
           </div>
           <div class="menu-buttons">
             <button id="settings-reset-button" class="menu-button" type="button">Standardwerte</button>

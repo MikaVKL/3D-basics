@@ -523,6 +523,8 @@ for (const key of Object.keys(SETTING_RANGES) as NumericSettingKey[]) {
 
 const minimapCheckbox = document.querySelector<HTMLInputElement>('#setting-minimap')!
 const minimapCheckboxValue = document.querySelector<HTMLOutputElement>('#setting-minimap-value')!
+const scopeBlurCheckbox = document.querySelector<HTMLInputElement>('#setting-scopeblur')!
+const scopeBlurCheckboxValue = document.querySelector<HTMLOutputElement>('#setting-scopeblur-value')!
 
 function showSettingValues() {
   for (const key of Object.keys(settingSliders) as NumericSettingKey[]) {
@@ -531,6 +533,8 @@ function showSettingValues() {
   }
   minimapCheckbox.checked = settings.minimap
   minimapCheckboxValue.textContent = settings.minimap ? 'An' : 'Aus'
+  scopeBlurCheckbox.checked = settings.scopeBlur
+  scopeBlurCheckboxValue.textContent = settings.scopeBlur ? 'An' : 'Aus'
 }
 
 function setMinimapEnabled(enabled: boolean) {
@@ -541,6 +545,11 @@ function setMinimapEnabled(enabled: boolean) {
 }
 
 minimapCheckbox.addEventListener('change', () => setMinimapEnabled(minimapCheckbox.checked))
+scopeBlurCheckbox.addEventListener('change', () => {
+  settings.scopeBlur = scopeBlurCheckbox.checked
+  showSettingValues()
+  saveSettings(settings)
+})
 // N schaltet die Karte um (nicht beim Tippen im Namensfeld)
 window.addEventListener('keydown', (event) => {
   if (event.code === 'KeyN' && !event.repeat && !(event.target instanceof HTMLInputElement)) setMinimapEnabled(!settings.minimap)
@@ -714,10 +723,83 @@ const crosshair = document.querySelector<HTMLDivElement>('#crosshair')!
 const CROSSHAIR_BASE_GAP = 4 // px
 // Lücke = echte Streuung als Bildschirmabstand (Winkel -> Pixel über das FOV)
 const scopeOverlay = document.querySelector<HTMLDivElement>('#scope')!
+// Unscharfer Rand des Zielfernrohrs, komplett auf der GPU: die Szene wird zusätzlich in ein
+// stark verkleinertes Bild gerendert; ein Vollbild-Dreieck zeigt es (weich hochskaliert,
+// mit etwas Streuung) außerhalb des Kreises. Kein CSS-backdrop-filter (kostete spürbar Bildrate,
+// vor allem auf Tablets) und kein Auslesen des Canvas.
+const SCOPE_BLUR_DIVISOR = 6
+const scopeTarget = new THREE.WebGLRenderTarget(8, 8, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter })
+const scopeMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    map: { value: scopeTarget.texture },
+    aspect: { value: 1 },
+    strength: { value: 0 },
+    texel: { value: new THREE.Vector2(1, 1) },
+    blurOn: { value: 1 },
+  },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: `
+    uniform sampler2D map; uniform float aspect; uniform float strength; uniform vec2 texel; uniform float blurOn;
+    varying vec2 vUv;
+    void main() {
+      // Kreisradius 40 vmin (wie die CSS-Maske des Rings): Abstand in Einheiten der kürzeren Bildkante
+      float d = length((vUv - 0.5) * vec2(aspect, 1.0)) / min(aspect, 1.0);
+      float edge = smoothstep(0.396, 0.406, d);
+      if (edge < 0.002) discard;
+      // 5 Abtastungen (Mitte doppelt, vier Diagonalen): glättet die Treppen des kleinen Bildes billig
+      vec3 c = texture2D(map, vUv).rgb * 0.4;
+      c += texture2D(map, vUv + texel * vec2(1.2, 1.2)).rgb * 0.15;
+      c += texture2D(map, vUv + texel * vec2(-1.2, 1.2)).rgb * 0.15;
+      c += texture2D(map, vUv + texel * vec2(1.2, -1.2)).rgb * 0.15;
+      c += texture2D(map, vUv + texel * vec2(-1.2, -1.2)).rgb * 0.15;
+      // Ohne Unschärfe (Einstellung aus): nur abgedunkelt
+      gl_FragColor = blurOn > 0.5 ? vec4(c * 0.65, edge * strength) : vec4(0.015, 0.025, 0.04, edge * strength * 0.85);
+      #include <colorspace_fragment>
+    }`,
+  transparent: true,
+  depthTest: false,
+  depthWrite: false,
+})
+const scopeQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), scopeMaterial)
+scopeQuad.frustumCulled = false
+const scopeScene = new THREE.Scene()
+scopeScene.add(scopeQuad)
+const scopeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+let scopeAmountNow = 0
+let scopeBlurFrame = 0
+function resizeScopeTarget() {
+  const size = renderer.getDrawingBufferSize(new THREE.Vector2())
+  const w = Math.max(8, Math.round(size.x / SCOPE_BLUR_DIVISOR))
+  const h = Math.max(8, Math.round(size.y / SCOPE_BLUR_DIVISOR))
+  if (scopeTarget.width !== w || scopeTarget.height !== h) scopeTarget.setSize(w, h)
+  scopeMaterial.uniforms.aspect.value = window.innerWidth / window.innerHeight
+  scopeMaterial.uniforms.texel.value.set(1 / w, 1 / h)
+}
+// Statt renderer.render(scene, camera): zeichnet bei aktivem Zielfernrohr zusätzlich den unscharfen Rand
+function renderFrame() {
+  if (scopeAmountNow <= 0.01) {
+    renderer.render(scene, camera)
+    return
+  }
+  // Der unscharfe Rand wird nur jedes zweite Bild neu gerendert (unscharf fällt das nicht auf)
+  scopeMaterial.uniforms.blurOn.value = settings.scopeBlur ? 1 : 0
+  if (settings.scopeBlur && scopeBlurFrame++ % 2 === 0) {
+    resizeScopeTarget()
+    renderer.setRenderTarget(scopeTarget)
+    renderer.render(scene, camera)
+    renderer.setRenderTarget(null)
+  }
+  renderer.render(scene, camera)
+  renderer.autoClear = false
+  scopeMaterial.uniforms.strength.value = scopeAmountNow
+  renderer.render(scopeScene, scopeCamera)
+  renderer.autoClear = true
+}
 function updateCrosshair() {
   // Zielfernrohr: Linsenbild statt Fadenkreuz
   const scope = player.isAlive ? weapon.scopeAmount : 0
   scopeOverlay.style.setProperty('--scope', scope.toFixed(2))
+  scopeAmountNow = scope
   crosshair.style.visibility = scope > 0.5 ? 'hidden' : ''
   const melee = weapon.isMelee
   crosshair.classList.toggle('melee', melee)
@@ -862,7 +944,7 @@ function animate() {
   player.setAiming(weapon.isAiming)
   slideView.apply(camera, player.isSliding && player.isAlive, deltaSeconds)
   weapon.slideAmount = slideView.amount
-  renderer.render(scene, camera)
+  renderFrame()
   slideView.restore(camera)
   cameraShake.restore(camera)
 }

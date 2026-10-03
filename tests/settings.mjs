@@ -146,6 +146,14 @@ try {
   await page.click('#settings-button')
   const garbage = await readUi(page)
   check('kein gültiges JSON: Standardwerte', garbage.sensitivity.value === 1 && garbage.fov.value === 75 && garbage.volume.value === 1, JSON.stringify(garbage))
+  // Scope-Unschärfe: Haken, Standard an, gemerkt
+  const blurDefault = await page.evaluate(() => ({ checked: document.querySelector('#setting-scopeblur').checked, label: document.querySelector('#setting-scopeblur-value').textContent }))
+  check('Scope-Unschärfe: Standard an', blurDefault.checked && blurDefault.label === 'An', JSON.stringify(blurDefault))
+  await page.evaluate(() => document.querySelector('#setting-scopeblur').click())
+  const blurOff = await page.evaluate(() => ({ stored: JSON.parse(localStorage.getItem('duskArena.settings')).scopeBlur, label: document.querySelector('#setting-scopeblur-value').textContent }))
+  check('Scope-Unschärfe ausschalten wird gemerkt', blurOff.stored === false && blurOff.label === 'Aus', JSON.stringify(blurOff))
+  await page.evaluate(() => document.querySelector('#setting-scopeblur').click())
+
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

@@ -71,7 +71,9 @@ try {
   const mid = await page.evaluate(() => ({ slots: __dusk.weapon.slots.join(), overlayHidden: document.querySelector('#overlay').classList.contains('hidden') }))
   check('Spielen im Pausenmenü setzt fort; die neuen Waffen warten bis zum Respawn', mid.overlayHidden && mid.slots === 'smg,sniper,knife', JSON.stringify(mid))
   await page.evaluate(() => __dusk.player.takeDamage(999))
-  await wait(3800)
+  // Respawn abwarten (nach ~3 s; auf langsamen Rechnern später)
+  await page.waitForFunction(() => __dusk.player.isAlive && __dusk.weapon.slots.join() !== 'smg,sniper,knife', null, { timeout: 15000 }).catch(() => {})
+  await wait(300)
   const after = await page.evaluate(() => ({ slots: __dusk.weapon.slots.join(), current: __dusk.weapon.current }))
   check('Nach dem Respawn: Maschinenpistole, Shotgun, Messer; Secondary in der Hand', after.slots === 'smg,shotgun,knife' && after.current === 'smg', JSON.stringify(after))
 

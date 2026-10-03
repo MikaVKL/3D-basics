@@ -6,11 +6,12 @@ export interface Settings {
   volume: number // 0..1
   music: number // 0..1, Hintergrundmusik
   minimap: boolean
+  scopeBlur: boolean // Zielfernrohr: Rand unscharf (aus = nur abgedunkelt, schont schwache Geräte)
 }
 
 export type NumericSettingKey = 'sensitivity' | 'fov' | 'volume' | 'music'
 
-export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1, music: 0.5, minimap: true }
+export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1, music: 0.5, minimap: true, scopeBlur: true }
 
 export const SETTING_RANGES: Record<NumericSettingKey, { min: number; max: number; step: number }> = {
   sensitivity: { min: 0.3, max: 8, step: 0.05 },
@@ -43,6 +44,7 @@ export function loadSettings(): Settings {
     volume: clampSetting('volume', stored.volume),
     music: clampSetting('music', stored.music),
     minimap: typeof stored.minimap === 'boolean' ? stored.minimap : DEFAULT_SETTINGS.minimap,
+    scopeBlur: typeof stored.scopeBlur === 'boolean' ? stored.scopeBlur : DEFAULT_SETTINGS.scopeBlur,
   }
 }
 

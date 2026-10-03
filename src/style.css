@@ -37,27 +37,15 @@ body {
 
 /* Fadenkreuz: 4 Striche, Lücke (--gap) folgt der echten Streuung.
    Messer: Punkt + Ring, leuchtet bei Gegner in Reichweite. */
-/* Zielfernrohr: nur im runden Sichtfeld scharf, außen unscharf und leicht abgedunkelt
-   (backdrop-filter mit Maske), dünner Rand und feines Fadenkreuz. Deckkraft kommt aus
+/* Zielfernrohr: nur im runden Sichtfeld scharf. Der unscharfe, abgedunkelte Außenbereich wird
+   in WebGL gezeichnet (main.ts, renderFrame); hier nur dünner Rand und feines Fadenkreuz. Deckkraft kommt aus
    main.ts (Zoom-Fortschritt), unter allem anderen HUD. */
 #scope {
   position: fixed;
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  --scope: 0; /* 0..1 aus main.ts; die Deckkraft sitzt an den Kindern, ein Eltern-Opacity < 1
-                 würde den Hintergrund-Blur unterdrücken (Backdrop Root) */
-}
-
-#scope .blur {
-  position: absolute;
-  inset: 0;
-  opacity: var(--scope);
-  background: rgba(4, 8, 14, 0.35);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  -webkit-mask-image: radial-gradient(circle at center, transparent 0, transparent 39.6vmin, #000 40.6vmin);
-  mask-image: radial-gradient(circle at center, transparent 0, transparent 39.6vmin, #000 40.6vmin);
+  --scope: 0; /* 0..1 aus main.ts, die Deckkraft sitzt an den Kindern */
 }
 
 #scope .ring {
