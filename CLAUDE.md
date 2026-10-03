@@ -314,6 +314,14 @@ Stolperfallen bei Headless-Tests:
   Regal-Steg bis zur Ostwand, Absprung-Lücke x 47..49. Die Öffnung hat
   bewusst KEINEN Sturz: mit 2,2 m Kopffreiheit stieß man im Sprung mitten
   in der Tür an (stuck-fuzz Seed 3). Spawn 5 (49,5 / -19,2) unter dem Steg.
+- **Südost-Halle** (x 36..52, z 12..21, Spiegelbild der Nordost-Halle, Nutzerwunsch "komplett
+  symmetrisch"): Öffnung x 38..46 in der Flankenraum-Südwand, Regal-Steg auf 2,8 m an der
+  Südwand als Verlängerung des Südstegs **über den Südost-Tunnel** (Steg-Boden = Tunneldecke
+  2,5..2,8; Tunnelmaße jetzt z 17,75..20,75 bündig mit dem Steg) und durch die Tunnel-Ostwand
+  (dort Sockel, darüber offen, ohne Sturz), Absprung-Lücke x 47..49, Spawn S6 (49,5 / 19,2)
+  unter dem Steg mit Kiste davor. Schmaler als die Nordost-Halle (16 statt 20 m), weil der
+  Tunnel (x 32..36) im Weg ist. Einsehbarkeit S6 31 % (S5 22 %, S3 25 %), bewusst nicht
+  weiter entschärft. Die West-Seite ist nicht gespiegelt (Fenster/Rampe B).
 - **Keine Requisiten** wie Autowracks, Fässer, Paletten (Nutzer: passen nicht
   zum Lasertag-Look; das Vorlagenfoto galt nur dem Aufbau der Arena). Es
   bleiben drei 6-m-Neon-Säulen (dunkler Kern `Palette.pillar`, drei

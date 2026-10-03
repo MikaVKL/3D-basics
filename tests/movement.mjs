@@ -386,6 +386,33 @@ try {
     walkTo(0, 120)
     out.hallWall = { z: cam.position.z }
 
+    // Südost-Halle (Spiegelbild): durch die Öffnung (x 38..46) hinein, daneben blockiert die Wand
+    placeOnFloor(39, 8)
+    walkTo(Math.PI, 200)
+    out.seHallIn = { z: cam.position.z }
+    placeOnFloor(37, 8)
+    walkTo(Math.PI, 120)
+    out.seHallWall = { z: cam.position.z }
+    // Regal-Steg Süd: vom Südsteg (x 28) nach Osten über den Südost-Tunnel und durch die Wand, Absprung-Lücke bei x 47..49
+    place(28, 19, EAST)
+    walkTo(EAST, 100)
+    out.seShelfEnter = { y: P.bodyY, x: cam.position.x }
+    walkTo(EAST, 160)
+    out.seShelfEast = { y: P.bodyY, x: cam.position.x }
+    cam.position.x = 48
+    walkTo(0, 80)
+    out.seShelfDrop = { y: P.bodyY, z: cam.position.z }
+    placeOnFloor(44, 14)
+    walkTo(Math.PI, 60)
+    out.seShelfUnder = { y: P.bodyY, z: cam.position.z }
+    // Halle-Spawn (49,5 / 19,2): unter dem Regal-Steg, Kiste davor, raus nach Westen
+    placeOnFloor(49.5, 19.2)
+    walkTo(WEST, 120)
+    out.seHallSpawnExit = cam.position.x
+    placeOnFloor(49.5, 19.2)
+    walkTo(Math.PI, 40)
+    out.seHallSpawnWall = cam.position.z
+
     // Nordwest-Tunnel (unter dem Nordsteg) führt durch die Trennwand in die West-Zone
     placeOnFloor(-10, -19)
     walkTo(WEST, 220)
@@ -468,6 +495,14 @@ try {
   check('Regal-Steg: Lücke im Geländer, hinunterspringen', r.shelfDrop.y < 0.01 && r.shelfDrop.z > -17, `Höhe ${f2(r.shelfDrop.y)}, z ${f2(r.shelfDrop.z)}`)
   check('unter dem Steg kein Durchgang durch die Ostwand', r.shelfWall.x < 32, `x ${f2(r.shelfWall.x)}`)
   check('unter dem Regal-Steg stehen', r.shelfUnder.y < 0.01 && r.shelfUnder.z < -17.9, `Höhe ${f2(r.shelfUnder.y)}, z ${f2(r.shelfUnder.z)}`)
+  check('Südost-Halle: durch die Öffnung hinein', r.seHallIn.z > 19.9, `z ${f2(r.seHallIn.z)}`)
+  check('Südost-Halle: Wand neben der Öffnung hält', r.seHallWall.z < 11.8, `z ${f2(r.seHallWall.z)}`)
+  check('Regal-Steg Süd: über den Tunnel und durch die Wand auf 2,8 m', Math.abs(r.seShelfEnter.y - 2.8) < 0.01 && r.seShelfEnter.x > 33, `Höhe ${f2(r.seShelfEnter.y)}, x ${f2(r.seShelfEnter.x)}`)
+  check('Regal-Steg Süd: bis ans Ende in der Halle', Math.abs(r.seShelfEast.y - 2.8) < 0.01 && r.seShelfEast.x > 50, `Höhe ${f2(r.seShelfEast.y)}, x ${f2(r.seShelfEast.x)}`)
+  check('Regal-Steg Süd: Lücke im Geländer, hinunterspringen', r.seShelfDrop.y < 0.01 && r.seShelfDrop.z < 17.5, `Höhe ${f2(r.seShelfDrop.y)}, z ${f2(r.seShelfDrop.z)}`)
+  check('unter dem Regal-Steg Süd stehen', r.seShelfUnder.y < 0.01 && r.seShelfUnder.z > 17.9, `Höhe ${f2(r.seShelfUnder.y)}, z ${f2(r.seShelfUnder.z)}`)
+  check('Südost-Halle-Spawn: nach Westen unter dem Steg raus', r.seHallSpawnExit < 44, `x ${f2(r.seHallSpawnExit)}`)
+  check('Südost-Halle-Spawn: Wand im Süden', r.seHallSpawnWall > 19.9, `z ${f2(r.seHallSpawnWall)}`)
   check('Nord-Spawn: seitlich unter dem Steg raus', r.northSpawnExit.west < -6 && r.northSpawnExit.east > 6, `x ${f2(r.northSpawnExit.west)} / ${f2(r.northSpawnExit.east)}`)
   check('unter dem Steg: Sprung stößt an (Kopf <= 2,5 m)', r.underCatwalk.maxHead <= 2.51 && r.underCatwalk.landed < 0.01, `Kopf max ${f2(r.underCatwalk.maxHead)}`)
   check('unter den Steg bis an die Wand laufen', r.walkUnder.y < 0.01 && r.walkUnder.z < -19.5, `x ${f2(r.walkUnder.x)}, z ${f2(r.walkUnder.z)}`)

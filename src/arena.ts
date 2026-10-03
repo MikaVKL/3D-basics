@@ -150,16 +150,24 @@ export function buildArena(): ArenaResult {
   // und Flankenraum-Ostwand), über eine Öffnung in dessen Nordwand erreichbar
   const HALL_MIN_Z = -MAIN_HALF_D
   const HALL_MAX_Z = -SIDE_HALF_D
-  const HALL_DOOR_X: [number, number] = [38, 46] // Öffnung in der Flankenraum-Nordwand
+  const HALL_DOOR_X: [number, number] = [38, 46] // Öffnung in der Flankenraum-Nord- und -Südwand
+  const sideRoomMaxXForHall = MAIN_HALF_W + SIDE_ROOM_WIDTH
   const hallGround = new THREE.Mesh(new THREE.PlaneGeometry(SIDE_ROOM_WIDTH, HALL_MAX_Z - HALL_MIN_Z), groundMaterial)
   hallGround.rotation.x = -Math.PI / 2
   hallGround.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0, (HALL_MIN_Z + HALL_MAX_Z) / 2)
   group.add(hallGround)
 
+  // Südost-Halle: Spiegelbild der Nordost-Halle, schmaler um den Südost-Tunnel (x 32..36)
+  const SE_HALL_MIN_X = 36
+  const seHallGround = new THREE.Mesh(new THREE.PlaneGeometry(sideRoomMaxXForHall - SE_HALL_MIN_X, MAIN_HALF_D - SIDE_HALF_D), groundMaterial)
+  seHallGround.rotation.x = -Math.PI / 2
+  seHallGround.position.set((SE_HALL_MIN_X + sideRoomMaxXForHall) / 2, 0, (SIDE_HALF_D + MAIN_HALF_D) / 2)
+  group.add(seHallGround)
+
   // Boden des Südost-Tunnels (außerhalb der Räume)
-  const tunnelGround = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 8.5), groundMaterial)
+  const tunnelGround = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 9), groundMaterial)
   tunnelGround.rotation.x = -Math.PI / 2
-  tunnelGround.position.set(34.25, 0, 16.25)
+  tunnelGround.position.set(34.25, 0, 16.5)
   group.add(tunnelGround)
 
   // --- Raster auf den Böden (GridHelper ist quadratisch -> per scale gestreckt) ---
@@ -183,6 +191,13 @@ export function buildArena(): ArenaResult {
   ;(hallGrid.material as THREE.Material).opacity = 0.15
   hallGrid.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0.01, (HALL_MIN_Z + HALL_MAX_Z) / 2)
   group.add(hallGrid)
+
+  const seHallGrid = new THREE.GridHelper(16, 6, Palette.accentNeon, 0x2a3a4a)
+  seHallGrid.scale.z = (MAIN_HALF_D - SIDE_HALF_D) / 16
+  ;(seHallGrid.material as THREE.Material).transparent = true
+  ;(seHallGrid.material as THREE.Material).opacity = 0.15
+  seHallGrid.position.set((SE_HALL_MIN_X + sideRoomMaxXForHall) / 2, 0.01, (SIDE_HALF_D + MAIN_HALF_D) / 2)
+  group.add(seHallGrid)
 
   // --- Umgebende Wände ---
   const wallMaterial = new THREE.MeshStandardMaterial({
@@ -222,8 +237,8 @@ export function buildArena(): ArenaResult {
   // Südost-Tunnel (L): der Gang unter dem Südsteg (z 17,5..20,5) geht durch die
   // Hauptraum-Ostwand nach Osten und biegt außerhalb nach Norden ab; er mündet
   // durch die Flankenraum-Südwand in die Ostzone. Breite 3 m, Höhe 2,5 m.
-  const SE_TUNNEL_Z_MIN = 17.5
-  const SE_TUNNEL_Z_MAX = 20.5
+  const SE_TUNNEL_Z_MIN = 17.75 // = Stegkante; bündig mit dem Südsteg darüber (Regal-Steg der Südost-Halle)
+  const SE_TUNNEL_Z_MAX = 20.75 // = Innenseite der Südwand
   const SE_TUNNEL_X_MAX = 36 // Innenkante der Ostwand des Tunnels
   const SE_TUNNEL_NORTH_X: [number, number] = [33, 36] // Nordarm, mündet bei z 12
   const dividerNorthLowerDepth = DOORWAY_Z_MIN - DIVIDER_GAP_Z_MAX
@@ -241,13 +256,13 @@ export function buildArena(): ArenaResult {
       x: MAIN_HALF_W,
       z: (SIDE_HALF_D + SE_TUNNEL_Z_MIN) / 2,
     },
-    { w: WALL_THICKNESS, d: SE_TUNNEL_Z_MAX - SE_TUNNEL_Z_MIN, x: MAIN_HALF_W, z: (SE_TUNNEL_Z_MIN + SE_TUNNEL_Z_MAX) / 2, bottom: TUNNEL_HEIGHT },
     // Ostwand nördlich der Öffnung: Durchgang für den Regal-Steg (z -20,5..-17,5, siehe unten)
     { w: WALL_THICKNESS, d: 5.5, x: MAIN_HALF_W, z: -SIDE_HALF_D - 5.5 / 2 },
     { w: WALL_THICKNESS, d: 0.5, x: MAIN_HALF_W, z: -MAIN_HALF_D + 0.25 },
     // Flankenraum-Südwand mit Mündung des Südost-Tunnels (Sturz darüber)
     { w: SE_TUNNEL_NORTH_X[0] - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + SE_TUNNEL_NORTH_X[0]) / 2, z: SIDE_HALF_D },
-    { w: sideRoomMaxX - SE_TUNNEL_NORTH_X[1], d: WALL_THICKNESS, x: (SE_TUNNEL_NORTH_X[1] + sideRoomMaxX) / 2, z: SIDE_HALF_D },
+    { w: HALL_DOOR_X[0] - SE_TUNNEL_NORTH_X[1], d: WALL_THICKNESS, x: (SE_TUNNEL_NORTH_X[1] + HALL_DOOR_X[0]) / 2, z: SIDE_HALF_D },
+    { w: sideRoomMaxX - HALL_DOOR_X[1], d: WALL_THICKNESS, x: (HALL_DOOR_X[1] + sideRoomMaxX) / 2, z: SIDE_HALF_D },
     {
       w: SE_TUNNEL_NORTH_X[1] - SE_TUNNEL_NORTH_X[0],
       d: WALL_THICKNESS,
@@ -257,14 +272,18 @@ export function buildArena(): ArenaResult {
     },
     // Südost-Tunnel: Südwand, Ostwand, dünne Westwand des Nordarms, Decke über beiden Armen
     { w: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2 - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + SE_TUNNEL_X_MAX + WALL_THICKNESS / 2) / 2, z: MAIN_HALF_D },
-    { w: WALL_THICKNESS, d: MAIN_HALF_D + WALL_THICKNESS / 2 - (SIDE_HALF_D + WALL_THICKNESS / 2), x: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2, z: (MAIN_HALF_D + WALL_THICKNESS / 2 + SIDE_HALF_D + WALL_THICKNESS / 2) / 2 },
+    // Ostwand des Tunnels = Westwand der Südost-Halle: voll bis zum Steg, an der Steg-Durchfahrt nur als Sockel (siehe unten)
+    { w: WALL_THICKNESS, d: SE_TUNNEL_Z_MIN - (SIDE_HALF_D + WALL_THICKNESS / 2), x: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2, z: (SE_TUNNEL_Z_MIN + SIDE_HALF_D + WALL_THICKNESS / 2) / 2 },
+    { w: WALL_THICKNESS, d: MAIN_HALF_D + WALL_THICKNESS / 2 - SE_TUNNEL_Z_MAX, x: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2, z: (MAIN_HALF_D + WALL_THICKNESS / 2 + SE_TUNNEL_Z_MAX) / 2 },
     { w: SE_TUNNEL_NORTH_X[0] - (sideRoomMinX + WALL_THICKNESS / 2), d: SE_TUNNEL_Z_MIN - (SIDE_HALF_D + WALL_THICKNESS / 2), x: (sideRoomMinX + WALL_THICKNESS / 2 + SE_TUNNEL_NORTH_X[0]) / 2, z: (SIDE_HALF_D + WALL_THICKNESS / 2 + SE_TUNNEL_Z_MIN) / 2 },
-    { w: SE_TUNNEL_X_MAX - (sideRoomMinX + WALL_THICKNESS / 2), d: SE_TUNNEL_Z_MAX - SE_TUNNEL_Z_MIN, x: (sideRoomMinX + WALL_THICKNESS / 2 + SE_TUNNEL_X_MAX) / 2, z: (SE_TUNNEL_Z_MIN + SE_TUNNEL_Z_MAX) / 2, bottom: TUNNEL_HEIGHT },
     { w: SE_TUNNEL_NORTH_X[1] - SE_TUNNEL_NORTH_X[0], d: SE_TUNNEL_Z_MIN - (SIDE_HALF_D + WALL_THICKNESS / 2), x: (SE_TUNNEL_NORTH_X[0] + SE_TUNNEL_NORTH_X[1]) / 2, z: (SIDE_HALF_D + WALL_THICKNESS / 2 + SE_TUNNEL_Z_MIN) / 2, bottom: TUNNEL_HEIGHT },
     // Nordwand des Flankenraums mit Öffnung zur Halle
     { w: HALL_DOOR_X[0] - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + HALL_DOOR_X[0]) / 2, z: -SIDE_HALF_D },
     { w: sideRoomMaxX - HALL_DOOR_X[1], d: WALL_THICKNESS, x: (HALL_DOOR_X[1] + sideRoomMaxX) / 2, z: -SIDE_HALF_D },
     { w: WALL_THICKNESS, d: SIDE_ROOM_DEPTH, x: sideRoomMaxX, z: 0 },
+    // Südost-Halle (Spiegelbild der Nordost-Halle): Süd- und Ostwand, West = Ostwand des Tunnels
+    { w: sideRoomMaxX + WALL_THICKNESS / 2 - (SE_TUNNEL_X_MAX + WALL_THICKNESS), d: WALL_THICKNESS, x: (SE_TUNNEL_X_MAX + WALL_THICKNESS + sideRoomMaxX + WALL_THICKNESS / 2) / 2, z: MAIN_HALF_D },
+    { w: WALL_THICKNESS, d: MAIN_HALF_D - SIDE_HALF_D + WALL_THICKNESS / 2, x: sideRoomMaxX, z: (MAIN_HALF_D + SIDE_HALF_D) / 2 + WALL_THICKNESS / 4 },
     // Halle: Nord- und Ostwand (West = Hauptraum-Ostwand)
     { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: HALL_MIN_Z },
     { w: WALL_THICKNESS, d: HALL_MAX_Z - HALL_MIN_Z + WALL_THICKNESS / 2, x: sideRoomMaxX, z: (HALL_MIN_Z + HALL_MAX_Z) / 2 - WALL_THICKNESS / 4 },
@@ -440,6 +459,9 @@ export function buildArena(): ArenaResult {
     [42, -15, 3, 1.2, 2.4],
     [49.5, -15.5, 2, 2.5, 2.4], // deckt den Halle-Spawn (49,5 / -19,2) nach Süden
     [35, -14.5, 2, 2, 1.4],
+    // Südost-Halle (Spiegelbild; Südwand-Streifen z > 17,75 bleibt für den Regal-Steg frei)
+    [42, 15, 3, 1.2, 2.4],
+    [49.5, 15.5, 2, 2.5, 2.4], // deckt den Halle-Spawn (49,5 / 19,2) nach Norden
     // Flankenraum
     [sideRoomMinX + 6, -5, 2.4, 2.4, 2.4],
     [sideRoomMinX + 13, 7, 2, 4.5, 2.8],
@@ -687,6 +709,22 @@ export function buildArena(): ArenaResult {
     for (const x of [36, 43, 51]) addBlock(x, SHELF_Z_MAX - 0.2, 0.4, 0.4, 0, upperBottom)
   }
 
+  // --- Südost-Halle: Regal-Steg auf 2,8 m an der Südwand, Verlängerung des Südstegs über
+  // den Südost-Tunnel (Steg-Boden = Tunneldecke) und durch die Ostwand des Tunnels
+  // (dort Sockel, darüber offen), Absprung-Lücke wie im Norden bei x 47..49
+  {
+    const seShelfMinX = MAIN_HALF_W - WALL_THICKNESS / 2
+    const seShelfZ = (SE_TUNNEL_Z_MIN + SE_TUNNEL_Z_MAX) / 2
+    addBlock((seShelfMinX + SHELF_MAX_X) / 2, seShelfZ, SHELF_MAX_X - seShelfMinX, CATWALK_DEPTH, upperBottom, UPPER_TOP)
+    addBlock(SE_TUNNEL_X_MAX + WALL_THICKNESS / 2, seShelfZ, WALL_THICKNESS, CATWALK_DEPTH, 0, UPPER_TOP)
+    const railZ = SE_TUNNEL_Z_MIN + RAILING_THICKNESS / 2
+    const railMinX = SE_TUNNEL_X_MAX + WALL_THICKNESS
+    const dropGap: [number, number] = [47, 49]
+    addBlock((railMinX + dropGap[0]) / 2, railZ, dropGap[0] - railMinX, RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
+    addBlock((dropGap[1] + SHELF_MAX_X) / 2, railZ, SHELF_MAX_X - dropGap[1], RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
+    for (const x of [37.5, 43, 51]) addBlock(x, SE_TUNNEL_Z_MIN + 0.2, 0.4, 0.4, 0, upperBottom)
+  }
+
   const rampNorthWest = buildUpperSide(-1, 'west', [26, 28])
   // Südsteg: Lücke im Geländer für die Verbindung vom Fenster (siehe unten)
   const WINDOW_LINK_X: [number, number] = [westEnd, westEnd + 2.5]
@@ -741,6 +779,6 @@ export function buildArena(): ArenaResult {
     solids,
     spawnPoints,
     ramps: [rampToMainPlatform, rampToWestPlatform, rampNorthWest, rampSouthEast],
-    shootables: [mainGround, sideGround, hallGround, ...shootableExtras, ...solids.map((s) => s.mesh)],
+    shootables: [mainGround, sideGround, hallGround, seHallGround, ...shootableExtras, ...solids.map((s) => s.mesh)],
   }
 }
