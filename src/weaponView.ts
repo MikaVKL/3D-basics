@@ -10,6 +10,9 @@ const REST_ROTATION_Y = -0.05
 // Beim Zielen liegt die Visierlinie (Oberkante von Kimme und Korn) knapp unter
 // der Bildmitte; x/y legt jedes Modell selbst fest (aimX/aimY), z gilt für alle
 const AIM_Z = -0.42
+// Beim Zielen soll das Waffenende (Schaft) mindestens so weit vor der Kamera bleiben, sonst steckt
+// man im Modell (Nahebene 0,1 m schneidet es an, lange Schäfte füllen das Bild)
+const AIM_MIN_REAR_DISTANCE = 0.24
 const AIM_SIGHT_DROP = 0.006
 const SWITCH_DROP = 0.35 // so weit sinkt die Waffe beim Wechseln
 
@@ -45,6 +48,7 @@ interface Model {
   // Verschiebung der Waffe zum Zielen, damit die Visierlinie in der Bildmitte liegt
   aimX: number
   aimY: number
+  aimZ: number
   // Messer: Stoß nach vorn statt Rückstoß
   stab: boolean
 }
@@ -398,7 +402,15 @@ export class WeaponView {
     this.group.add(group)
     const aimX = -group.position.x
     const aimY = -(group.position.y + sightTop) - AIM_SIGHT_DROP
-    return { group, muzzle, recoilScale, aimX, aimY, stab }
+    // Hinterstes Ende des Modells (lokal, nur die Boxen), daraus die Zieltiefe
+    let rear = -Infinity
+    for (const child of group.children) {
+      if (child instanceof THREE.Mesh && child.geometry instanceof THREE.BoxGeometry) {
+        rear = Math.max(rear, child.position.z + child.geometry.parameters.depth / 2)
+      }
+    }
+    const aimZ = Math.min(AIM_Z, -AIM_MIN_REAR_DISTANCE - group.position.z - rear)
+    return { group, muzzle, recoilScale, aimX, aimY, aimZ, stab }
   }
 
   setWeapon(id: WeaponId) {
@@ -420,7 +432,7 @@ export class WeaponView {
     this.recoilRemaining = Math.max(0, this.recoilRemaining - deltaSeconds)
     const restX = REST_POSITION.x + (this.current.aimX - REST_POSITION.x) * this.aim
     const restY = REST_POSITION.y + (this.current.aimY - REST_POSITION.y) * this.aim
-    const restZ = REST_POSITION.z + (AIM_Z - REST_POSITION.z) * this.aim
+    const restZ = REST_POSITION.z + (this.current.aimZ - REST_POSITION.z) * this.aim
     // Nachladen: Waffe kippt zur Seite und hoch (weich ein/aus), mit einem
     // kleinen Ruck beim Magazin-Lösen (30 %) und beim Einrasten (75 %)
     const reloadPose = reloadEnvelope(this.reload)

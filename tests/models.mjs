@@ -36,12 +36,19 @@ try {
           }
         }
       }
-      out[id] = { boxes: boxes.length, issues }
+      // Beim Zielen darf das Modell nicht in die Kamera ragen (Nahebene 0,1 m): hinterstes Ende >= 0,2 m davor
+      let rear = -Infinity
+      for (const m of model.group.children) {
+        if (m.geometry && m.geometry.type === 'BoxGeometry') rear = Math.max(rear, m.position.z + m.geometry.parameters.depth / 2)
+      }
+      const rearWorld = model.aimZ + model.group.position.z + rear
+      out[id] = { boxes: boxes.length, issues, rearWorld }
     }
     return out
   })
   for (const [id, r] of Object.entries(result)) {
     check(`${id}: keine deckungsgleichen Flächen (${r.boxes} Boxen geprüft)`, r.issues.length === 0, r.issues.join(', '))
+    if (id !== 'knife') check(`${id}: beim Zielen steckt die Kamera nicht im Modell (Ende ${(-r.rearWorld).toFixed(2)} m vor der Kamera)`, r.rearWorld <= -0.2, r.rearWorld.toFixed(3))
   }
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
