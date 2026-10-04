@@ -75,7 +75,7 @@ try {
     const THREE_Vector3 = cloud.group.position.constructor
     const from = new THREE_Vector3(cloud.group.position.x, 1.3, cloud.group.position.z + 7)
     const ray = new (__dusk.weapon.raycaster.constructor)()
-    const meshes = cloud.blobs.map((b) => b.mesh)
+    const meshes = [cloud.mesh]
     ray.set(from, new THREE_Vector3(0, 0, -1))
     const through = ray.intersectObjects(meshes, false).length
     ray.set(from.clone().setX(from.x + 9), new THREE_Vector3(0, 0, -1))
@@ -83,6 +83,34 @@ try {
     return { through, beside }
   })
   check('Wolke blockiert die Sicht: Strahl hindurch trifft sie, daneben nicht', sight.through > 0 && sight.beside === 0, JSON.stringify(sight))
+
+  // Rauch aus Würfeln; mitten drin ist das Bild zu, draußen frei
+  const look = await page.evaluate(() => {
+    const G = __dusk.gadgets
+    const cloud = G.clouds[0]
+    const V = cloud.group.position.constructor
+    const c = cloud.group.position
+    const at = (x, y, z) => G.smokeDensity(new V(c.x + x, y, c.z + z))
+    return {
+      cubes: cloud.mesh.count,
+      isBox: cloud.mesh.geometry.type,
+      centre: Number(at(0, 1.5, 0).toFixed(2)),
+      edge: Number(at(2.2, 1.5, 0).toFixed(2)),
+      outside: Number(at(6, 1.5, 0).toFixed(2)),
+    }
+  })
+  check('Rauch besteht aus 240 Würfeln', look.cubes === 240 && look.isBox === 'BoxGeometry', JSON.stringify(look))
+  check('Dichte: in der Mitte voll, am Rand dünner, außerhalb 0', look.centre > 0.95 && look.edge < look.centre && look.outside === 0, JSON.stringify(look))
+  await page.evaluate(() => {
+    const c = __dusk.gadgets.clouds[0].group.position
+    __dusk.player.spawn({ x: c.x, y: 1.7, z: c.z, clone() { return this } })
+  })
+  await wait(500)
+  const inside = Number(await page.evaluate(() => getComputedStyle(document.querySelector('#smoke-overlay')).opacity))
+  check('Kamera im Rauch: grauer Schleier fast deckend', inside > 0.85, String(inside))
+  await page.evaluate(() => window.__face(0))
+  await wait(400)
+  check('Wieder draußen: Schleier weg', Number(await page.evaluate(() => getComputedStyle(document.querySelector('#smoke-overlay')).opacity)) < 0.05)
 
   // Dauer: nach 8 s weg, nach 25 s wieder bereit
   await page.evaluate(() => window.__step(7.5))

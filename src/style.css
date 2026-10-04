@@ -1416,6 +1416,16 @@ body {
   display: none;
 }
 
+/* Mitten im Rauch: graue Wand vor dem Bild; Deckkraft setzt main.ts nach der Dichte */
+#smoke-overlay {
+  position: fixed;
+  inset: 0;
+  background: #8e99ad;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1; /* unter dem HUD, über dem Spielbild */
+}
+
 /* Blendgranate: weißer Schleier über allem; Deckkraft setzt main.ts */
 #flash-overlay {
   position: fixed;

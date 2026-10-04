@@ -848,6 +848,7 @@ const gadgetBarFill = document.querySelector<HTMLDivElement>('#gadget-bar-fill')
 const gadgetButtonEl = document.querySelector<HTMLButtonElement>('#gadget-button')!
 const gadgetNameEl = document.querySelector<HTMLSpanElement>('#gadget-name')!
 const flashOverlay = document.querySelector<HTMLDivElement>('#flash-overlay')!
+const smokeOverlay = document.querySelector<HTMLDivElement>('#smoke-overlay')!
 const GADGET_ICONS: Record<GadgetId, string> = {
   smoke: '<circle cx="9" cy="14" r="5" fill="currentColor"/><circle cx="15" cy="10" r="4.5" fill="currentColor" opacity="0.7"/><circle cx="16" cy="16" r="3.5" fill="currentColor" opacity="0.5"/>',
   flash: '<path d="M12 2l2.2 6.3L21 6.5l-4.2 5.5L22 14l-6.4 1.3L17 22l-5-4.2L7 22l1.4-6.7L2 14l5.2-2L3 6.5l6.8 1.8z" fill="currentColor"/>',
@@ -986,6 +987,7 @@ function animate() {
   updateAmmoHud()
   updateGadgetHud()
   flashOverlay.style.opacity = String(gadgets.blindLevel)
+  smokeOverlay.style.opacity = String(0.96 * gadgets.smokeDensity(camera.position))
   updateCrosshair()
   updateHealthHud()
   updateShieldAndStaminaHud()

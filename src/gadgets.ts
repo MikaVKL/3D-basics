@@ -12,7 +12,8 @@ const GRAVITY = 16
 const STEP = 1 / 60
 const MIN_FLIGHT = 0.15 // kürzeste gezeigte Flugzeit (Animation)
 const MIN_THROW_TIME = 0.03 // darunter steckt man mit der Nase in der Wand: kein Wurf
-const CLOUD_BLOBS = 14
+const CLOUD_CUBES = 240 // Rauch aus vielen kleinen Würfeln (Retro-Look, wie Feuer in alten Spielen)
+const SMOKE_TONES = [0xa3afc1, 0x8793a8, 0xbac5d6, 0x6f7b91]
 const GROW_TIME = 0.6
 const SHRINK_TIME = 1.5
 
@@ -31,9 +32,20 @@ interface Burst {
   age: number
 }
 
+interface SmokeCube {
+  x: number
+  y: number
+  z: number
+  size: number
+  spin: number
+  phase: number
+  speed: number
+}
+
 interface Cloud {
   group: THREE.Group
-  blobs: Array<{ mesh: THREE.Mesh; base: number; spin: number }>
+  mesh: THREE.InstancedMesh
+  cubes: SmokeCube[]
   age: number
   duration: number
   radius: number
@@ -61,10 +73,14 @@ export class GadgetSystem {
   private readonly raycaster = new THREE.Raycaster()
   private readonly grenadeGeometry = new THREE.IcosahedronGeometry(0.11, 0)
   private readonly burstGeometry = new THREE.IcosahedronGeometry(1, 1)
-  private readonly blobGeometry = new THREE.IcosahedronGeometry(1, 1)
-  private readonly blobMaterials = [0xb7c3d3, 0xa6b3c6, 0xc4cfdd].map(
-    (color) => new THREE.MeshLambertMaterial({ color, emissive: 0x3a465a, flatShading: true, side: THREE.DoubleSide })
-  )
+  private readonly cubeGeometry = new THREE.BoxGeometry(1, 1, 1)
+  private readonly cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x2a3446, flatShading: true })
+  private readonly tmpMatrix = new THREE.Matrix4()
+  private readonly tmpQuat = new THREE.Quaternion()
+  private readonly tmpScale = new THREE.Vector3()
+  private readonly tmpPos = new THREE.Vector3()
+  private readonly yAxis = new THREE.Vector3(0, 1, 0)
+  private readonly tmpColor = new THREE.Color()
   // Landung (Rauch geht auf / Blendgranate knallt) für den Ton
   onLand?: (kind: GadgetId, position: THREE.Vector3) => void
   // Blendgranate hat bei dir gewirkt (Sekunden)
@@ -223,24 +239,65 @@ export class GadgetSystem {
     const stats = GADGETS.smoke
     const group = new THREE.Group()
     group.position.copy(position)
-    const blobs: Cloud['blobs'] = []
-    for (let i = 0; i < CLOUD_BLOBS; i++) {
-      // Kugelverteilung, nach unten gedrückt (Rauch quillt am Boden)
-      const offset = new THREE.Vector3(Math.random() - 0.5, (Math.random() - 0.5) * 0.7, Math.random() - 0.5)
-        .normalize()
-        .multiplyScalar(stats.radius * 0.55 * Math.sqrt(Math.random()))
-      const base = stats.radius * (0.38 + Math.random() * 0.22)
-      const mesh = new THREE.Mesh(this.blobGeometry, this.blobMaterials[i % this.blobMaterials.length])
-      mesh.position.copy(offset)
-      mesh.position.y = Math.max(base * 0.35, mesh.position.y + stats.radius * 0.3)
-      mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6)
-      mesh.scale.setScalar(0.001)
-      group.add(mesh)
-      blobs.push({ mesh, base, spin: (Math.random() - 0.5) * 0.4 })
+    const mesh = new THREE.InstancedMesh(this.cubeGeometry, this.cubeMaterial, CLOUD_CUBES)
+    mesh.frustumCulled = false
+    // Grobe Hülle für den Strahltest (die Würfel werden einzeln geprüft)
+    mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, stats.radius * 0.5, 0), stats.radius * 1.6)
+    const cubes: SmokeCube[] = []
+    for (let i = 0; i < CLOUD_CUBES; i++) {
+      // Gleichmäßig in einer am Boden abgeflachten Kugel; kleine Würfel außen, größere innen
+      const direction = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
+      const reach = Math.cbrt(Math.random())
+      const size = 0.3 + (1 - reach) * 0.35 + Math.random() * 0.2
+      const x = direction.x * reach * stats.radius * 0.95
+      const z = direction.z * reach * stats.radius * 0.95
+      const y = Math.max(size * 0.5, stats.radius * 0.5 + direction.y * reach * stats.radius * 0.75)
+      cubes.push({ x, y, z, size, spin: (Math.random() - 0.5) * 1.2, phase: Math.random() * 6.28, speed: 0.5 + Math.random() * 0.8 })
+      mesh.setColorAt(i, this.tmpColor.setHex(SMOKE_TONES[i % SMOKE_TONES.length]))
     }
+    group.add(mesh)
     this.scene.add(group)
-    this.clouds.push({ group, blobs, age: 0, duration: stats.duration, radius: stats.radius })
+    const cloud: Cloud = { group, mesh, cubes, age: 0, duration: stats.duration, radius: stats.radius }
+    this.clouds.push(cloud)
+    this.layoutCloud(cloud)
     this.onLand?.('smoke', position)
+  }
+
+  // 0..1: wie weit die Wolke aufgegangen ist (Auf-/Abschwellen)
+  private cloudScale(cloud: Cloud): number {
+    const grow = Math.min(1, cloud.age / GROW_TIME)
+    const shrink = Math.min(1, (cloud.duration - cloud.age) / SHRINK_TIME)
+    return (1 - (1 - grow) * (1 - grow)) * Math.max(0, shrink)
+  }
+
+  // Würfel setzen: wachsen aus der Mitte, schweben leicht auf und ab, drehen sich langsam
+  private layoutCloud(cloud: Cloud) {
+    const scale = this.cloudScale(cloud)
+    for (let i = 0; i < cloud.cubes.length; i++) {
+      const cube = cloud.cubes[i]
+      const bob = Math.sin(cloud.age * cube.speed + cube.phase) * 0.18
+      this.tmpPos.set(cube.x * scale, cube.y * scale + bob, cube.z * scale)
+      this.tmpQuat.setFromAxisAngle(this.yAxis, cube.phase + cloud.age * cube.spin)
+      this.tmpScale.setScalar(Math.max(0.001, cube.size * scale))
+      this.tmpMatrix.compose(this.tmpPos, this.tmpQuat, this.tmpScale)
+      cloud.mesh.setMatrixAt(i, this.tmpMatrix)
+    }
+    cloud.mesh.instanceMatrix.needsUpdate = true
+    if (cloud.mesh.instanceColor) cloud.mesh.instanceColor.needsUpdate = true
+  }
+
+  // 0..1: wie dicht der Rauch um diesen Punkt ist (Kamera in der Wolke = nichts mehr zu sehen)
+  smokeDensity(point: THREE.Vector3): number {
+    let best = 0
+    for (const cloud of this.clouds) {
+      const reach = cloud.radius * 0.85 * this.cloudScale(cloud)
+      if (reach <= 0.01) continue
+      const centre = this.tmpPos.copy(cloud.group.position)
+      centre.y += cloud.radius * 0.45
+      const t = THREE.MathUtils.clamp((reach - point.distanceTo(centre)) / (reach * 0.5), 0, 1)
+      best = Math.max(best, t * t * (3 - 2 * t))
+    }
+    return best
   }
 
   update(deltaSeconds: number) {
@@ -285,17 +342,11 @@ export class GadgetSystem {
       cloud.age += deltaSeconds
       if (cloud.age >= cloud.duration) {
         this.scene.remove(cloud.group)
+        cloud.mesh.dispose()
         this.clouds.splice(i, 1)
         continue
       }
-      // Aufquellen am Anfang, Schrumpfen am Ende
-      const grow = Math.min(1, cloud.age / GROW_TIME)
-      const shrink = Math.min(1, (cloud.duration - cloud.age) / SHRINK_TIME)
-      const scale = (1 - (1 - grow) * (1 - grow)) * shrink
-      for (const blob of cloud.blobs) {
-        blob.mesh.scale.setScalar(Math.max(0.001, blob.base * scale))
-        blob.mesh.rotation.y += blob.spin * deltaSeconds
-      }
+      this.layoutCloud(cloud)
     }
   }
 
