@@ -33,7 +33,7 @@ try {
       document.querySelector('#score-goal').textContent = 'Erstes Team mit 20 Kills gewinnt'
       const feed = document.querySelector('#kill-feed')
       for (const t of ['Maximilianus1234 ✕ Clara', 'Du ✕ Ben', 'Ben ✕ Du']) { const e = document.createElement('div'); e.className = 'kill-entry'; e.textContent = t; feed.append(e) }
-      const ids = ['#scoreboard', '#score-goal', '#net-status', '#kill-feed', '#connection-warning', '#notice-banner', '#minimap', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button', '#aim-button', '#menu-button']
+      const ids = ['#scoreboard', '#score-goal', '#net-status', '#kill-feed', '#connection-warning', '#notice-banner', '#minimap', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button', '#aim-button', '#gadget-button', '#menu-button']
       const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
         .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
       const overlaps = []
@@ -60,7 +60,7 @@ try {
       document.querySelector('#round-winner').textContent = 'Team Rot gewinnt!'
       document.querySelector('#round-countdown').textContent = 'Nächste Runde in 8s'
       mod.renderRoundStats(document.querySelector('#round-stats'), stats, 8)
-      const ids = ['#round-banner', '#scoreboard', '#net-status', '#kill-feed', '#minimap', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button', '#aim-button', '#menu-button']
+      const ids = ['#round-banner', '#scoreboard', '#net-status', '#kill-feed', '#minimap', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button', '#aim-button', '#gadget-button', '#menu-button']
       const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
         .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })
       const overlaps = []
@@ -82,7 +82,7 @@ try {
       document.querySelector('#notice-banner').classList.add('hidden')
       document.querySelector('#notice-banner').style.display = 'none'
       document.querySelector('#score-goal').style.display = 'block'
-      const ids = ['#scoreboard', '#score-goal', '#net-status', '#minimap', '#kill-feed', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button', '#aim-button', '#menu-button']
+      const ids = ['#scoreboard', '#score-goal', '#net-status', '#minimap', '#kill-feed', '#health-hud', '#weapon-hud', '#jump-button', '#shoot-button', '#reload-button', '#crouch-button', '#switch-button', '#aim-button', '#gadget-button', '#menu-button']
       const measure = () => {
         const boxes = ids.map((id) => [id, document.querySelector(id)?.getBoundingClientRect()]).filter(([, r]) => r && r.width > 0)
           .filter(([id]) => { let e = document.querySelector(id); while (e) { if (getComputedStyle(e).display === 'none') return false; e = e.parentElement } return true })

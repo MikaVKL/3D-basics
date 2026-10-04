@@ -24,6 +24,7 @@ interface TouchElements {
   crouchButton: HTMLElement
   switchButton: HTMLElement
   aimButton: HTMLElement
+  gadgetButton: HTMLElement
 }
 
 export class TouchInput {
@@ -38,6 +39,8 @@ export class TouchInput {
   private lastShootPos = { x: 0, y: 0 }
   private jumpRepeat: ReturnType<typeof setInterval> | null = null
 
+  // Gadget-Button (setzt main.ts)
+  onGadget?: () => void
   private elements: TouchElements
   private player: Player
   private lookControl: LookControl
@@ -97,6 +100,12 @@ export class TouchInput {
     }
     shootButton.addEventListener('touchend', stopShooting)
     shootButton.addEventListener('touchcancel', stopShooting)
+
+    elements.gadgetButton.addEventListener('touchstart', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.onGadget?.()
+    })
 
     switchButton.addEventListener('touchstart', (e) => {
       e.preventDefault()

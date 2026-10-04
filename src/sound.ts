@@ -156,6 +156,16 @@ export const SYNTHS = {
     noiseBurst(ctx, out, noise, 'bandpass', 3000, 0.4, 0.03, 0.1) // Spannen
     tone(ctx, out, 'square', 650, 1150, 0.1, 0.07, 0.15) // fertig-"Ping"
   },
+  // Rauchgranate: Wurf = kurzes Zischen nach oben, Landung = dumpfer Plopp mit Fauchen
+  throw: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 1800, 0.35, 0.12)
+    tone(ctx, out, 'sine', 300, 600, 0.08, 0.1)
+  },
+  smokePop: (ctx, out, noise) => {
+    tone(ctx, out, 'sine', 140, 55, 0.5, 0.18)
+    noiseBurst(ctx, out, noise, 'lowpass', 700, 0.5, 0.15)
+    noiseBurst(ctx, out, noise, 'highpass', 1800, 0.25, 1.2, 0.05) // Fauchen
+  },
   // Nachladen: Energiezelle löst sich (Anfang) und rastet wieder ein (Ende);
   // zwei getrennte Töne, damit sie zur Nachladezeit der Waffe passen
   reloadOut: (ctx, out, noise) => {

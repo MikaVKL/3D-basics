@@ -12,6 +12,8 @@ export class DesktopInput {
   private lookControl: LookControl
   private weapon: Weapon
   private onLockChange: (locked: boolean) => void
+  // Taste G: Gadget einsetzen (setzt main.ts)
+  onGadget?: () => void
 
   constructor(
     domElement: HTMLElement,
@@ -106,6 +108,9 @@ export class DesktopInput {
       }
       case 'KeyQ':
         if (pressed) this.weapon.switchToPrevious()
+        break
+      case 'KeyG':
+        if (pressed) this.onGadget?.() // Wiederholung stört nicht: die Abklingzeit sperrt
         break
       case 'ControlLeft':
       case 'ControlRight':

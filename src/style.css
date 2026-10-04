@@ -277,6 +277,52 @@ body {
   z-index: 5;
 }
 
+/* Gadget-Anzeige im Waffenfeld: Taste, Name, Status, Abklingbalken */
+#gadget-hud {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(138, 151, 171, 0.25);
+  font-size: 0.7rem;
+  color: #aab4c4;
+}
+
+#gadget-hud .gadget-key {
+  padding: 0 4px;
+  border: 1px solid rgba(138, 151, 171, 0.6);
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+#gadget-hud.ready {
+  color: var(--c-text);
+}
+
+#gadget-hud.ready #gadget-status {
+  color: var(--c-neon);
+}
+
+#gadget-bar {
+  grid-column: 1 / -1;
+  height: 3px;
+  background: rgba(138, 151, 171, 0.25);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#gadget-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--c-neon);
+}
+
+#gadget-hud:not(.ready) #gadget-bar-fill {
+  background: #8a97ab;
+}
+
 /* Touch: unten rechts liegen die Buttons, unten mittig ist es auf kleinen
    Handys zu eng - oben links ist auf allen Touch-Layouts frei */
 @media (pointer: coarse) {
@@ -293,6 +339,11 @@ body {
   /* Mit vielen Waffen passt die Leiste nicht in 160 px: nur die aktive zeigen
      (gewechselt wird per Button) */
   .weapon-slot:not(.active) {
+    display: none;
+  }
+
+  /* zu wenig Platz oben links: die Abklingzeit steht auf dem Button */
+  #gadget-hud {
     display: none;
   }
 }
@@ -1567,6 +1618,43 @@ body {
   font-size: calc(1.5rem * var(--btn));
   z-index: 6;
   touch-action: none;
+}
+
+/* Gadget (Rauchgranate) */
+#gadget-button {
+  position: fixed;
+  padding: 0;
+  right: calc(28px + 62px * var(--btn)); /* links neben dem Ducken-Button, rechts neben Nachladen */
+  bottom: calc(28px + 92px * var(--btn));
+  width: calc(56px * var(--btn));
+  height: calc(56px * var(--btn));
+  border-radius: 50%;
+  border: 2px solid rgba(154, 167, 186, 0.7);
+  background: rgba(154, 167, 186, 0.16);
+  color: #dfe6f0;
+  z-index: 6;
+  touch-action: none;
+}
+
+#gadget-button:active {
+  background: rgba(154, 167, 186, 0.4);
+}
+
+#gadget-button.cooling svg {
+  opacity: 0.3;
+}
+
+/* Restzeit der Abklingzeit auf dem Button (Touch zeigt die Leiste im Waffenfeld nicht) */
+#gadget-button::after {
+  content: attr(data-time);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(1.05rem * var(--btn));
+  font-weight: 700;
+  color: var(--c-text);
 }
 
 /* Ducken ist ein Umschalter: .active = dauerhaft geduckt */

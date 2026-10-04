@@ -26,6 +26,7 @@ import { SoundFx } from './sound'
 import { Effects, CameraShake, SlideView } from './effects'
 import { WEAPONS, type WeaponId } from './shared/weapons'
 import { LoadoutScreen } from './loadoutScreen'
+import { GadgetSystem } from './gadgets'
 import { weaponIcon } from './weaponIcons'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
@@ -68,6 +69,8 @@ scene.add(sunLight)
 // --- Arena aufbauen ---
 
 const arena = buildArena()
+// Nur die feste Welt (Spieler hängen sich später an arena.shootables): Granaten fliegen nur dagegen
+const worldMeshes = [...arena.shootables]
 scene.add(arena.group)
 
 // --- Debug-Modus (F1): zeigt Spawn-Punkte, nur zum Entwickeln ---
@@ -145,6 +148,15 @@ const scoreGoal = document.querySelector<HTMLDivElement>('#score-goal')!
 let nextRoundAt: number | null = null
 
 const sound = new SoundFx()
+
+// --- Gadget: Rauchgranate (Taste G / Button) ---
+const gadgets = new GadgetSystem(scene, worldMeshes)
+gadgets.onLand = (position) => sound.playAt('smokePop', position, 1)
+function throwGadget() {
+  if (!isActive || !player.isAlive) return
+  const thrown = gadgets.tryThrow(camera, player.team)
+  if (thrown) sound.play('throw', 0.6)
+}
 const noticeBanner = document.querySelector<HTMLDivElement>('#notice-banner')!
 const screenFade = document.querySelector<HTMLDivElement>('#screen-fade')!
 const NOTICE_MS = 3500
@@ -351,7 +363,7 @@ window.addEventListener('keydown', (event) => {
 
 // Nur im Dev-Build: Zugriff für die Browser-Tests (tests/)
 if (import.meta.env.DEV) {
-  Object.assign(window, { __dusk: { player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake, slideView, renderer } })
+  Object.assign(window, { __dusk: { gadgets, throwGadget, player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake, slideView, renderer } })
 }
 
 // --- Eingabe ---
@@ -437,6 +449,7 @@ function showSettings(show: boolean) {
 
 // Neues Leben (erster Start, Beitritt, Respawn): gewählte Waffen, volle Magazine, Secondary in der Hand
 function startLife() {
+  gadgets.reset()
   weapon.resetLoadout(loadoutScreen.loadout)
   player.weapon = weapon.current
   buildWeaponSlots()
@@ -584,12 +597,13 @@ if (isTouchDevice) {
       crouchButton: document.querySelector<HTMLButtonElement>('#crouch-button')!,
       switchButton: document.querySelector<HTMLButtonElement>('#switch-button')!,
       aimButton: document.querySelector<HTMLButtonElement>('#aim-button')!,
+      gadgetButton: document.querySelector<HTMLButtonElement>('#gadget-button')!,
     },
     player,
     lookControl,
     weapon
   )
-  void touchInput // arbeitet über seine Event-Listener
+  touchInput.onGadget = throwGadget
 
   document.querySelector('#menu-button')!.addEventListener('click', () => setActive(false))
   overlay.addEventListener('click', activateFromOverlay)
@@ -597,6 +611,7 @@ if (isTouchDevice) {
   const desktopInput = new DesktopInput(renderer.domElement, player, lookControl, weapon, (locked) => {
     setActive(locked)
   })
+  desktopInput.onGadget = throwGadget
 
   activate = () => desktopInput.requestActivation()
   overlay.addEventListener('click', activateFromOverlay)
@@ -809,6 +824,19 @@ function updateCrosshair() {
   crosshair.style.setProperty('--gap', `${gap.toFixed(1)}px`)
 }
 
+const gadgetHud = document.querySelector<HTMLDivElement>('#gadget-hud')!
+const gadgetStatus = document.querySelector<HTMLSpanElement>('#gadget-status')!
+const gadgetBarFill = document.querySelector<HTMLDivElement>('#gadget-bar-fill')!
+const gadgetButtonEl = document.querySelector<HTMLButtonElement>('#gadget-button')!
+function updateGadgetHud() {
+  const ready = gadgets.ready
+  gadgetHud.classList.toggle('ready', ready)
+  gadgetButtonEl.classList.toggle('cooling', !ready)
+  gadgetButtonEl.dataset.time = ready ? '' : String(Math.ceil(gadgets.cooldownRemaining))
+  gadgetStatus.textContent = ready ? 'bereit' : `${Math.ceil(gadgets.cooldownRemaining)} s`
+  gadgetBarFill.style.width = `${(1 - gadgets.cooldownRemaining / gadgets.stats.cooldown) * 100}%`
+}
+
 function updateAmmoHud() {
   const ammo = weapon.getAmmoState()
   if (shownWeapon !== ammo.weapon) {
@@ -910,6 +938,7 @@ function animate() {
   if (player.isAlive && !wasAlive) startLife()
   if (!player.isAlive) weapon.cancelFire()
   wasAlive = player.isAlive
+  gadgets.update(deltaSeconds)
   weapon.setMotion(player.isAlive && isActive ? player.horizontalSpeed : 0, player.isOnGround)
   weapon.update(deltaSeconds)
   for (const target of targets) {
@@ -923,6 +952,7 @@ function animate() {
   hitFeedback.update()
   scoreTable.render(network.roster, network.localId)
   updateAmmoHud()
+  updateGadgetHud()
   updateCrosshair()
   updateHealthHud()
   updateShieldAndStaminaHud()
