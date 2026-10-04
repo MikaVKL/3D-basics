@@ -25,8 +25,9 @@ import { ScoreTable } from './scoreTable'
 import { SoundFx } from './sound'
 import { Effects, CameraShake, SlideView } from './effects'
 import { WEAPONS, type WeaponId } from './shared/weapons'
-import { LoadoutScreen } from './loadoutScreen'
+import { LoadoutScreen, GadgetPicker } from './loadoutScreen'
 import { GadgetSystem } from './gadgets'
+import { GADGETS, type GadgetId } from './shared/gadgets'
 import { weaponIcon } from './weaponIcons'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
@@ -151,7 +152,8 @@ const sound = new SoundFx()
 
 // --- Gadget: Rauchgranate (Taste G / Button) ---
 const gadgets = new GadgetSystem(scene, worldMeshes)
-gadgets.onLand = (position) => sound.playAt('smokePop', position, 1)
+gadgets.viewer = camera
+gadgets.onLand = (kind, position) => sound.playAt(kind === 'flash' ? 'flashBang' : 'smokePop', position, 1)
 function throwGadget() {
   if (!isActive || !player.isAlive) return
   const thrown = gadgets.tryThrow(camera, player.team)
@@ -277,13 +279,14 @@ const network: NetworkClient = new NetworkClient({
       shotWeapon
     )
   },
-  onRemoteGadget: (_kind, from, to, flight, thrower) => {
+  onRemoteGadget: (kind, from, to, flight, thrower) => {
     sound.playAt('throw', from, 0.6)
     gadgets.spawnFlight(
       new THREE.Vector3(from.x, from.y, from.z),
       new THREE.Vector3(to.x, to.y, to.z),
       flight,
-      network.roster.get(thrower)?.team ?? 'red'
+      network.roster.get(thrower)?.team ?? 'red',
+      kind
     )
   },
   onHurt: (by) => {
@@ -443,6 +446,7 @@ const loadoutScreen = new LoadoutScreen(
   document.querySelector<HTMLDivElement>('#loadout-secondary')!
 )
 loadoutScreen.onChange = (loadout) => network.sendLoadout(loadout)
+const gadgetPicker = new GadgetPicker(document.querySelector<HTMLDivElement>('#loadout-gadget')!)
 // Erster "Spielen"-Klick hat das Spiel gestartet: ab dann gibt es "Weiter" statt "Starten"
 let started = false
 
@@ -462,6 +466,8 @@ function showSettings(show: boolean) {
 // Neues Leben (erster Start, Beitritt, Respawn): gewählte Waffen, volle Magazine, Secondary in der Hand
 function startLife() {
   gadgets.reset()
+  gadgets.setGadget(gadgetPicker.gadget)
+  applyGadgetUi()
   weapon.resetLoadout(loadoutScreen.loadout)
   player.weapon = weapon.current
   buildWeaponSlots()
@@ -840,6 +846,20 @@ const gadgetHud = document.querySelector<HTMLDivElement>('#gadget-hud')!
 const gadgetStatus = document.querySelector<HTMLSpanElement>('#gadget-status')!
 const gadgetBarFill = document.querySelector<HTMLDivElement>('#gadget-bar-fill')!
 const gadgetButtonEl = document.querySelector<HTMLButtonElement>('#gadget-button')!
+const gadgetNameEl = document.querySelector<HTMLSpanElement>('#gadget-name')!
+const flashOverlay = document.querySelector<HTMLDivElement>('#flash-overlay')!
+const GADGET_ICONS: Record<GadgetId, string> = {
+  smoke: '<circle cx="9" cy="14" r="5" fill="currentColor"/><circle cx="15" cy="10" r="4.5" fill="currentColor" opacity="0.7"/><circle cx="16" cy="16" r="3.5" fill="currentColor" opacity="0.5"/>',
+  flash: '<path d="M12 2l2.2 6.3L21 6.5l-4.2 5.5L22 14l-6.4 1.3L17 22l-5-4.2L7 22l1.4-6.7L2 14l5.2-2L3 6.5l6.8 1.8z" fill="currentColor"/>',
+}
+// Name, Taste-Symbol und Beschriftung folgen dem gewählten Gadget
+function applyGadgetUi() {
+  const label = GADGETS[gadgets.gadget].label
+  gadgetNameEl.textContent = label
+  gadgetButtonEl.setAttribute('aria-label', `${label} werfen`)
+  gadgetButtonEl.querySelector('svg')!.innerHTML = GADGET_ICONS[gadgets.gadget]
+}
+
 function updateGadgetHud() {
   const ready = gadgets.ready
   gadgetHud.classList.toggle('ready', ready)
@@ -965,6 +985,7 @@ function animate() {
   scoreTable.render(network.roster, network.localId)
   updateAmmoHud()
   updateGadgetHud()
+  flashOverlay.style.opacity = String(gadgets.blindLevel)
   updateCrosshair()
   updateHealthHud()
   updateShieldAndStaminaHud()

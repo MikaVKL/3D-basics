@@ -166,6 +166,12 @@ export const SYNTHS = {
     noiseBurst(ctx, out, noise, 'lowpass', 700, 0.5, 0.15)
     noiseBurst(ctx, out, noise, 'highpass', 1800, 0.25, 1.2, 0.05) // Fauchen
   },
+  // Blendgranate: scharfer Knall mit hohem Pfeifen
+  flashBang: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'highpass', 1200, 0.6, 0.25)
+    tone(ctx, out, 'sine', 180, 60, 0.45, 0.2)
+    tone(ctx, out, 'sine', 3800, 3800, 0.12, 1.4, 0.05)
+  },
   // Nachladen: Energiezelle löst sich (Anfang) und rastet wieder ein (Ende);
   // zwei getrennte Töne, damit sie zur Nachladezeit der Waffe passen
   reloadOut: (ctx, out, noise) => {

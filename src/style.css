@@ -1342,6 +1342,53 @@ body {
   display: none;
 }
 
+.gadget-cards {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.gadget-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  width: 14.4rem;
+  padding: 0.4rem 0.4rem 0.45rem;
+  font: inherit;
+  color: var(--c-text);
+  background: rgba(16, 22, 31, 0.85);
+  border: 1px solid rgba(138, 151, 171, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.gadget-card:hover,
+.gadget-card:focus-visible {
+  border-color: var(--c-neon);
+  outline: none;
+}
+
+.gadget-card.selected {
+  border-color: var(--c-neon);
+  background: rgba(51, 230, 204, 0.16);
+  box-shadow: 0 0 12px rgba(51, 230, 204, 0.4);
+}
+
+.gadget-card strong {
+  font-size: 0.9rem;
+}
+
+/* Blendgranate: weißer Schleier über allem; Deckkraft setzt main.ts */
+#flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+
 /* Niedrige Fenster (Laptop klein, Handy quer): Auswahl kompakter, ohne Titel und Beschreibung */
 @media (max-height: 640px) {
   #overlay-content:has(#menu-loadout:not(.hidden)) h1 {
@@ -1355,6 +1402,15 @@ body {
 
   #menu-loadout h3 {
     margin: 0.3rem 0 0.2rem;
+  }
+
+  .gadget-card {
+    width: 13.5rem;
+    padding: 0.25rem 0.3rem 0.3rem;
+  }
+
+  .gadget-card strong {
+    font-size: 0.82rem;
   }
 
   .weapon-card {

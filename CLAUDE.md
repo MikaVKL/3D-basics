@@ -61,7 +61,15 @@ Weiterarbeiten wissen muss.
 - `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall), Kamera-Ruck
   und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
 - `src/weaponIcons.ts` – Waffen-Umrisse (SVG) für Kill-Feed und Waffenfeld
-- `src/gadgets.ts` + `src/shared/gadgets.ts` – Gadgets (Taste G, Touch-Button): Rauchgranate.
+- `src/gadgets.ts` + `src/shared/gadgets.ts` – Gadgets (Taste G, Touch-Button): Rauchgranate und
+  Blendgranate (Auswahl im Waffenauswahl-Fenster, `GadgetPicker`, gemerkt unter `duskArena.gadget`,
+  gilt ab dem nächsten Spawn; eine gemeinsame Abklingzeit, Rauch 25 s / Blend 30 s). Blendgranate:
+  gleicher Wurf wie Rauch, knallt bei der Landung; jeder Client rechnet für SICH selbst
+  (`blindDuration()` in shared: Abstand ≤ 22 m, Blick ≤ 100° neben dem Knall, 0,6-3 s, freie
+  Sichtlinie), weißer Schleier `#flash-overlay` (voll, dann weiches Ausblenden). Trifft auch Werfer
+  und Team (so gewollt). Server relayt nur (kein Zustand nötig). Neue Gadgets: ID + Werte in
+  `shared/gadgets.ts`, Karte kommt von selbst, Icon in `GADGET_ICONS` (main.ts).
+  Rauchgranate:
   Flug wird beim Werfer gegen die feste Welt gerechnet (`worldMeshes`, Wand/Decke prallen ab,
   fällt auf den Boden), Wolke = 14 Low-Poly-Blobs (3,2 m, 8 s, Auf-/Abschwellen), Sichtsperre
   (Schüsse gehen durch), Abklingzeit 25 s, am Anfang jedes Lebens bereit. Anzeige im Waffenfeld
@@ -124,6 +132,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Landeton, Sichtsperre (Strahl durch die Wolke), 8 s Dauer, Wandwurf fällt auf den Boden,
   tot = kein Wurf, Respawn = bereit. `tests/gadget-net.mjs` (läuft mit): andere sehen Wurf/Wolke am
   selben Ort, Server lehnt Abklingzeit, zu weites Ziel, falschen Startpunkt, Flugzeit, Tote ab
+- `tests/flash.mjs` (in `test:gadget`) – Blendgranate: Gadget-Karten im Menü (passt in 5 Bildschirmgrößen),
+  Dauer nach Winkel/Abstand, Rücken/zu weit/Wand = keine Wirkung, Ausblenden, Wurf per G, online geblendet
 - `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
   gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als

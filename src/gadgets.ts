@@ -3,7 +3,7 @@
 // meldet nur Start, Landepunkt und Flugzeit; alle zeigen denselben Bogen und dieselbe Wolke.
 
 import * as THREE from 'three'
-import { GADGETS, DEFAULT_GADGET, type GadgetId } from './shared/gadgets'
+import { GADGETS, DEFAULT_GADGET, blindDuration, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
 const THROW_SPEED = 15 // m/s
@@ -26,6 +26,11 @@ interface Flight {
   onLand: (position: THREE.Vector3) => void
 }
 
+interface Burst {
+  mesh: THREE.Mesh
+  age: number
+}
+
 interface Cloud {
   group: THREE.Group
   blobs: Array<{ mesh: THREE.Mesh; base: number; spin: number }>
@@ -41,20 +46,29 @@ export interface ThrowResult {
 }
 
 export class GadgetSystem {
-  readonly gadget: GadgetId = DEFAULT_GADGET
+  gadget: GadgetId = DEFAULT_GADGET
   cooldownRemaining = 0
+  // Geblendet: Restzeit und Gesamtdauer (für das Ausblenden)
+  blindRemaining = 0
+  private blindTotal = 0
+  private readonly bursts: Burst[] = []
+  // Blick des eigenen Spielers (für die Blendwirkung)
+  viewer: THREE.Camera | null = null
   readonly clouds: Cloud[] = []
   private readonly flights: Flight[] = []
   private readonly scene: THREE.Scene
   private readonly world: THREE.Object3D[]
   private readonly raycaster = new THREE.Raycaster()
   private readonly grenadeGeometry = new THREE.IcosahedronGeometry(0.11, 0)
+  private readonly burstGeometry = new THREE.IcosahedronGeometry(1, 1)
   private readonly blobGeometry = new THREE.IcosahedronGeometry(1, 1)
   private readonly blobMaterials = [0xb7c3d3, 0xa6b3c6, 0xc4cfdd].map(
     (color) => new THREE.MeshLambertMaterial({ color, emissive: 0x3a465a, flatShading: true, side: THREE.DoubleSide })
   )
-  // Landung (für den Ton) und Wurf melden
-  onLand?: (position: THREE.Vector3) => void
+  // Landung (Rauch geht auf / Blendgranate knallt) für den Ton
+  onLand?: (kind: GadgetId, position: THREE.Vector3) => void
+  // Blendgranate hat bei dir gewirkt (Sekunden)
+  onBlinded?: (seconds: number) => void
 
   constructor(scene: THREE.Scene, world: THREE.Object3D[]) {
     this.scene = scene
@@ -72,6 +86,20 @@ export class GadgetSystem {
   // Neues Leben: Granate wieder bereit
   reset() {
     this.cooldownRemaining = 0
+    this.blindRemaining = 0
+    this.blindTotal = 0
+  }
+
+  // Auswahl gilt ab dem nächsten Leben (startLife); die Abklingzeit bleibt
+  setGadget(id: GadgetId) {
+    this.gadget = id
+  }
+
+  // 0..1: erst voll weiß, dann weiches Ausblenden
+  get blindLevel(): number {
+    if (this.blindTotal <= 0 || this.blindRemaining <= 0) return 0
+    const p = this.blindRemaining / this.blindTotal
+    return p > 0.45 ? 1 : (p / 0.45) * (p / 0.45)
   }
 
   // Werfen aus der Kamera: Flugbahn gegen die Arena rechnen, Flug und Wolke starten
@@ -132,7 +160,7 @@ export class GadgetSystem {
   }
 
   // Auch für die Würfe anderer (Server-Meldung): Bogen zeigen, bei der Landung die Wolke
-  spawnFlight(from: THREE.Vector3, to: THREE.Vector3, duration: number, team: Team) {
+  spawnFlight(from: THREE.Vector3, to: THREE.Vector3, duration: number, team: Team, kind: GadgetId = this.gadget) {
     const mesh = new THREE.Mesh(
       this.grenadeGeometry,
       new THREE.MeshBasicMaterial({ color: TeamColor[team], fog: false })
@@ -147,12 +175,52 @@ export class GadgetSystem {
       duration: Math.max(MIN_FLIGHT, duration),
       elapsed: 0,
       arc: Math.min(5, 0.5 + distance * 0.12),
-      onLand: (position) => this.spawnCloud(position),
+      onLand: (position) => (kind === 'smoke' ? this.spawnCloud(position) : this.spawnBurst(kind, position)),
     })
   }
 
+  // Blendgranate: kurzer Lichtblitz; wer zum Knall sieht (freie Sicht, Winkel, Abstand), ist geblendet
+  spawnBurst(kind: GadgetId, position: THREE.Vector3) {
+    const mesh = new THREE.Mesh(
+      this.burstGeometry,
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })
+    )
+    mesh.position.copy(position)
+    this.scene.add(mesh)
+    this.bursts.push({ mesh, age: 0 })
+    this.onLand?.(kind, position)
+    this.blindFrom(kind, position)
+  }
+
+  // Wirkung auf den eigenen Spieler (nur der sieht seinen Bildschirm)
+  private blindFrom(kind: GadgetId, position: THREE.Vector3) {
+    const camera = this.viewer
+    if (!camera) return
+    const eye = camera.getWorldPosition(new THREE.Vector3())
+    const toBurst = position.clone().sub(eye)
+    const distance = toBurst.length()
+    if (distance < 0.01) return this.applyBlind(GADGETS[kind].blind?.maxTime ?? 0)
+    toBurst.divideScalar(distance)
+    const forward = camera.getWorldDirection(new THREE.Vector3())
+    const angle = THREE.MathUtils.radToDeg(Math.acos(Math.min(1, Math.max(-1, forward.dot(toBurst)))))
+    const seconds = blindDuration(GADGETS[kind], distance, angle)
+    if (seconds <= 0) return
+    // Wand dazwischen schützt
+    this.raycaster.set(eye, toBurst)
+    this.raycaster.far = Math.max(0, distance - 0.4)
+    if (this.raycaster.intersectObjects(this.world, false).length > 0) return
+    this.applyBlind(seconds)
+  }
+
+  private applyBlind(seconds: number) {
+    if (seconds <= 0) return
+    this.blindRemaining = Math.max(this.blindRemaining, seconds)
+    this.blindTotal = Math.max(this.blindTotal, this.blindRemaining)
+    this.onBlinded?.(seconds)
+  }
+
   spawnCloud(position: THREE.Vector3) {
-    const stats = this.stats
+    const stats = GADGETS.smoke
     const group = new THREE.Group()
     group.position.copy(position)
     const blobs: Cloud['blobs'] = []
@@ -172,7 +240,7 @@ export class GadgetSystem {
     }
     this.scene.add(group)
     this.clouds.push({ group, blobs, age: 0, duration: stats.duration, radius: stats.radius })
-    this.onLand?.(position)
+    this.onLand?.('smoke', position)
   }
 
   update(deltaSeconds: number) {
@@ -191,6 +259,25 @@ export class GadgetSystem {
         this.flights.splice(i, 1)
         flight.onLand(flight.to)
       }
+    }
+
+    if (this.blindRemaining > 0) {
+      this.blindRemaining = Math.max(0, this.blindRemaining - deltaSeconds)
+      if (this.blindRemaining === 0) this.blindTotal = 0
+    }
+    for (let i = this.bursts.length - 1; i >= 0; i--) {
+      const burst = this.bursts[i]
+      burst.age += deltaSeconds
+      const duration = GADGETS.flash.duration
+      if (burst.age >= duration) {
+        this.scene.remove(burst.mesh)
+        ;(burst.mesh.material as THREE.Material).dispose()
+        this.bursts.splice(i, 1)
+        continue
+      }
+      const t = burst.age / duration
+      burst.mesh.scale.setScalar(0.3 + 2.2 * Math.sqrt(t))
+      ;(burst.mesh.material as THREE.MeshBasicMaterial).opacity = (1 - t) * (1 - t)
     }
 
     for (let i = this.clouds.length - 1; i >= 0; i--) {

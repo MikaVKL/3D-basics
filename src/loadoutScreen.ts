@@ -11,6 +11,7 @@ import {
   type WeaponId,
 } from './shared/weapons'
 import { weaponIcon } from './weaponIcons'
+import { GADGETS, GADGET_IDS, DEFAULT_GADGET, isGadgetId, type GadgetId } from './shared/gadgets'
 
 const STORAGE_KEY = 'duskArena.loadout'
 
@@ -112,6 +113,71 @@ export class LoadoutScreen {
       const selected = id === this.loadout.primary || id === this.loadout.secondary
       card.classList.toggle('selected', selected)
       card.setAttribute('aria-pressed', String(selected))
+    }
+  }
+}
+
+const GADGET_KEY = 'duskArena.gadget'
+const GADGET_DESCRIPTIONS: Record<GadgetId, string> = {
+  smoke: 'Sichtschutz für 8 s',
+  flash: 'Blendet, wer hinsieht',
+}
+
+export function loadStoredGadget(): GadgetId {
+  try {
+    const stored = localStorage.getItem(GADGET_KEY)
+    if (isGadgetId(stored)) return stored
+  } catch {
+    // gesperrt: Standard
+  }
+  return DEFAULT_GADGET
+}
+
+// Gadget-Wahl (Taste G): eine kleine Karte je Gadget, im Browser gemerkt
+export class GadgetPicker {
+  gadget: GadgetId
+  onChange?: (gadget: GadgetId) => void
+  private readonly cards = new Map<GadgetId, HTMLButtonElement>()
+
+  constructor(row: HTMLElement) {
+    this.gadget = loadStoredGadget()
+    for (const id of GADGET_IDS) {
+      const card = document.createElement('button')
+      card.type = 'button'
+      card.className = 'gadget-card'
+      card.dataset.gadget = id
+      const name = document.createElement('strong')
+      name.textContent = GADGETS[id].label
+      const description = document.createElement('span')
+      description.className = 'card-description'
+      description.textContent = GADGET_DESCRIPTIONS[id]
+      card.append(name, description)
+      card.addEventListener('click', (event) => {
+        event.stopPropagation()
+        this.choose(id)
+      })
+      this.cards.set(id, card)
+      row.append(card)
+    }
+    this.refresh()
+  }
+
+  choose(id: GadgetId) {
+    if (this.gadget === id) return
+    this.gadget = id
+    try {
+      localStorage.setItem(GADGET_KEY, id)
+    } catch {
+      // privater Modus: gilt nur für diese Sitzung
+    }
+    this.refresh()
+    this.onChange?.(id)
+  }
+
+  private refresh() {
+    for (const [id, card] of this.cards) {
+      card.classList.toggle('selected', id === this.gadget)
+      card.setAttribute('aria-pressed', String(id === this.gadget))
     }
   }
 }
