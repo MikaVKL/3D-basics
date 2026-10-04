@@ -15,6 +15,7 @@ import {
 } from './shared/protocol'
 import type { Team } from './team'
 import type { Loadout, WeaponId } from './shared/weapons'
+import type { GadgetId } from './shared/gadgets'
 
 // idle = Server vorhanden, aber nicht beigetreten (Startbildschirm/Menü)
 export type ConnectionStatus = 'offline' | 'idle' | 'connecting' | 'online' | 'full' | 'outdated'
@@ -43,6 +44,7 @@ export interface NetworkHandlers {
   onRoundEnd: (winner: Team, nextRoundIn: number, stats: RoundStat[]) => void
   onRoundStart: (scores: Scores) => void
   onRemoteShot: (from: Vec3, to: Vec3, hit: boolean, weapon: WeaponId, shooter: PlayerId) => void
+  onRemoteGadget: (kind: GadgetId, from: Vec3, to: Vec3, flight: number, thrower: PlayerId) => void
   onHurt: (by: PlayerId) => void
   // Zurück in den Singleplayer
   onDisconnect: () => void
@@ -244,6 +246,9 @@ export class NetworkClient {
       case 'shot':
         this.handlers.onRemoteShot(message.from, message.to, message.hit, message.weapon, message.id)
         break
+      case 'gadget':
+        this.handlers.onRemoteGadget(message.kind, message.from, message.to, message.flight, message.id)
+        break
       case 'hurt':
         this.handlers.onHurt(message.by)
         break
@@ -286,6 +291,11 @@ export class NetworkClient {
   sendShot(from: Vec3, to: Vec3, hit: boolean) {
     const r = (v: Vec3) => ({ x: round(v.x), y: round(v.y), z: round(v.z) })
     this.send({ t: 'shot', from: r(from), to: r(to), hit })
+  }
+
+  sendGadget(kind: GadgetId, from: Vec3, to: Vec3, flight: number) {
+    const r = (v: Vec3) => ({ x: round(v.x), y: round(v.y), z: round(v.z) })
+    this.send({ t: 'gadget', kind, from: r(from), to: r(to), flight: round(flight) })
   }
 
   private send(message: ClientMessage) {

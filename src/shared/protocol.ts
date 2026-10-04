@@ -2,9 +2,10 @@
 
 import type { Team } from '../team.ts'
 import type { Loadout, WeaponId } from './weapons.ts'
+import type { GadgetId } from './gadgets.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 20
+export const PROTOCOL_VERSION = 21
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -84,6 +85,8 @@ export type ClientMessage =
   | { t: 'ping'; time: number; rtt: number | null } // rtt: zuletzt gemessener Ping
   // Nur für die Leuchtspur bei den anderen
   | { t: 'shot'; from: Vec3; to: Vec3; hit: boolean }
+  // Gadget-Wurf: Start, Landepunkt und Flugzeit (s); der Server prüft Abklingzeit und Weite
+  | { t: 'gadget'; kind: GadgetId; from: Vec3; to: Vec3; flight: number }
 
 export type RejectReason = 'full' | 'version'
 
@@ -112,6 +115,7 @@ export type ServerMessage =
   | { t: 'roundStart'; scores: Scores }
   // hit: Schuss hat etwas getroffen (Einschlagfunken statt Schuss ins Leere)
   | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3; hit: boolean; weapon: WeaponId }
+  | { t: 'gadget'; id: PlayerId; kind: GadgetId; from: Vec3; to: Vec3; flight: number }
   // Nur an den Getroffenen (Richtungsanzeiger)
   | { t: 'hurt'; by: PlayerId }
   | { t: 'pong'; time: number }

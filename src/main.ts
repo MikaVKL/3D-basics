@@ -155,7 +155,10 @@ gadgets.onLand = (position) => sound.playAt('smokePop', position, 1)
 function throwGadget() {
   if (!isActive || !player.isAlive) return
   const thrown = gadgets.tryThrow(camera, player.team)
-  if (thrown) sound.play('throw', 0.6)
+  if (thrown) {
+    sound.play('throw', 0.6)
+    network.sendGadget(gadgets.gadget, thrown.from, thrown.to, thrown.flight)
+  }
 }
 const noticeBanner = document.querySelector<HTMLDivElement>('#notice-banner')!
 const screenFade = document.querySelector<HTMLDivElement>('#screen-fade')!
@@ -272,6 +275,15 @@ const network: NetworkClient = new NetworkClient({
       new THREE.Vector3(to.x, to.y, to.z),
       network.roster.get(shooter)?.team ?? 'red',
       shotWeapon
+    )
+  },
+  onRemoteGadget: (_kind, from, to, flight, thrower) => {
+    sound.playAt('throw', from, 0.6)
+    gadgets.spawnFlight(
+      new THREE.Vector3(from.x, from.y, from.z),
+      new THREE.Vector3(to.x, to.y, to.z),
+      flight,
+      network.roster.get(thrower)?.team ?? 'red'
     )
   },
   onHurt: (by) => {

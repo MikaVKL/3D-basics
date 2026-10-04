@@ -65,7 +65,10 @@ Weiterarbeiten wissen muss.
   Flug wird beim Werfer gegen die feste Welt gerechnet (`worldMeshes`, Wand/Decke prallen ab,
   fällt auf den Boden), Wolke = 14 Low-Poly-Blobs (3,2 m, 8 s, Auf-/Abschwellen), Sichtsperre
   (Schüsse gehen durch), Abklingzeit 25 s, am Anfang jedes Lebens bereit. Anzeige im Waffenfeld
-  (Touch: Restzeit auf dem Button). Weitere Gadgets später (Blendgranate, Sprungpad, Schildwand).
+  (Touch: Restzeit auf dem Button). Online: Werfer schickt `gadget` (Start, Ziel, Flugzeit), Server
+  (`handleGadget`) prüft Abklingzeit (±1 s), Startpunkt ≤ 3 m am Spieler, Weite, Flugzeit, lebt,
+  keine Rundenpause, und gibt es an die anderen weiter; die lassen den Bogen + die Wolke am
+  selben Ort nachspielen. Weitere Gadgets später (Blendgranate, Sprungpad, Schildwand).
 - `src/sky.ts` – Abendhimmel-Kuppel (Farbverlauf), folgt der Kamera
 - `src/surfaceTextures.ts` – Kisten-/Plattenmuster (Canvas, Graustufen x
   Palettenfarbe); `worldBox()` statt BoxGeometry, damit Muster nicht verzerren
@@ -119,7 +122,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   auf 5/20 m, prüft u. a. MP nah nicht schneller als Pistole, Falloff, Kopftreffer-Verhältnis
 - `npm run test:gadget` – Rauchgranate: Wurf per G, Abklingzeit 25 s und Anzeige, Flug, Wolke und
   Landeton, Sichtsperre (Strahl durch die Wolke), 8 s Dauer, Wandwurf fällt auf den Boden,
-  tot = kein Wurf, Respawn = bereit
+  tot = kein Wurf, Respawn = bereit. `tests/gadget-net.mjs` (läuft mit): andere sehen Wurf/Wolke am
+  selben Ort, Server lehnt Abklingzeit, zu weites Ziel, falschen Startpunkt, Flugzeit, Tote ab
 - `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
   gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als
@@ -414,7 +418,7 @@ Stolperfallen bei Headless-Tests:
   Server mit `off`, weil sie absichtlich teleportieren (Bot-Test und
   movement-enforce mit enforce). Neue Bewegungsmechaniken (schneller als
   13 m/s, größere Sprünge) müssen die Konstanten dort mit anheben,
-  sonst gibt es Rubber-Band. PROTOCOL_VERSION 20.
+  sonst gibt es Rubber-Band. PROTOCOL_VERSION 21.
 - **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
   gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
   getestet - Nutzen gering gegen Risiko. Nur nach Absprache.
