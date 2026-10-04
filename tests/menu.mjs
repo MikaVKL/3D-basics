@@ -2,7 +2,7 @@
 // Pausenmenü ("Weiter" + "Waffenauswahl").
 //
 //   node tests/menu.mjs
-import { startServers, launchBrowser, openGame, wait, createChecks } from './lib.mjs'
+import { startServers, launchBrowser, openGame, wait, createChecks, pickOption } from './lib.mjs'
 
 const { check, finish } = createChecks()
 const servers = await startServers({ gameServer: false })
@@ -40,11 +40,22 @@ try {
   check('Standard: Sturmgewehr + Pistole ausgewählt', cards.selected.join() === 'rifle,pistol', cards.selected.join())
   check('Messer ist nicht wählbar (nur Hinweis)', !(await page.locator('.weapon-card[data-weapon="knife"]').count()) && (await page.locator('.loadout-note').innerText()).includes('Messer'))
 
-  await page.click('.weapon-card[data-weapon="sniper"]')
-  await page.click('.weapon-card[data-weapon="smg"]')
+  // Aufklapplisten: zu, bis man klickt; je Slot eine; Wahl klappt zu; Klick daneben klappt zu
+  const openCount = () => page.evaluate(() => document.querySelectorAll('.dropdown-list:not(.hidden)').length)
+  const summary = (sel) => page.evaluate((s) => document.querySelector(`${s} .dropdown-trigger strong`).textContent, sel)
+  check('Drei Aufklapplisten (Primary, Secondary, Gadget), alle zu; Knopf zeigt die Wahl', (await page.locator('.dropdown').count()) === 3 && (await openCount()) === 0 && (await summary('#loadout-primary')) === 'Sturmgewehr' && (await summary('#loadout-secondary')) === 'Pistole', `${await summary('#loadout-primary')} / ${await summary('#loadout-secondary')}`)
+  await page.click('#loadout-primary .dropdown-trigger')
+  check('Klick öffnet die Liste mit den 3 Primary-Waffen', (await openCount()) === 1 && (await page.locator('#loadout-primary .dropdown-list .weapon-card:visible').count()) === 3)
+  await page.click('#loadout-secondary .dropdown-trigger')
+  check('Zweite Liste öffnen schließt die erste', (await openCount()) === 1 && (await page.locator('#loadout-secondary .dropdown-list:not(.hidden)').count()) === 1)
+  await page.click('#overlay-content h2', { position: { x: 3, y: 3 } })
+  check('Klick daneben klappt zu, Spiel startet nicht', (await openCount()) === 0 && !(await overlayHidden(page)))
+  await pickOption(page, '.weapon-card[data-weapon="sniper"]')
+  check('Wahl klappt die Liste zu, Knopf zeigt Sniper', (await openCount()) === 0 && (await summary('#loadout-primary')) === 'Sniper')
+  await pickOption(page, '.weapon-card[data-weapon="smg"]')
   const picked = await page.evaluate(() => [...document.querySelectorAll('.weapon-card.selected')].map((c) => c.dataset.weapon).join())
   check('Wahl wechselt je Slot: Sniper + Maschinenpistole', picked === 'sniper,smg', picked)
-  await page.click('.weapon-card[data-weapon="sniper"]')
+  await pickOption(page, '.weapon-card[data-weapon="sniper"]')
   check('Erneut anklicken lässt die Wahl stehen', (await page.locator('.weapon-card.selected').count()) === 2)
 
   await page.click('#loadout-back-button')
@@ -65,7 +76,7 @@ try {
 
   // Mitten im Leben ändern: gilt erst ab dem nächsten Spawn
   await page.click('#loadout-open-button')
-  await page.click('.weapon-card[data-weapon="shotgun"]')
+  await pickOption(page, '.weapon-card[data-weapon="shotgun"]')
   await page.click('#loadout-play-button')
   await wait(300)
   const mid = await page.evaluate(() => ({ slots: __dusk.weapon.slots.join(), overlayHidden: document.querySelector('#overlay').classList.contains('hidden') }))

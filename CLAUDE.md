@@ -62,7 +62,8 @@ Weiterarbeiten wissen muss.
   und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
 - `src/weaponIcons.ts` – Waffen-Umrisse (SVG) für Kill-Feed und Waffenfeld
 - `src/gadgets.ts` + `src/shared/gadgets.ts` – Gadgets (Taste G, Touch-Button): Rauchgranate und
-  Blendgranate (Auswahl im Waffenauswahl-Fenster, `GadgetPicker`, gemerkt unter `duskArena.gadget`,
+  Blendgranate (Auswahl im Waffenauswahl-Fenster als drei Aufklapplisten Primary/Secondary/Gadget, `Dropdown` in
+  `loadoutScreen.ts`, Nutzerwunsch: ein Haupt-Gadget je Leben, nicht alle; `GadgetPicker`, gemerkt unter `duskArena.gadget`,
   gilt ab dem nächsten Spawn; eine gemeinsame Abklingzeit, Rauch 25 s / Blend 30 s). Blendgranate:
   gleicher Wurf wie Rauch, knallt bei der Landung; jeder Client rechnet für SICH selbst
   (`blindDuration()` in shared: Abstand ≤ 22 m, Blick ≤ 100° neben dem Knall, 0,6-3 s, freie

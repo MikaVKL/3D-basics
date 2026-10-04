@@ -138,12 +138,20 @@
         </div>
         <div id="menu-loadout" class="hidden">
           <h2>Waffenauswahl</h2>
-          <h3>Primary</h3>
-          <div id="loadout-primary" class="weapon-cards"></div>
-          <h3>Secondary</h3>
-          <div id="loadout-secondary" class="weapon-cards"></div>
-          <h3>Gadget (Taste G)</h3>
-          <div id="loadout-gadget" class="gadget-cards"></div>
+          <div class="loadout-columns">
+            <div class="loadout-column">
+              <h3>Primary</h3>
+              <div id="loadout-primary"></div>
+            </div>
+            <div class="loadout-column">
+              <h3>Secondary</h3>
+              <div id="loadout-secondary"></div>
+            </div>
+            <div class="loadout-column">
+              <h3>Gadget (Taste G)</h3>
+              <div id="loadout-gadget"></div>
+            </div>
+          </div>
           <p class="loadout-note">Das Messer ist immer dabei. Neue Wahl gilt ab dem nächsten Spawn.</p>
           <div class="menu-buttons row">
             <button id="loadout-back-button" class="menu-button" type="button">Zurück</button>

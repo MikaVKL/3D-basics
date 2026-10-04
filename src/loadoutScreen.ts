@@ -55,9 +55,88 @@ function saveLoadout(loadout: Loadout) {
   }
 }
 
+// Aufklappliste: Knopf zeigt die Wahl, die Liste darunter die Optionen. Es ist höchstens eine offen.
+class Dropdown {
+  private static openOne: Dropdown | null = null
+  readonly list: HTMLElement
+  private readonly trigger: HTMLButtonElement
+
+  constructor(root: HTMLElement) {
+    root.classList.add('dropdown')
+    this.trigger = document.createElement('button')
+    this.trigger.type = 'button'
+    this.trigger.className = 'dropdown-trigger'
+    this.trigger.setAttribute('aria-haspopup', 'listbox')
+    this.trigger.setAttribute('aria-expanded', 'false')
+    this.list = document.createElement('div')
+    this.list.className = 'dropdown-list hidden'
+    this.list.setAttribute('role', 'listbox')
+    root.append(this.trigger, this.list)
+    // Klick bleibt im Menü (sonst würde der Overlay-Klick das Spiel starten)
+    this.trigger.addEventListener('click', (event) => {
+      event.stopPropagation()
+      this.isOpen ? this.close() : this.open()
+    })
+    // Klick irgendwo sonst klappt zu
+    document.addEventListener('click', () => this.close())
+  }
+
+  get isOpen(): boolean {
+    return !this.list.classList.contains('hidden')
+  }
+
+  setSummary(...nodes: Node[]) {
+    const arrow = document.createElement('span')
+    arrow.className = 'dropdown-arrow'
+    arrow.setAttribute('aria-hidden', 'true')
+    this.trigger.replaceChildren(...nodes, arrow)
+  }
+
+  open() {
+    if (Dropdown.openOne && Dropdown.openOne !== this) Dropdown.openOne.close()
+    Dropdown.openOne = this
+    this.list.classList.remove('hidden')
+    this.trigger.setAttribute('aria-expanded', 'true')
+  }
+
+  close() {
+    this.list.classList.add('hidden')
+    this.trigger.setAttribute('aria-expanded', 'false')
+    if (Dropdown.openOne === this) Dropdown.openOne = null
+  }
+}
+
+function barsFor(id: WeaponId): HTMLElement {
+  const bars = document.createElement('div')
+  bars.className = 'card-bars'
+  for (const [label, value] of statBars(id)) {
+    const line = document.createElement('div')
+    line.className = 'card-bar'
+    line.title = label
+    const fill = document.createElement('i')
+    fill.style.width = `${Math.round(value * 100)}%`
+    line.append(fill)
+    bars.append(line)
+  }
+  return bars
+}
+
+function textBlock(name: string, description: string): HTMLElement[] {
+  const wrapper = document.createElement('div')
+  wrapper.className = 'card-text'
+  const strong = document.createElement('strong')
+  strong.textContent = name
+  const span = document.createElement('span')
+  span.className = 'card-description'
+  span.textContent = description
+  wrapper.append(strong, span)
+  return [wrapper]
+}
+
 export class LoadoutScreen {
   loadout: Loadout
   private readonly cards = new Map<WeaponId, HTMLButtonElement>()
+  private readonly dropdowns = new Map<keyof Loadout, Dropdown>()
   onChange?: (loadout: Loadout) => void
 
   constructor(primaryRow: HTMLElement, secondaryRow: HTMLElement) {
@@ -67,36 +146,23 @@ export class LoadoutScreen {
     this.refresh()
   }
 
-  private fill(row: HTMLElement, ids: WeaponId[], slot: keyof Loadout) {
+  private fill(root: HTMLElement, ids: WeaponId[], slot: keyof Loadout) {
+    const dropdown = new Dropdown(root)
+    this.dropdowns.set(slot, dropdown)
     for (const id of ids) {
       const card = document.createElement('button')
       card.type = 'button'
       card.className = 'weapon-card'
       card.dataset.weapon = id
-      const name = document.createElement('strong')
-      name.textContent = WEAPONS[id].label
-      const description = document.createElement('span')
-      description.className = 'card-description'
-      description.textContent = DESCRIPTIONS[id]
-      const bars = document.createElement('div')
-      bars.className = 'card-bars'
-      for (const [label, value] of statBars(id)) {
-        const line = document.createElement('div')
-        line.className = 'card-bar'
-        line.title = label
-        const fill = document.createElement('i')
-        fill.style.width = `${Math.round(value * 100)}%`
-        line.append(fill)
-        bars.append(line)
-      }
-      card.append(weaponIcon(id, 1.4), name, description, bars)
-      // Klick bleibt in der Auswahl (sonst würde der Overlay-Klick das Spiel starten)
+      card.setAttribute('role', 'option')
+      card.append(weaponIcon(id, 1), ...textBlock(WEAPONS[id].label, DESCRIPTIONS[id]))
       card.addEventListener('click', (event) => {
         event.stopPropagation()
         this.choose(slot, id)
+        dropdown.close()
       })
       this.cards.set(id, card)
-      row.append(card)
+      dropdown.list.append(card)
     }
   }
 
@@ -112,7 +178,11 @@ export class LoadoutScreen {
     for (const [id, card] of this.cards) {
       const selected = id === this.loadout.primary || id === this.loadout.secondary
       card.classList.toggle('selected', selected)
-      card.setAttribute('aria-pressed', String(selected))
+      card.setAttribute('aria-selected', String(selected))
+    }
+    for (const [slot, dropdown] of this.dropdowns) {
+      const id = this.loadout[slot]
+      dropdown.setSummary(weaponIcon(id, 1.4), ...textBlock(WEAPONS[id].label, DESCRIPTIONS[id]), barsFor(id))
     }
   }
 }
@@ -138,26 +208,25 @@ export class GadgetPicker {
   gadget: GadgetId
   onChange?: (gadget: GadgetId) => void
   private readonly cards = new Map<GadgetId, HTMLButtonElement>()
+  private readonly dropdown: Dropdown
 
-  constructor(row: HTMLElement) {
+  constructor(root: HTMLElement) {
     this.gadget = loadStoredGadget()
+    this.dropdown = new Dropdown(root)
     for (const id of GADGET_IDS) {
       const card = document.createElement('button')
       card.type = 'button'
       card.className = 'gadget-card'
       card.dataset.gadget = id
-      const name = document.createElement('strong')
-      name.textContent = GADGETS[id].label
-      const description = document.createElement('span')
-      description.className = 'card-description'
-      description.textContent = GADGET_DESCRIPTIONS[id]
-      card.append(name, description)
+      card.setAttribute('role', 'option')
+      card.append(...textBlock(GADGETS[id].label, GADGET_DESCRIPTIONS[id]))
       card.addEventListener('click', (event) => {
         event.stopPropagation()
         this.choose(id)
+        this.dropdown.close()
       })
       this.cards.set(id, card)
-      row.append(card)
+      this.dropdown.list.append(card)
     }
     this.refresh()
   }
@@ -177,7 +246,8 @@ export class GadgetPicker {
   private refresh() {
     for (const [id, card] of this.cards) {
       card.classList.toggle('selected', id === this.gadget)
-      card.setAttribute('aria-pressed', String(id === this.gadget))
+      card.setAttribute('aria-selected', String(id === this.gadget))
     }
+    this.dropdown.setSummary(...textBlock(GADGETS[this.gadget].label, GADGET_DESCRIPTIONS[this.gadget]))
   }
 }

@@ -2,7 +2,7 @@
 // Wurf per G (Knall-Ton), online sieht der andere den Wurf und wird geblendet.
 //
 //   node tests/flash.mjs
-import { startServers, launchBrowser, openGame, play, wait, teleport, createChecks } from './lib.mjs'
+import { startServers, launchBrowser, openGame, play, wait, teleport, createChecks, pickOption } from './lib.mjs'
 
 const { check, finish } = createChecks()
 const servers = await startServers()
@@ -23,6 +23,13 @@ try {
       return { bottom: Math.round(r.bottom), top: Math.round(c.top), innerHeight, right: Math.round(c.right), innerWidth }
     })
     check(`Auswahl passt in ${w}x${h} (Spielen-Knopf sichtbar)`, fit.bottom <= fit.innerHeight && fit.right <= fit.innerWidth, JSON.stringify(fit))
+    await page.click('#loadout-primary .dropdown-trigger')
+    const list = await page.evaluate(() => {
+      const r = document.querySelector('#loadout-primary .dropdown-list').getBoundingClientRect()
+      return { bottom: Math.round(r.bottom), innerHeight }
+    })
+    check(`Offene Liste liegt in ${w}x${h} im Bild`, list.bottom <= list.innerHeight, JSON.stringify(list))
+    await page.click('#loadout-primary .dropdown-trigger')
   }
   await page.setViewportSize({ width: 1280, height: 720 })
   const cards = await page.evaluate(() => ({
@@ -31,7 +38,7 @@ try {
     weaponSelected: document.querySelectorAll('.weapon-card.selected').length,
   }))
   check('Gadget-Auswahl: Rauchgranate + Blendgranate, Standard Rauch; Waffenkarten unberührt', cards.ids === 'smoke,flash' && cards.selected === 'smoke' && cards.weaponSelected === 2, JSON.stringify(cards))
-  await page.click('.gadget-card[data-gadget="flash"]')
+  await pickOption(page, '.gadget-card[data-gadget="flash"]')
   check('Blendgranate gewählt und im Browser gemerkt', (await page.evaluate(() => localStorage.getItem('duskArena.gadget'))) === 'flash')
   await page.click('#loadout-play-button')
   await wait(500)

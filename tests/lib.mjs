@@ -111,6 +111,21 @@ export async function openGame(browser, { online = true, name, errors = [] } = {
 
 // "Starten" -> Waffenauswahl -> "Spielen" (oder im Pausenmenü "Weiter"). loadout = { primary, secondary }
 // wählt Karten an; ohne Angabe bleiben die Standardwaffen (Sturmgewehr + Pistole).
+// Option einer Aufklappliste anklicken (Waffen/Gadget): bei Bedarf erst die Liste öffnen
+export async function pickOption(page, selector, { touch = false } = {}) {
+  const click = (sel) => (touch ? page.tap(sel) : page.click(sel))
+  if (!(await page.locator(selector).isVisible())) {
+    const trigger = await page.evaluate((sel) => {
+      const root = document.querySelector(sel).closest('.dropdown')
+      root.dataset.pick = '1'
+      return true
+    }, selector)
+    if (trigger) await click('.dropdown[data-pick="1"] .dropdown-trigger')
+    await page.evaluate(() => document.querySelectorAll('.dropdown[data-pick]').forEach((e) => delete e.dataset.pick))
+  }
+  await click(selector)
+}
+
 export async function play(page, loadout, { touch = false } = {}) {
   const click = (selector) => (touch ? page.tap(selector) : page.click(selector))
   // Die Tests laufen oft in winzigen Fenstern (480x270): für die Auswahl kurz vergrößern
@@ -120,7 +135,7 @@ export async function play(page, loadout, { touch = false } = {}) {
   if (await page.locator('#start-button').isVisible()) {
     await click('#start-button')
     for (const id of [loadout?.primary, loadout?.secondary]) {
-      if (id) await click(`.weapon-card[data-weapon="${id}"]`)
+      if (id) await pickOption(page, `.weapon-card[data-weapon="${id}"]`, { touch })
     }
     await click('#loadout-play-button')
   } else {
