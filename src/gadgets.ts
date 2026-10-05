@@ -15,7 +15,8 @@ const MIN_THROW_TIME = 0.03 // darunter steckt man mit der Nase in der Wand: kei
 const CLOUD_CUBES = 240 // Rauch aus vielen kleinen Würfeln (Retro-Look, wie Feuer in alten Spielen)
 const SMOKE_TONES = [0xa3afc1, 0x8793a8, 0xbac5d6, 0x6f7b91]
 const GROW_TIME = 0.6
-const SHRINK_TIME = 1.5
+const SHRINK_TIME = 2.2
+const DISSOLVE_TIME = 0.9 // so lange schrumpft ein einzelner Würfel am Ende
 
 interface Flight {
   mesh: THREE.Mesh
@@ -40,6 +41,8 @@ interface SmokeCube {
   spin: number
   phase: number
   speed: number
+  delay: number // Sekunden bis der Würfel auftaucht (außen später: die Wolke quillt nach außen)
+  end: number // Alter, in dem er ganz verschwunden ist (außen früher: die Wolke löst sich von außen auf)
 }
 
 interface Cloud {
@@ -252,7 +255,17 @@ export class GadgetSystem {
       const x = direction.x * reach * stats.radius * 0.95
       const z = direction.z * reach * stats.radius * 0.95
       const y = Math.max(size * 0.5, stats.radius * 0.5 + direction.y * reach * stats.radius * 0.75)
-      cubes.push({ x, y, z, size, spin: (Math.random() - 0.5) * 1.2, phase: Math.random() * 6.28, speed: 0.5 + Math.random() * 0.8 })
+      cubes.push({
+        x,
+        y,
+        z,
+        size,
+        spin: (Math.random() - 0.5) * 1.2,
+        phase: Math.random() * 6.28,
+        speed: 0.5 + Math.random() * 0.8,
+        delay: reach * 0.45 * Math.random() + reach * 0.1,
+        end: stats.duration - 2.4 * reach * (0.4 + 0.6 * Math.random()),
+      })
       mesh.setColorAt(i, this.tmpColor.setHex(SMOKE_TONES[i % SMOKE_TONES.length]))
     }
     group.add(mesh)
@@ -263,27 +276,30 @@ export class GadgetSystem {
     this.onLand?.('smoke', position)
   }
 
-  // 0..1: wie weit die Wolke aufgegangen ist (Auf-/Abschwellen)
+  // 0..1: wie weit die Wolke steht (nur für die Dichte; die Würfel selbst blenden einzeln aus)
   private cloudScale(cloud: Cloud): number {
     const grow = Math.min(1, cloud.age / GROW_TIME)
     const shrink = Math.min(1, (cloud.duration - cloud.age) / SHRINK_TIME)
     return (1 - (1 - grow) * (1 - grow)) * Math.max(0, shrink)
   }
 
-  // Würfel setzen: wachsen aus der Mitte, schweben leicht auf und ab, drehen sich langsam
+  // Würfel setzen: Die Wolke quillt von innen nach außen auf, jeder Würfel schwebt leicht, dreht
+  // sich und löst sich zum Schluss einzeln auf (außen zuerst, steigt dabei auf und schrumpft)
   private layoutCloud(cloud: Cloud) {
-    const scale = this.cloudScale(cloud)
+    const spread = 1 - Math.pow(1 - Math.min(1, cloud.age / GROW_TIME), 2)
     for (let i = 0; i < cloud.cubes.length; i++) {
       const cube = cloud.cubes[i]
+      const appear = THREE.MathUtils.smoothstep((cloud.age - cube.delay) / 0.5, 0, 1)
+      const vanish = THREE.MathUtils.smoothstep((cube.end - cloud.age) / DISSOLVE_TIME, 0, 1)
       const bob = Math.sin(cloud.age * cube.speed + cube.phase) * 0.18
-      this.tmpPos.set(cube.x * scale, cube.y * scale + bob, cube.z * scale)
+      const rise = (1 - vanish) * 1.3
+      this.tmpPos.set(cube.x * spread, cube.y * spread + bob + rise, cube.z * spread)
       this.tmpQuat.setFromAxisAngle(this.yAxis, cube.phase + cloud.age * cube.spin)
-      this.tmpScale.setScalar(Math.max(0.001, cube.size * scale))
+      this.tmpScale.setScalar(Math.max(0.0005, cube.size * appear * vanish))
       this.tmpMatrix.compose(this.tmpPos, this.tmpQuat, this.tmpScale)
       cloud.mesh.setMatrixAt(i, this.tmpMatrix)
     }
     cloud.mesh.instanceMatrix.needsUpdate = true
-    if (cloud.mesh.instanceColor) cloud.mesh.instanceColor.needsUpdate = true
   }
 
   // 0..1: wie dicht der Rauch um diesen Punkt ist (Kamera in der Wolke = nichts mehr zu sehen)

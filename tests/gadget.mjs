@@ -112,6 +112,29 @@ try {
   await wait(400)
   check('Wieder draußen: Schleier weg', Number(await page.evaluate(() => getComputedStyle(document.querySelector('#smoke-overlay')).opacity)) < 0.05)
 
+  // Auflösen: außen zuerst und einzeln, nicht alles gleichzeitig in die Mitte
+  const fade = await page.evaluate(() => {
+    const G = __dusk.gadgets
+    const cloud = G.clouds[0]
+    const sizes = () => {
+      const e = cloud.mesh.instanceMatrix.array
+      const out = []
+      for (let i = 0; i < cloud.cubes.length; i++) {
+        const o = i * 16
+        out.push({ s: Math.hypot(e[o], e[o + 1], e[o + 2]), r: Math.hypot(cloud.cubes[i].x, cloud.cubes[i].z) })
+      }
+      return out
+    }
+    const early = sizes()
+    window.__step(6.5 - cloud.age) // Alter 6,5 s von 8
+    const mid = sizes()
+    const outer = mid.filter((c) => c.r > 2.2)
+    const inner = mid.filter((c) => c.r < 1)
+    const avg = (a) => a.reduce((x, c) => x + c.s, 0) / Math.max(1, a.length)
+    return { age: cloud.age, outerGone: outer.filter((c) => c.s < 0.02).length / Math.max(1, outer.length), innerKept: inner.filter((c) => c.s > 0.2).length / Math.max(1, inner.length), outerAvg: avg(outer), innerAvg: avg(inner), startSizes: early.length }
+  })
+  check('Auflösen von außen: bei 6,5 s sind viele äußere Würfel weg, innere noch da', fade.outerGone > 0.3 && fade.innerKept > 0.7, JSON.stringify(fade))
+
   // Dauer: nach 8 s weg, nach 25 s wieder bereit
   await page.evaluate(() => window.__step(7.5))
   check('Wolke verschwindet nach 8 s', (await page.evaluate(() => __dusk.gadgets.clouds.length)) === 0)
