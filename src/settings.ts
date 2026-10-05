@@ -5,19 +5,21 @@ export interface Settings {
   fov: number // Grad (senkrecht)
   volume: number // 0..1
   music: number // 0..1, Hintergrundmusik
+  renderScale: number // Anteil der Bildpunkte (Pixeldichte x Faktor); weniger = flüssiger auf schwachen/hochauflösenden Geräten
   minimap: boolean
   scopeBlur: boolean // Zielfernrohr: Rand unscharf (aus = nur abgedunkelt, schont schwache Geräte)
 }
 
-export type NumericSettingKey = 'sensitivity' | 'fov' | 'volume' | 'music'
+export type NumericSettingKey = 'sensitivity' | 'fov' | 'volume' | 'music' | 'renderScale'
 
-export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1, music: 0.5, minimap: true, scopeBlur: true }
+export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1, music: 0.5, renderScale: 1, minimap: true, scopeBlur: true }
 
 export const SETTING_RANGES: Record<NumericSettingKey, { min: number; max: number; step: number }> = {
   sensitivity: { min: 0.3, max: 8, step: 0.05 },
   fov: { min: 60, max: 110, step: 1 },
   volume: { min: 0, max: 1, step: 0.05 },
   music: { min: 0, max: 1, step: 0.05 },
+  renderScale: { min: 0.5, max: 1, step: 0.05 },
 }
 
 const STORAGE_KEY = 'duskArena.settings'
@@ -43,6 +45,7 @@ export function loadSettings(): Settings {
     fov: clampSetting('fov', stored.fov),
     volume: clampSetting('volume', stored.volume),
     music: clampSetting('music', stored.music),
+    renderScale: clampSetting('renderScale', stored.renderScale),
     minimap: typeof stored.minimap === 'boolean' ? stored.minimap : DEFAULT_SETTINGS.minimap,
     scopeBlur: typeof stored.scopeBlur === 'boolean' ? stored.scopeBlur : DEFAULT_SETTINGS.scopeBlur,
   }

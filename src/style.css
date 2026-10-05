@@ -1142,8 +1142,7 @@ body {
   position: fixed;
   inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow-y: auto; /* sehr kleine Fenster: Menü scrollt, statt Knöpfe aus dem Bild zu schieben */
   background: rgba(26, 31, 46, 0.75);
   backdrop-filter: blur(4px);
   cursor: pointer;
@@ -1157,6 +1156,7 @@ body {
 }
 
 #overlay-content {
+  margin: auto; /* mittig, solange es passt; sonst oben bündig und scrollbar */
   text-align: center;
   color: var(--c-text);
 }
@@ -1523,6 +1523,32 @@ body {
 @media (max-height: 480px) {
   .setting-row {
     margin: 0.3rem auto;
+  }
+
+  /* Niedrige Fenster (Handy quer): Einstellungen in zwei Spalten, sonst läuft "Fertig" aus dem Bild */
+  #menu-settings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.2rem;
+    width: min(46rem, 96vw);
+    margin: 0 auto;
+  }
+
+  #menu-settings:not(.hidden) > h2,
+  #menu-settings > .menu-buttons {
+    grid-column: 1 / -1;
+  }
+
+  #menu-settings .setting-row {
+    width: auto;
+    max-width: none;
+    grid-template-columns: 7.4rem 1fr 3.4rem;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+  }
+
+  #menu-settings .setting-row output {
+    white-space: nowrap;
   }
 }
 

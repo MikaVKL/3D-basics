@@ -48,7 +48,6 @@ scene.add(camera)
 
 const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
-renderer.setPixelRatio(window.devicePixelRatio)
 // Bewusst ohne Schlagschatten (wirkten unpassend); Flächen bleiben durch
 // die Schattierung des gerichteten Lichts unterscheidbar
 
@@ -523,9 +522,17 @@ const settingFormat: Record<NumericSettingKey, (value: number) => string> = {
   fov: (value) => `${Math.round(value)}°`,
   volume: (value) => `${Math.round(value * 100)} %`,
   music: (value) => `${Math.round(value * 100)} %`,
+  renderScale: (value) => `${Math.round(value * 100)} %`,
+}
+
+// Pixeldichte: höchstens 2 (3x-Handys wären 9x so viele Bildpunkte), dazu der Regler "Bildschärfe"
+const MAX_PIXEL_RATIO = 2
+function applyPixelRatio() {
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO) * settings.renderScale)
 }
 
 function applySettings() {
+  applyPixelRatio()
   lookControl.setSensitivityScale(settings.sensitivity)
   camera.fov = settings.fov
   camera.updateProjectionMatrix()

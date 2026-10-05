@@ -379,7 +379,9 @@ Stolperfallen bei Headless-Tests:
   sonst Waffenfeld/Buttons überlappen (`test:layout` prüft das mit 8 Spielern).
   Alte Server schicken keine Liste (Client zeigt dann nichts).
 - **Einstellungen** (`src/settings.ts`, Menü "Einstellungen"): Empfindlichkeit,
-  Blickfeld, Lautstärke; `localStorage` `duskArena.settings`, jeder Wert
+  Blickfeld, Lautstärke, Musik, **Bildschärfe** (`renderScale` 50-100 %; Pixeldichte =
+  min(Geräte-Pixeldichte, 2) x Faktor, gegen Ruckeln auf Retina-Geräten/3x-Handys), Minimap,
+  Scope-Unschärfe; unter 480 px Höhe zweispaltig, das Menü (`#overlay`) scrollt, wenn es nicht passt; `localStorage` `duskArena.settings`, jeder Wert
   einzeln begrenzt/auf Standard, wenn kaputt. Wirkt über
   `LookControl.setSensitivityScale`, `SlideView.setBaseFov` (Rutschen addiert
   weiter +7°) und `SoundFx.setVolume` (M = Stumm bleibt getrennt). Neue

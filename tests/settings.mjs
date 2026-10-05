@@ -1,5 +1,5 @@
-// Einstellungen im Menü: Regler für Empfindlichkeit, Blickfeld und
-// Lautstärke wirken sofort, werden gemerkt und vertragen kaputte Speicherwerte.
+// Einstellungen im Menü: Regler für Empfindlichkeit, Blickfeld, Lautstärke und
+// Bildschärfe wirken sofort, werden gemerkt und vertragen kaputte Speicherwerte.
 //
 //   node tests/settings.mjs
 import { startServers, launchBrowser, openGame, play, wait, createChecks } from './lib.mjs'
@@ -153,6 +153,30 @@ try {
   const blurOff = await page.evaluate(() => ({ stored: JSON.parse(localStorage.getItem('duskArena.settings')).scopeBlur, label: document.querySelector('#setting-scopeblur-value').textContent }))
   check('Scope-Unschärfe ausschalten wird gemerkt', blurOff.stored === false && blurOff.label === 'Aus', JSON.stringify(blurOff))
   await page.evaluate(() => document.querySelector('#setting-scopeblur').click())
+
+  // Bildschärfe: Pixeldichte x Faktor, Pixeldichte höchstens 2
+  const px = () =>
+    page.evaluate(() => ({
+      ratio: __dusk.renderer.getPixelRatio(),
+      canvas: __dusk.renderer.domElement.width,
+      inner: innerWidth,
+      label: document.querySelector('#setting-renderScale-value').textContent,
+      stored: JSON.parse(localStorage.getItem('duskArena.settings') ?? '{}').renderScale,
+    }))
+  const sharp = await px()
+  check('Bildschärfe: Standard 100 %, volle Pixeldichte (1)', sharp.ratio === 1 && sharp.canvas === sharp.inner && sharp.label === '100 %', JSON.stringify(sharp))
+  await setSlider(page, 'renderScale', 0.5)
+  const half = await px()
+  check('Bildschärfe 50 %: halbe Pixeldichte, Leinwand halb so breit, gemerkt', half.ratio === 0.5 && half.canvas === Math.round(half.inner * 0.5) && half.label === '50 %' && half.stored === 0.5, JSON.stringify(half))
+  await setSlider(page, 'renderScale', 0.1)
+  check('Bildschärfe unter 50 % wird auf 50 % begrenzt', (await px()).label === '50 %')
+  await setSlider(page, 'renderScale', 1)
+  const dense = await browser.newPage({ viewport: { width: 640, height: 360 }, deviceScaleFactor: 3 })
+  await dense.goto(page.url())
+  await dense.waitForFunction(() => 'undefined' !== typeof window.__dusk)
+  const capped = await dense.evaluate(() => ({ ratio: __dusk.renderer.getPixelRatio(), dpr: devicePixelRatio, canvas: __dusk.renderer.domElement.width }))
+  check('Gerät mit 3-facher Pixeldichte: auf 2 begrenzt (statt 9x Bildpunkte)', capped.dpr === 3 && capped.ratio === 2 && capped.canvas === 1280, JSON.stringify(capped))
+  await dense.close()
 
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
