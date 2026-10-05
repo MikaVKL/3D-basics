@@ -6,7 +6,7 @@
 import { startServers, launchBrowser, openGame, play, shootAt, teleport, wait, createChecks } from './lib.mjs'
 
 const { check, finish } = createChecks()
-const servers = await startServers({ serverEnv: { KILLS_TO_WIN: '2' } })
+const servers = await startServers({ serverEnv: { KILLS_TO_WIN: '2', ROUND_END_PAUSE: '25' } })
 const browser = await launchBrowser()
 const errors = []
 
@@ -50,10 +50,11 @@ try {
   await kill(A, B)
   await wait(800)
 
+  const bannerAt = Date.now()
   const a = await banner(A)
   const b = await banner(B)
   check('Banner sichtbar mit Sieger', a.visible && /gewinnt/.test(a.winner), `${a.winner} (${a.cls})`)
-  check('Countdown zeigt bis zu 10 s', /\d+/.test(a.countdown) && Number(a.countdown.match(/\d+/)[0]) > 6, a.countdown)
+  check('Countdown zeigt die eingestellte Pause (25 s im Test)', /\d+/.test(a.countdown) && Number(a.countdown.match(/\d+/)[0]) > 15, a.countdown)
   check('Liste: Kopfzeile + 2 Spieler', a.rows.length === 3 && a.rows[0].cls.includes('header'), JSON.stringify(a.rows.map((r) => r.cells)))
   const [, first, second] = a.rows
   check('Bester zuerst, mit Stern: Anna 2 Kills / 0 Tode / 6 Kopftreffer', first?.cells.join('|') === '★|Anna|2|0|6' && first.cls.includes('mvp'), JSON.stringify(first))
@@ -66,10 +67,10 @@ try {
   await play(C)
   await wait(1500)
   const c = await banner(C)
-  check('Nachzügler sieht die Statistik', c.visible && c.rows.length === 3, `${c.rows.length} Zeilen`)
+  check('Nachzügler sieht die Statistik', c.visible && c.rows.length === 3, `${c.rows.length} Zeilen, ${((Date.now() - bannerAt) / 1000).toFixed(1)} s nach Rundenende, sichtbar: ${c.visible}`)
 
   // Nächste Runde
-  await A.waitForFunction(() => document.querySelector('#round-banner').classList.contains('hidden'), null, { timeout: 15000 })
+  await A.waitForFunction(() => document.querySelector('#round-banner').classList.contains('hidden'), null, { timeout: 30000 })
   await wait(500)
   const after = await A.evaluate(() => [...__dusk.network.roster.values()].map((p) => `${p.name}:${p.kills}/${p.deaths}`).join())
   check('nächste Runde: Banner weg, Zähler wieder 0', /Anna:0\/0/.test(after) && /Ben:0\/0/.test(after), after)

@@ -89,6 +89,8 @@ let nextPlayerId = 1
 let scores: Scores = { red: 0, blue: 0 }
 // Per Umgebungsvariable änderbar (kürzere Runden, Tests)
 const KILLS_TO_WIN_ACTIVE = Number(process.env.KILLS_TO_WIN) || KILLS_TO_WIN
+// Pause nach Rundenende (Sekunden), für Tests mit langsamen Browsern länger einstellbar
+const ROUND_END_PAUSE_ACTIVE = Number(process.env.ROUND_END_PAUSE) || ROUND_END_PAUSE
 // Start der nächsten Runde während der Sieger-Anzeige, sonst null
 let nextRoundAt: number | null = null
 let roundWinner: Team | null = null
@@ -374,11 +376,11 @@ function balanceTeams(now: number): boolean {
 
 function endRound(winner: Team, now: number) {
   roundWinner = winner
-  nextRoundAt = now + ROUND_END_PAUSE * 1000
+  nextRoundAt = now + ROUND_END_PAUSE_ACTIVE * 1000
   roundStats = [...clients.values()]
     .map((c) => ({ id: c.id, name: c.name, team: c.team, kills: c.kills, deaths: c.deaths, headshots: c.headshots }))
     .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || b.headshots - a.headshots)
-  broadcast({ t: 'roundEnd', winner, nextRoundIn: ROUND_END_PAUSE, stats: roundStats })
+  broadcast({ t: 'roundEnd', winner, nextRoundIn: ROUND_END_PAUSE_ACTIVE, stats: roundStats })
   console.log(`Runde vorbei, Team ${winner} gewinnt (${scores.red}:${scores.blue})`)
 }
 
