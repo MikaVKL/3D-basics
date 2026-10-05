@@ -184,15 +184,20 @@ function withSimulatedLatency(socket: WebSocket, direction: 'in' | 'out', delive
   }, at - now)
 }
 
-function send(socket: WebSocket, message: ServerMessage) {
+function sendRaw(socket: WebSocket, data: string) {
   if (socket.readyState !== WebSocket.OPEN) return
-  const data = JSON.stringify(message)
   withSimulatedLatency(socket, 'out', () => socket.send(data))
 }
 
+function send(socket: WebSocket, message: ServerMessage) {
+  sendRaw(socket, JSON.stringify(message))
+}
+
+// Einmal in Text umwandeln, nicht je Empfänger (der Snapshot ist die größte Nachricht, 20x/s an alle)
 function broadcast(message: ServerMessage, exceptId?: PlayerId) {
+  const data = JSON.stringify(message)
   for (const client of clients.values()) {
-    if (client.id !== exceptId) send(client.socket, message)
+    if (client.id !== exceptId) sendRaw(client.socket, data)
   }
 }
 
