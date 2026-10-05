@@ -623,6 +623,8 @@ if (isTouchDevice) {
       switchButton: document.querySelector<HTMLButtonElement>('#switch-button')!,
       aimButton: document.querySelector<HTMLButtonElement>('#aim-button')!,
       gadgetButton: document.querySelector<HTMLButtonElement>('#gadget-button')!,
+      leanLeftButton: document.querySelector<HTMLButtonElement>('#lean-left-button')!,
+      leanRightButton: document.querySelector<HTMLButtonElement>('#lean-right-button')!,
     },
     player,
     lookControl,

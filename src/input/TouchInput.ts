@@ -25,6 +25,8 @@ interface TouchElements {
   switchButton: HTMLElement
   aimButton: HTMLElement
   gadgetButton: HTMLElement
+  leanLeftButton: HTMLElement
+  leanRightButton: HTMLElement
 }
 
 export class TouchInput {
@@ -100,6 +102,26 @@ export class TouchInput {
     }
     shootButton.addEventListener('touchend', stopShooting)
     shootButton.addEventListener('touchcancel', stopShooting)
+
+    // Lehnen: nur solange der Finger auf der Taste ist (der andere Daumen schießt/zielt)
+    for (const [button, direction] of [[elements.leanLeftButton, -1], [elements.leanRightButton, 1]] as const) {
+      const hold = (e: Event) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.player.setLean(direction)
+        button.classList.add('active')
+      }
+      const release = (e: Event) => {
+        e.stopPropagation()
+        button.classList.remove('active')
+        // Nur aufheben, wenn nicht gleich die andere Taste (noch) gehalten wird
+        const other = direction === -1 ? elements.leanRightButton : elements.leanLeftButton
+        this.player.setLean(other.classList.contains('active') ? (direction === -1 ? 1 : -1) : 0)
+      }
+      button.addEventListener('touchstart', hold, { passive: false })
+      button.addEventListener('touchend', release)
+      button.addEventListener('touchcancel', release)
+    }
 
     elements.gadgetButton.addEventListener('touchstart', (e) => {
       e.preventDefault()

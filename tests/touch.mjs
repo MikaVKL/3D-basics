@@ -160,6 +160,27 @@ try {
   await page.tap('#resume-button')
   await wait(300)
   check('Weiter-Button setzt das Spiel fort', await page.evaluate(() => document.querySelector('#overlay').classList.contains('hidden')))
+  // Lehnen: Tasten links in der Mitte, nur solange der Finger drauf ist
+  const holdButton = async (selector, id) => {
+    const b = await page.locator(selector).boundingBox()
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: b.x + b.width / 2, y: b.y + b.height / 2, id }] })
+  }
+  const letGo = () => cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  const leanNow = () => page.evaluate(() => Number(__dusk.player.lean.toFixed(2)))
+  await holdButton('#lean-right-button', 11)
+  await wait(900)
+  const leanR = await leanNow()
+  check('Touch: rechte Lehn-Taste gehalten = nach rechts gelehnt, Taste leuchtet', leanR > 0.9 && (await page.evaluate(() => document.querySelector('#lean-right-button').classList.contains('active'))), String(leanR))
+  await letGo()
+  await wait(900)
+  check('Touch: loslassen = wieder gerade', (await leanNow()) === 0 && !(await page.evaluate(() => document.querySelector('#lean-right-button').classList.contains('active'))))
+  await holdButton('#lean-left-button', 12)
+  await wait(900)
+  const leanL = await leanNow()
+  check('Touch: linke Lehn-Taste = nach links', leanL < -0.9, String(leanL))
+  await letGo()
+  await wait(700)
+
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {
   await browser.close()

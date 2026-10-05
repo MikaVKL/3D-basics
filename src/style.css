@@ -1750,6 +1750,38 @@ body {
   touch-action: none;
 }
 
+/* Lehnen: zwei kleine Tasten links in der Mitte (zwischen Waffenfeld und Lebensanzeige), gehalten */
+#lean-left-button,
+#lean-right-button {
+  position: fixed;
+  padding: 0;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin-top: 14px; /* unter der Hinweis-Zeile in der Mitte, über der Lebensanzeige */
+  border-radius: 50%;
+  border: 2px solid rgba(51, 230, 204, 0.5);
+  background: rgba(51, 230, 204, 0.1);
+  color: #d6fff8;
+  z-index: 6;
+  touch-action: none;
+}
+
+#lean-left-button {
+  left: var(--edge-left);
+}
+
+#lean-right-button {
+  left: calc(var(--edge-left) + 54px);
+}
+
+#lean-left-button:active,
+#lean-left-button.active,
+#lean-right-button:active,
+#lean-right-button.active {
+  background: rgba(51, 230, 204, 0.35);
+}
+
 /* Gadget (Rauchgranate) */
 #gadget-button {
   position: fixed;
