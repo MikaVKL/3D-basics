@@ -117,7 +117,6 @@ export class Weapon {
   // Waffen auf den Tasten 1-3: Secondary, Primary, Messer
   slots: WeaponId[] = loadoutSlots(DEFAULT_LOADOUT)
   private weaponId: WeaponId = this.slots[0]
-  private previousWeapon: WeaponId = this.slots[1]
   private ammoByWeapon = fullMagazines()
   private reloadRemaining = 0
   private switchRemaining = 0
@@ -173,7 +172,6 @@ export class Weapon {
 
   switchTo(id: WeaponId) {
     if (id === this.weaponId || !this.slots.includes(id)) return
-    this.previousWeapon = this.weaponId
     this.weaponId = id
     // Nachladen bricht ab (Munition bleibt wie sie war)
     this.reloadRemaining = 0
@@ -192,17 +190,12 @@ export class Weapon {
     this.switchTo(this.slots[(index + direction + this.slots.length) % this.slots.length])
   }
 
-  switchToPrevious() {
-    this.switchTo(this.previousWeapon)
-  }
-
   // Nach dem Respawn: alles voll, Startwaffe in der Hand
   // loadout: gewählte Waffen, wirken ab diesem Leben (Beitritt/Respawn)
   resetLoadout(loadout?: Loadout) {
     if (loadout) this.slots = loadoutSlots(loadout)
     this.ammoByWeapon = fullMagazines()
     this.switchTo(this.slots[0])
-    this.previousWeapon = this.slots[1]
     this.reloadRemaining = 0
     this.switchRemaining = 0
     // Kein Wechsel-Ablauf beim Respawn: Modell sofort, ohne Ton

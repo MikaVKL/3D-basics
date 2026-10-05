@@ -144,7 +144,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   hüfte 0,05 / gezielt 0, 70 Körper, Server 70/140 auf 60 m, Knall- und Repetierton
 - `npm run test:shotgun` – Shotgun: 8 Strahlen, 64 Schaden nah in einer Meldung, Schadens-
   abfall nach Entfernung, Server rechnet Körner/Entfernung nach, begrenzt gefälschte Körnerzahl
-- `npm run test:weapons` – Wechsel (1/2/3, Mausrad, Q), Munition je Waffe,
+- `npm run test:weapons` – Wechsel (1/2/3, Mausrad), Munition je Waffe,
   Nachladen, Dauerfeuer, Streuung, Tempo, Messer-Reichweite, Respawn,
   Server-Schaden/Ratenlimit/Reichweite, Waffe/Töne bei anderen, Kill-Feed-Symbol
 - `npm run test:bots -- [bots=4] [sekunden=180]` – Bot-Dauertest zur
@@ -293,7 +293,7 @@ Stolperfallen bei Headless-Tests:
   **Waffenauswahl** (`src/loadoutScreen.ts`, Nutzerwunsch): Hauptmenü "Starten" -> Fenster
   mit Karten Primary (Sturmgewehr/Shotgun/Sniper) und Secondary (Pistole/Schwere
   Pistole/MP), Messer fest; "Zurück" ins Hauptmenü, "Spielen" startet. Ohne Wahl gilt
-  Sturmgewehr + Pistole. Tasten wie bisher: 1 = Secondary, 2 = Primary, 3 = Messer; nach
+  Sturmgewehr + Pistole. Tasten wie bisher: 1 = Secondary, 2 = Primary, 3 = Messer, Mausrad wechselt reihum (Nutzerwunsch: im Spiel nur unter den gewählten Waffen; Q-Schnellwechsel entfernt, Q/E sind fürs Lehnen frei); nach
   dem Spawn hält man die Secondary (Pistole). Wahl im Browser gemerkt (`duskArena.loadout`),
   im Pausenmenü über "Waffenauswahl" änderbar, gilt ab dem nächsten Spawn
   (`startLife()` in main.ts). Tests wählen per `play(page, { primary, secondary })`.

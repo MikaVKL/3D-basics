@@ -106,9 +106,6 @@ export class DesktopInput {
         if (pressed && slot) this.weapon.switchTo(slot)
         break
       }
-      case 'KeyQ':
-        if (pressed) this.weapon.switchToPrevious()
-        break
       case 'KeyG':
         if (pressed) this.onGadget?.() // Wiederholung stört nicht: die Abklingzeit sperrt
         break

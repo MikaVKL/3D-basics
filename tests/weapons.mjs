@@ -1,4 +1,4 @@
-// Waffen: Wechsel (Tasten, Mausrad, Q), Munition je Waffe, Nachladezeiten,
+// Waffen: Wechsel (Tasten, Mausrad; nur unter den gewählten Waffen), Munition je Waffe, Nachladezeiten,
 // Dauerfeuer, Streuung, Lauftempo, Respawn-Ausrüstung und Server-Schaden
 // samt Feuerraten-Begrenzung.
 //
@@ -37,10 +37,13 @@ try {
 
   await page.keyboard.press('KeyQ')
   await wait(400)
-  check('Q: zurück zur Pistole', (await hud(page)).weapon === 'pistol')
+  check('Q wechselt nichts mehr (Taste ist fürs Lehnen frei)', (await hud(page)).weapon === 'rifle')
   await page.mouse.wheel(0, 100)
   await wait(400)
-  check('Mausrad: nächste Waffe', (await hud(page)).weapon === 'rifle')
+  check('Mausrad vor: nächste gewählte Waffe (Messer)', (await hud(page)).weapon === 'knife')
+  await page.mouse.wheel(0, -100)
+  await wait(400)
+  check('Mausrad zurück: wieder Sturmgewehr', (await hud(page)).weapon === 'rifle')
   await page.keyboard.press('Digit1')
   await wait(400)
 
