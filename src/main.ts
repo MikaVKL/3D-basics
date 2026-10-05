@@ -378,7 +378,7 @@ window.addEventListener('keydown', (event) => {
 
 // Nur im Dev-Build: Zugriff für die Browser-Tests (tests/)
 if (import.meta.env.DEV) {
-  Object.assign(window, { __dusk: { gadgets, throwGadget, player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake, slideView, renderer } })
+  Object.assign(window, { __dusk: { getFps: () => fps, gadgets, throwGadget, player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake, slideView, renderer } })
 }
 
 // --- Eingabe ---
@@ -665,6 +665,7 @@ const staminaBarFill = document.querySelector<HTMLDivElement>('#stamina-bar-fill
 const netStatus = document.querySelector<HTMLDivElement>('#net-status')!
 const netText = document.querySelector<HTMLSpanElement>('#net-text')!
 const netPing = document.querySelector<HTMLSpanElement>('#net-ping')!
+const netFps = document.querySelector<HTMLSpanElement>('#net-fps')!
 const connectionWarning = document.querySelector<HTMLDivElement>('#connection-warning')!
 // Server schickt 20x/s - so lange Stille ist kein normales Schwanken mehr
 const CONNECTION_WARNING_AFTER_MS = 1500
@@ -692,6 +693,20 @@ const killFeed = new KillFeed(document.querySelector<HTMLDivElement>('#kill-feed
 const WAKE_HINT_AFTER_MS = 5000
 const GIVE_UP_HINT_AFTER_MS = 90000
 
+// Bildrate, alle 0,5 s aus den gezählten Frames (hilft bei "es laggt": Bildrate oder Verbindung?)
+let fpsFrames = 0
+let fpsSince = performance.now()
+let fps = 0
+function updateFps(now: number) {
+  fpsFrames++
+  if (now - fpsSince < 500) return
+  fps = Math.round((fpsFrames * 1000) / (now - fpsSince))
+  fpsFrames = 0
+  fpsSince = now
+  netFps.textContent = ` · ${fps} FPS`
+  netFps.dataset.quality = fps >= 45 ? 'good' : fps >= 25 ? 'ok' : 'bad'
+}
+
 function updateNetStatusHud() {
   const tryingFor =
     network.connectingSince === null ? null : performance.now() - network.connectingSince
@@ -705,7 +720,7 @@ function updateNetStatusHud() {
     connecting: trying,
     // Kleine Bildschirme: kurz, sonst stößt der Status an den Punktestand
     online:
-      window.innerWidth < 760
+      window.innerWidth < 1000
         ? `${network.playerCount}/${MAX_PLAYERS} · Team ${TeamLabel[player.team]}`
         : `Online · ${network.playerCount}/${MAX_PLAYERS} Spieler · Team ${TeamLabel[player.team]}`,
     full: 'Server voll · Singleplayer',
@@ -960,6 +975,7 @@ let wasAlive = true
 function animate() {
   requestAnimationFrame(animate)
 
+  updateFps(performance.now())
   timer.update()
   const deltaSeconds = Math.min(timer.getDelta(), 0.1) // Deckel gegen Sprünge nach Tab-Wechsel
 

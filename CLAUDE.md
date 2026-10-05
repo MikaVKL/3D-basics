@@ -157,6 +157,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `npm run test:touch` – Touch-Steuerung (Handy-Emulation): Ducken-Button
   halten = ducken/rutschen, loslassen = aufstehen; Schießen halten + wischen =
   zielen; Sprung halten = weiterhüpfen; Zielen-Button antippen = zielen an/aus
+- `tests/fps.mjs` (in `npm test`) – FPS-Anzeige im Statusfeld (neben dem Ping, grün/gelb/rot ab 45/25), Wert = echte Frames. Zeigt Testern, ob Lag = Bildrate oder Verbindung
 - `npm run test:ping` – Ping-Anzeige: Messwert (auch mit 200 ms simuliert),
   Farbe, ausgeblendet ohne Verbindung, Ping-Spalte in der Tab-Tabelle,
   Spielerliste bei stabilem Ping selten verschickt

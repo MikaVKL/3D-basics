@@ -741,15 +741,18 @@ body {
   text-shadow: 0 0 8px rgba(51, 230, 204, 0.5);
 }
 
-#net-ping[data-quality='good'] {
+#net-ping[data-quality='good'],
+#net-fps[data-quality='good'] {
   color: var(--c-neon);
 }
 
-#net-ping[data-quality='ok'] {
+#net-ping[data-quality='ok'],
+#net-fps[data-quality='ok'] {
   color: var(--c-warn);
 }
 
-#net-ping[data-quality='bad'] {
+#net-ping[data-quality='bad'],
+#net-fps[data-quality='bad'] {
   color: var(--c-warm);
 }
 
