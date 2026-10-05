@@ -7,6 +7,8 @@ import type { Weapon } from '../weapon'
 
 export class DesktopInput {
   private keysPressed = { forward: false, back: false, left: false, right: false }
+  // Lehnen: Q links, E rechts (beide gedrückt = gerade)
+  private leanKeys = { left: false, right: false }
   private domElement: HTMLElement
   private player: Player
   private lookControl: LookControl
@@ -51,7 +53,12 @@ export class DesktopInput {
     })
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === this.domElement
-      if (!locked) this.weapon.cancelFire()
+      if (!locked) {
+        this.weapon.cancelFire()
+        // Beim Verlassen losgelassene Tasten kommen nicht an: nicht festhängen
+        this.leanKeys = { left: false, right: false }
+        this.player.setLean(0)
+      }
       this.onLockChange(locked)
     })
   }
@@ -106,6 +113,12 @@ export class DesktopInput {
         if (pressed && slot) this.weapon.switchTo(slot)
         break
       }
+      case 'KeyQ':
+      case 'KeyE':
+        if (code === 'KeyQ') this.leanKeys.left = pressed
+        else this.leanKeys.right = pressed
+        this.player.setLean((Number(this.leanKeys.right) - Number(this.leanKeys.left)) as -1 | 0 | 1)
+        break
       case 'KeyG':
         if (pressed) this.onGadget?.() // Wiederholung stört nicht: die Abklingzeit sperrt
         break

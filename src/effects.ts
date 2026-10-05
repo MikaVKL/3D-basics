@@ -222,6 +222,9 @@ const SLIDE_ROLL = 0.07 // rad
 const SLIDE_FOV_BOOST = 7 // Grad
 const SLIDE_BLEND_SPEED = 8 // pro Sekunde
 
+// Kippen der Kamera bei vollem Lehnen (rad, ~12°); rechts = im Uhrzeigersinn
+const LEAN_ROLL = 0.21
+
 export class SlideView {
   amount = 0
   private baseFov: number
@@ -238,7 +241,8 @@ export class SlideView {
     this.baseFov = fov
   }
 
-  apply(camera: THREE.PerspectiveCamera, sliding: boolean, deltaSeconds: number) {
+  // lean: -1..1 (links..rechts), kippt die Kamera zur Seite
+  apply(camera: THREE.PerspectiveCamera, sliding: boolean, deltaSeconds: number, lean = 0) {
     const step = SLIDE_BLEND_SPEED * deltaSeconds
     this.amount += THREE.MathUtils.clamp((sliding ? 1 : 0) - this.amount, -step, step)
     const fov = (this.baseFov + SLIDE_FOV_BOOST * this.amount) * this.zoom
@@ -246,7 +250,7 @@ export class SlideView {
       camera.fov = fov
       camera.updateProjectionMatrix()
     }
-    this.appliedRoll = SLIDE_ROLL * this.amount
+    this.appliedRoll = SLIDE_ROLL * this.amount - lean * LEAN_ROLL
     camera.rotateZ(this.appliedRoll)
   }
 

@@ -26,6 +26,11 @@ const CROUCH_TRANSITION_SPEED = 6
 const MOVE_SPEED = 6 // Meter pro Sekunde
 const SPRINT_SPEED_MULTIPLIER = 1.6
 const AIM_SPEED_MULTIPLIER = 0.75
+// Lehnen (Q/E): Kamera seitlich versetzt und gekippt, Körper bleibt stehen
+export const LEAN_DISTANCE = 0.45 // m bei vollem Lehnen
+const LEAN_SPEED = 7 // 1/s: in ~0,15 s ganz gelehnt
+const LEAN_SPEED_MULTIPLIER = 0.75
+const LEAN_CAMERA_RADIUS = 0.12 // so dicht darf die Kamera an Wände (Körper hält 0,3 m)
 const JUMP_SPEED = 7.6 // ~1.6m Sprunghöhe: reicht für die 1.4m-Kisten
 const GRAVITY = 18
 const PLAYER_RADIUS = 0.4
@@ -117,6 +122,12 @@ export class Player implements Damageable {
   private eyeHeight = EYE_HEIGHT
 
   private aiming = false
+  // Lehnen: Wunsch (-1 links, 0, 1 rechts), weich nachgeführt, und was nach Wandprüfung gilt
+  private leanInput = 0
+  private leanSmooth = 0
+  private leanEffective = 0
+  // Seitlicher Versatz, der gerade auf camera.position liegt (Körperposition = Kamera minus Versatz)
+  private leanApplied = new THREE.Vector3()
   private wantsToSprint = false
   private isSprinting = false
   private stamina = MAX_STAMINA
@@ -153,6 +164,7 @@ export class Player implements Damageable {
   // Server-Korrektur: zurück an eine gültige Stelle, Leben/Ausdauer bleiben
   moveTo(position: THREE.Vector3) {
     this.camera.position.copy(position)
+    this.resetLean()
     this.velocity.set(0, 0, 0)
     this.horizontalVelocity.set(0, 0)
     this.sliding = false
@@ -162,6 +174,7 @@ export class Player implements Damageable {
   spawn(position: THREE.Vector3) {
     this.spawnPoint.copy(position)
     this.camera.position.copy(position)
+    this.resetLean()
     this.velocity.set(0, 0, 0)
     this.horizontalVelocity.set(0, 0)
     this.sliding = false
@@ -218,10 +231,11 @@ export class Player implements Damageable {
   getNetworkState(): PlayerNetworkState {
     const euler = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ')
     return {
+      // Körperposition: ohne den Lehn-Versatz (der steckt im lean-Wert)
       position: {
-        x: this.camera.position.x,
+        x: this.camera.position.x - this.leanApplied.x,
         y: this.camera.position.y,
-        z: this.camera.position.z,
+        z: this.camera.position.z - this.leanApplied.z,
       },
       yaw: euler.y,
       health: this.vitals.health,
@@ -275,6 +289,16 @@ export class Player implements Damageable {
     this.aiming = aiming
   }
 
+  // -1 links, 0 gerade, 1 rechts (gehalten)
+  setLean(direction: -1 | 0 | 1) {
+    this.leanInput = direction
+  }
+
+  // -1..1: wie weit gelehnt (nach Wandprüfung), für Kippen der Kamera und die Figur der anderen
+  get lean(): number {
+    return this.leanEffective
+  }
+
   setSprinting(sprinting: boolean) {
     this.wantsToSprint = sprinting
   }
@@ -297,7 +321,13 @@ export class Player implements Damageable {
   }
 
   update(deltaSeconds: number) {
+    // Lehn-Versatz vom letzten Frame wieder abziehen: Kollision und Physik rechnen mit der Körperposition
+    this.camera.position.sub(this.leanApplied)
+    this.leanApplied.set(0, 0, 0)
+
     if (!this.isAlive) {
+      this.leanSmooth = 0
+      this.leanEffective = 0
       this.respawnRemaining = Math.max(0, this.respawnRemaining - deltaSeconds)
       if (this.respawnRemaining === 0 && !this.networkControlled) {
         this.spawn(this.spawnPoint)
@@ -389,6 +419,64 @@ export class Player implements Damageable {
     if (this.eyeHeight > headroom) this.eyeHeight = Math.max(CROUCH_EYE_HEIGHT, headroom)
 
     this.camera.position.y = this.bodyY + this.eyeHeight
+
+    this.updateLean(deltaSeconds)
+  }
+
+  private resetLean() {
+    this.leanSmooth = 0
+    this.leanEffective = 0
+    this.leanApplied.set(0, 0, 0)
+  }
+
+  // Gelehnt wird nur im Stehen/Gehen/Ducken, nicht beim Sprinten oder Rutschen. Die Kamera geht
+  // seitlich, bis sie dicht an eine Wand kommt (hinter einer Kante hervorlugen, nie durch sie hindurch).
+  private updateLean(deltaSeconds: number) {
+    const target = this.isSprinting || this.sliding ? 0 : this.leanInput
+    const step = LEAN_SPEED * deltaSeconds
+    this.leanSmooth += THREE.MathUtils.clamp(target - this.leanSmooth, -step, step)
+
+    const forward = new THREE.Vector3()
+    this.camera.getWorldDirection(forward)
+    forward.y = 0
+    forward.normalize()
+    const right = new THREE.Vector3().crossVectors(forward, this.camera.up)
+
+    const side = Math.sign(this.leanSmooth)
+    let reach = Math.abs(this.leanSmooth) * LEAN_DISTANCE
+    if (side !== 0) reach = Math.min(reach, this.leanClearance(right, side))
+    this.leanEffective = (side * reach) / LEAN_DISTANCE
+    this.leanApplied.copy(right).multiplyScalar(side * reach)
+    this.camera.position.add(this.leanApplied)
+  }
+
+  // Wie weit (m, höchstens LEAN_DISTANCE) die Kamera in Richtung right*side ohne Wandkontakt kommt
+  private leanClearance(right: THREE.Vector3, side: number): number {
+    const position = this.camera.position
+    const y = position.y
+    let free = 0
+    for (let d = 0.05; d <= LEAN_DISTANCE + 1e-6; d += 0.05) {
+      const x = position.x + right.x * side * d
+      const z = position.z + right.z * side * d
+      let blocked = false
+      for (const solid of this.solids) {
+        const box = solid.box
+        if (
+          x + LEAN_CAMERA_RADIUS > box.min.x &&
+          x - LEAN_CAMERA_RADIUS < box.max.x &&
+          z + LEAN_CAMERA_RADIUS > box.min.z &&
+          z - LEAN_CAMERA_RADIUS < box.max.z &&
+          y + 0.15 > box.min.y &&
+          y - 0.15 < box.max.y
+        ) {
+          blocked = true
+          break
+        }
+      }
+      if (blocked) break
+      free = d
+    }
+    return free
   }
 
   // Gewünschte Geschwindigkeit aus Eingabe, Blickrichtung und Tempo-Stufe
@@ -417,7 +505,8 @@ export class Player implements Damageable {
 
   // Volles Tempo der aktuellen Haltung (Gehen/Sprint/Ducken)
   private stanceSpeed(): number {
-    const speed = MOVE_SPEED * WEAPONS[this.weapon].moveSpeed * (this.aiming ? AIM_SPEED_MULTIPLIER : 1)
+    const speed =
+      MOVE_SPEED * WEAPONS[this.weapon].moveSpeed * (this.aiming ? AIM_SPEED_MULTIPLIER : 1) * (this.leanEffective !== 0 ? LEAN_SPEED_MULTIPLIER : 1)
     if (this.isCrouching) return speed * CROUCH_SPEED_MULTIPLIER
     return this.isSprinting ? speed * SPRINT_SPEED_MULTIPLIER : speed
   }

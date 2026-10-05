@@ -1030,7 +1030,7 @@ function animate() {
     aimButtonEl.classList.toggle('active', weapon.aimRequested)
   }
   player.setAiming(weapon.isAiming)
-  slideView.apply(camera, player.isSliding && player.isAlive, deltaSeconds)
+  slideView.apply(camera, player.isSliding && player.isAlive, deltaSeconds, player.lean)
   weapon.slideAmount = slideView.amount
   renderFrame()
   slideView.restore(camera)

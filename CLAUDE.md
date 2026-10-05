@@ -88,6 +88,11 @@ Weiterarbeiten wissen muss.
   Look: fast schwarze Rüstung (Weste, Helm) mit Leuchtteilen in Teamfarbe
 - `src/minimap.ts` – Minimap rechts oben (Norden oben): Grenzen und Zeichnung aus
   `arena.solids` + `arena.ramps`, Pfeil für dich, Punkte für dein Team
+- **Lehnen** (`player.ts`, `updateLean`): Q links, E rechts (gehalten). Die Kamera liegt seitlich versetzt
+  (`leanApplied`, 0,45 m), Körper/Kollision/Netz-Position bleiben am Körper: `update()` zieht den Versatz
+  zuerst ab und setzt ihn am Ende neu; `getNetworkState()` zieht ihn ab. Kippen ~12° über
+  `SlideView.apply(..., lean)` (nur beim Zeichnen). Wand: Kamera hält 0,12 m Abstand (`leanClearance`).
+  Nicht beim Sprinten/Rutschen, Tempo 75 %. Wer `camera.position` direkt setzt: `spawn()`/`moveTo()`.
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
   (Interpolation auf der Uhr des Absenders), `src/player.ts` (Bewegung und
   Kollision: Boden über die ganze Standfläche, Deckenkollision, "nur tiefer
@@ -135,6 +140,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   selben Ort, Server lehnt Abklingzeit, zu weites Ziel, falschen Startpunkt, Flugzeit, Tote ab
 - `tests/flash.mjs` (in `test:gadget`) – Blendgranate: Gadget-Karten im Menü (passt in 5 Bildschirmgrößen),
   Dauer nach Winkel/Abstand, Rücken/zu weit/Wand = keine Wirkung, Ausblenden, Wurf per G, online geblendet
+- `tests/lean.mjs` (in `npm test`) – Lehnen (Q links / E rechts): 0,45 m seitlich + ~12° Kippen, weich, Wand stoppt die Kamera, 75 % Tempo, Sprint/Rutschen/Tod beenden es, Netzwerk-Position ohne Versatz
 - `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
   gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als
