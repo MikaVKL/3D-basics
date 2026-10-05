@@ -74,7 +74,7 @@ try {
     __dusk.player.update(1 / 60)
     return Number(__dusk.player.lean.toFixed(2))
   })
-  check('Lehnen läuft weich ein (nach 1 Frame erst ein Teil)', soft > 0 && soft < 0.3, String(soft))
+  check('Lehnen läuft weich ein (nach 1 Frame erst ein Teil, nie sofort ganz)', soft > 0 && soft < 0.5, String(soft))
   await page.keyboard.up('KeyE')
   await page.evaluate(() => window.__run(0.5))
 

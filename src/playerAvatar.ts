@@ -28,6 +28,12 @@ const SLIDE_POSE_SPEED = 10 // Übergang pro Sekunde
 const SLIDE_HIP_HEIGHT = 0.3
 const SLIDE_LEG_ANGLE = 1.3 // rad
 const SLIDE_LEAN = 0.3 // rad
+// Lehnen: Oberkörper kippt um die Hüfte und rückt dazu seitlich, sodass der Kopf etwa so weit
+// zur Seite kommt wie die Kamera des Spielers (LEAN_DISTANCE in player.ts)
+const LEAN_TILT = 0.35 // rad bei vollem Lehnen
+const LEAN_SHIFT = 0.19 // m
+const LEAN_POSE_SPEED = 10 // Übergang pro Sekunde
+const HIP_HEIGHT = 0.9
 
 function box(width: number, height: number, depth: number, material: THREE.Material): THREE.Mesh {
   return new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material)
@@ -67,6 +73,8 @@ export class PlayerAvatar {
   private crouchAmount = 0
   private slideAmount = 0
   private slideTarget = 0
+  private leanTarget = 0
+  private leanAmount = 0
   private readonly lastPosition = new THREE.Vector3()
   private hasLastPosition = false
 
@@ -222,6 +230,7 @@ export class PlayerAvatar {
     this.root.rotation.set(0, state.yaw, 0)
     this.crouchAmount = THREE.MathUtils.clamp((EYE_HEIGHT - state.eyeHeight) / (EYE_HEIGHT - CROUCH_EYE_HEIGHT), 0, 1)
     this.slideTarget = state.sliding ? 1 : 0
+    this.leanTarget = state.lean ?? 0
 
     const height = BODY_HEIGHT - CROUCH_DROP * this.crouchAmount
     this.mesh.scale.y = height / BODY_HEIGHT
@@ -242,6 +251,12 @@ export class PlayerAvatar {
     const slide = this.slideAmount
     this.upperBody.position.y = -CROUCH_DROP * Math.max(crouch, slide)
     this.upperBody.rotation.x = SLIDE_LEAN * slide
+    // Lehnen: um die Hüfte kippen (rechts = im Uhrzeigersinn, also negativer z-Winkel) plus seitlich rücken
+    const tilt = -this.leanAmount * LEAN_TILT
+    const pivotHeight = HIP_HEIGHT - CROUCH_DROP * crouch
+    this.upperBody.rotation.z = tilt
+    this.upperBody.position.x = pivotHeight * Math.sin(tilt) + this.leanAmount * LEAN_SHIFT
+    this.upperBody.position.y += pivotHeight * (1 - Math.cos(tilt))
     const crouchLegScale = 1 - 0.65 * crouch
     const legScale = THREE.MathUtils.lerp(crouchLegScale, 1, slide)
     const hipHeight = THREE.MathUtils.lerp(0.8 * crouchLegScale, SLIDE_HIP_HEIGHT, slide)
@@ -283,9 +298,11 @@ export class PlayerAvatar {
   }
 
   update(deltaSeconds: number) {
-    if (this.slideAmount !== this.slideTarget) {
+    if (this.slideAmount !== this.slideTarget || this.leanAmount !== this.leanTarget) {
       const step = SLIDE_POSE_SPEED * deltaSeconds
       this.slideAmount += THREE.MathUtils.clamp(this.slideTarget - this.slideAmount, -step, step)
+      const leanStep = LEAN_POSE_SPEED * deltaSeconds
+      this.leanAmount += THREE.MathUtils.clamp(this.leanTarget - this.leanAmount, -leanStep, leanStep)
       this.applyPose()
     }
     if (this.hitFlashRemaining <= 0) return

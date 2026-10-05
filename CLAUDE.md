@@ -141,6 +141,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `tests/flash.mjs` (in `test:gadget`) – Blendgranate: Gadget-Karten im Menü (passt in 5 Bildschirmgrößen),
   Dauer nach Winkel/Abstand, Rücken/zu weit/Wand = keine Wirkung, Ausblenden, Wurf per G, online geblendet
 - `tests/lean.mjs` (in `npm test`) – Lehnen (Q links / E rechts): 0,45 m seitlich + ~12° Kippen, weich, Wand stoppt die Kamera, 75 % Tempo, Sprint/Rutschen/Tod beenden es, Netzwerk-Position ohne Versatz
+- `tests/lean-net.mjs` (in `npm test`) – Lehnen online: B sieht A's Lehnwert, Kopf-Kasten ±0,45 m, Treffer nur auf den neuen Kopfort, Server begrenzt gefälschte Werte
 - `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
   gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als
@@ -438,7 +439,7 @@ Stolperfallen bei Headless-Tests:
   Server mit `off`, weil sie absichtlich teleportieren (Bot-Test und
   movement-enforce mit enforce). Neue Bewegungsmechaniken (schneller als
   13 m/s, größere Sprünge) müssen die Konstanten dort mit anheben,
-  sonst gibt es Rubber-Band. PROTOCOL_VERSION 21.
+  sonst gibt es Rubber-Band. PROTOCOL_VERSION 22.
 - **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
   gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
   getestet - Nutzen gering gegen Risiko. Nur nach Absprache.

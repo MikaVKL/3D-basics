@@ -195,6 +195,7 @@ function interpolate(samples: Sample[], renderTime: number): PlayerNetworkState 
     },
     yaw: lerpAngle(a.yaw, b.yaw, t),
     eyeHeight: THREE.MathUtils.lerp(a.eyeHeight, b.eyeHeight, t),
+    lean: THREE.MathUtils.lerp(a.lean ?? 0, b.lean ?? 0, t),
   }
 }
 

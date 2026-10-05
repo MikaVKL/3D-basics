@@ -5,7 +5,7 @@ import type { Loadout, WeaponId } from './weapons.ts'
 import type { GadgetId } from './gadgets.ts'
 
 // Bei jeder inkompatiblen Änderung erhöhen (alte, gecachte Clients werden abgewiesen)
-export const PROTOCOL_VERSION = 21
+export const PROTOCOL_VERSION = 22
 
 export const MAX_PLAYERS = 8
 export const MAX_NAME_LENGTH = 16
@@ -28,6 +28,8 @@ export interface PlayerNetworkState {
   // Tatsächliche Augenhöhe (geht beim Ducken fließend), für die Fußhöhe
   eyeHeight: number
   sprinting: boolean
+  // Lehnen: -1 voll links .. 1 voll rechts (position bleibt die Körperposition)
+  lean: number
   shield: number
   maxShield: number
   team: Team

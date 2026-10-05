@@ -316,5 +316,6 @@ function roundState(state: PlayerNetworkState): PlayerNetworkState {
     ...state,
     position: { x: r(state.position.x), y: r(state.position.y), z: r(state.position.z) },
     yaw: r(state.yaw),
+    lean: r(state.lean),
   }
 }
