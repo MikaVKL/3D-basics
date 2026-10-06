@@ -5,6 +5,7 @@ import type { Damageable } from './damageable'
 import { TeamColor, type Team } from './team'
 import { HEADSHOT_MULTIPLIER } from './shared/gameRules'
 import { WEAPONS, ALL_WEAPONS, DEFAULT_LOADOUT, LOWER_TIME, switchTime, isMelee, damageFactor, loadoutSlots, type Loadout, type WeaponId } from './shared/weapons'
+import { SLIDE_ROLL, LEAN_ROLL } from './effects'
 
 // Hitscan aus der Bildschirmmitte, mehrere Waffen mit eigener Munition,
 // Nachladen, Wechsel, Dauerfeuer. Treffer laufen generisch über Damageable
@@ -111,6 +112,8 @@ export class Weapon {
   private pendingModel: WeaponId | null = null
   // 0..1, Waffe neigt sich beim Rutschen (setzt main.ts)
   slideAmount = 0
+  // -1..1, gesetzt von main.ts: beim Zeichnen kippt die Kamera (und die Waffe mit), der Strahl muss am gekippten Lauf starten
+  leanAmount = 0
   // Messerstich (getroffen oder nicht), für den Ton
   onSwing?: () => void
 
@@ -366,7 +369,7 @@ export class Weapon {
       return true
     }
 
-    const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
+    const muzzlePosition = this.renderedMuzzle(this.view.getMuzzleWorldPosition(new THREE.Vector3()))
     // Steckt die Mündung in einer Wand/Kiste (man steht dicht davor), schlägt der Schuss dort ein,
     // statt vom Fadenkreuz aus an der Waffe vorbei durch die Wand zu gehen
     const blocker = this.muzzleBlocker(muzzlePosition)
@@ -399,6 +402,16 @@ export class Weapon {
       this.reload()
     }
     return true
+  }
+
+  // Die Kamera wird nur beim Zeichnen gekippt (Rutschen, Lehnen), die Waffe kippt mit: der Lauf liegt dann
+  // woanders als in der Logik. Strahl und Spur starten dort, wo der Lauf gezeichnet wird.
+  private renderedMuzzle(muzzle: THREE.Vector3): THREE.Vector3 {
+    const roll = SLIDE_ROLL * this.slideAmount - this.leanAmount * LEAN_ROLL
+    if (Math.abs(roll) < 1e-4) return muzzle
+    const origin = this.camera.getWorldPosition(new THREE.Vector3())
+    const back = this.camera.getWorldDirection(new THREE.Vector3()).negate()
+    return muzzle.sub(origin).applyAxisAngle(back, roll).add(origin)
   }
 
   // Erste Wand/Kiste zwischen Kamera und Mündung (nur Hindernisse, keine Spieler)

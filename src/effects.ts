@@ -218,12 +218,12 @@ export class CameraShake {
 // Rutschen aus eigener Sicht: Kamera leicht zur Seite gekippt, Sichtfeld
 // etwas weiter. Die Neigung dreht nur um die Blickachse (Zielpunkt in der
 // Bildmitte bleibt) und wird wie der Kamera-Ruck nur fürs Rendern aufgeschlagen.
-const SLIDE_ROLL = 0.07 // rad
+export const SLIDE_ROLL = 0.07 // rad
 const SLIDE_FOV_BOOST = 7 // Grad
 const SLIDE_BLEND_SPEED = 8 // pro Sekunde
 
 // Kippen der Kamera bei vollem Lehnen (rad, ~12°); rechts = im Uhrzeigersinn
-const LEAN_ROLL = 0.21
+export const LEAN_ROLL = 0.21
 
 export class SlideView {
   amount = 0

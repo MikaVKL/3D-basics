@@ -1047,6 +1047,7 @@ function animate() {
   player.setAiming(weapon.isAiming)
   slideView.apply(camera, player.isSliding && player.isAlive, deltaSeconds, player.lean)
   weapon.slideAmount = slideView.amount
+  weapon.leanAmount = player.lean
   renderFrame()
   slideView.restore(camera)
   cameraShake.restore(camera)
