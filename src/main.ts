@@ -160,7 +160,7 @@ function throwGadget() {
   if (!thrown && gadgets.rejectReason) showNotice(gadgets.rejectReason)
   if (thrown) {
     sound.play('throw', 0.6)
-    network.sendGadget(gadgets.gadget, thrown.from, thrown.to, thrown.flight)
+    network.sendGadget(gadgets.gadget, thrown.from, thrown.to, thrown.flight, thrown.velocity)
   }
 }
 const noticeBanner = document.querySelector<HTMLDivElement>('#notice-banner')!
@@ -277,14 +277,15 @@ const network: NetworkClient = new NetworkClient({
     if (hit) effects.impactSparks(new THREE.Vector3(to.x, to.y, to.z))
     weapon.showRemoteTracer(start, new THREE.Vector3(to.x, to.y, to.z), network.roster.get(shooter)?.team ?? 'red', shotWeapon)
   },
-  onRemoteGadget: (kind, from, to, flight, thrower) => {
+  onRemoteGadget: (kind, from, to, flight, thrower, velocity) => {
     sound.playAt('throw', from, 0.6)
-    gadgets.spawnFlight(
+    gadgets.spawnRemoteFlight(
       new THREE.Vector3(from.x, from.y, from.z),
       new THREE.Vector3(to.x, to.y, to.z),
       flight,
       network.roster.get(thrower)?.team ?? 'red',
-      kind
+      kind,
+      velocity ? new THREE.Vector3(velocity.x, velocity.y, velocity.z) : undefined
     )
   },
   onHurt: (by) => {

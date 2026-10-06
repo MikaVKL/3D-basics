@@ -170,7 +170,7 @@ try {
     window.__step(3.5)
     return __dusk.gadgets.clouds[0].group.position.toArray()
   })
-  check('Wurf gegen die Wand: prallt ab und fällt davor auf den Boden', wall[2] > -20.99 && wall[2] < -19 && wall[1] < 0.5, JSON.stringify(wall))
+  check('Wurf gegen die Wand: prallt ab und fällt davor auf den Boden (nie dahinter)', wall[2] > -20.99 && wall[2] < -12 && wall[1] < 0.5, JSON.stringify(wall))
 
   // Tot: kein Wurf; Respawn: wieder bereit
   const dead = await page.evaluate(() => {

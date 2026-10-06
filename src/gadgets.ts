@@ -6,8 +6,7 @@ import * as THREE from 'three'
 import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
-const THROW_SPEED = 15 // m/s
-const THROW_LIFT = 0.18 // Wurf leicht nach oben (Anteil der Geschwindigkeit)
+const BOUNCE = 0.45 // Anteil der Geschwindigkeit, der beim Aufprall an einer Wand erhalten bleibt
 const GRAVITY = 16
 const STEP = 1 / 60
 const MIN_FLIGHT = 0.15 // kürzeste gezeigte Flugzeit (Animation)
@@ -34,6 +33,7 @@ interface Flight {
   duration: number
   elapsed: number
   arc: number
+  points?: THREE.Vector3[] // gerechneter Weg (je Schritt ein Punkt), sonst einfacher Bogen
   onLand: (position: THREE.Vector3) => void
 }
 
@@ -78,6 +78,7 @@ export interface ThrowResult {
   from: THREE.Vector3
   to: THREE.Vector3
   flight: number
+  velocity: THREE.Vector3
 }
 
 export class GadgetSystem {
@@ -157,19 +158,13 @@ export class GadgetSystem {
     return p > 0.45 ? 1 : (p / 0.45) * (p / 0.45)
   }
 
-  // Werfen aus der Kamera: Flugbahn gegen die Arena rechnen, Flug und Wolke starten
-  tryThrow(camera: THREE.Camera, team: Team): ThrowResult | null {
-    if (!this.ready) return null
-    const direction = new THREE.Vector3()
-    camera.getWorldDirection(direction)
-    const from = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(direction, 0.4)
-    from.y -= 0.15
-    const velocity = direction.clone().multiplyScalar(THROW_SPEED)
-    velocity.y += THROW_SPEED * THROW_LIFT
-
+  // Flug rechnen (Werfer und alle anderen mit derselben Startgeschwindigkeit -> derselbe Weg samt Abprallern):
+  // je Schritt ein Punkt; endet am Boden/auf einer ebenen Fläche oder nach der maximalen Flugzeit
+  simulateFlight(from: THREE.Vector3, startVelocity: THREE.Vector3, maxFlight: number) {
+    const velocity = startVelocity.clone()
     const position = from.clone()
+    const points: THREE.Vector3[] = [position.clone()]
     let flight = 0
-    const maxFlight = this.stats.maxFlightTime
     while (flight < maxFlight) {
       const next = position.clone().addScaledVector(velocity, STEP)
       next.y -= 0.5 * GRAVITY * STEP * STEP
@@ -188,9 +183,13 @@ export class GadgetSystem {
           if (normal.y > 0.5) {
             landed = true
           } else {
-            // Wand oder Decke: abprallen und herunterfallen, die Wolke liegt am Boden
-            velocity.set(normal.x * 1.5, Math.min(velocity.y, 0), normal.z * 1.5)
+            // Wand oder Decke: abprallen (Rückprall von der Fläche weg, Tempo bleibt zum Teil erhalten)
+            const along = velocity.dot(normal)
+            velocity.addScaledVector(normal, -(1 + BOUNCE) * along)
+            velocity.x *= 0.85
+            velocity.z *= 0.85
             flight += STEP
+            points.push(position.clone())
             continue
           }
         }
@@ -201,13 +200,25 @@ export class GadgetSystem {
         position.copy(next)
         landed = true
       }
-      if (landed) {
-        flight += STEP
-        break
-      }
-      position.copy(next)
       flight += STEP
+      if (!landed) position.copy(next)
+      points.push(position.clone())
+      if (landed) break
     }
+    return { points, to: position.clone(), flight }
+  }
+
+  // Werfen aus der Kamera: Flugbahn gegen die Arena rechnen, Flug und Wolke starten
+  tryThrow(camera: THREE.Camera, team: Team): ThrowResult | null {
+    if (!this.ready) return null
+    const direction = new THREE.Vector3()
+    camera.getWorldDirection(direction)
+    const from = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(direction, 0.4)
+    from.y -= 0.15
+    const velocity = direction.clone().multiplyScalar(this.stats.throwSpeed)
+    velocity.y += this.stats.throwSpeed * this.stats.throwLift
+
+    const { points, to: position, flight } = this.simulateFlight(from, velocity, this.stats.maxFlightTime)
     if (flight < MIN_THROW_TIME) return null
     this.rejectReason = ''
     if (this.gadget === 'jump' && !this.padSpotOk(position)) {
@@ -215,12 +226,25 @@ export class GadgetSystem {
       return null
     }
     this.cooldownRemaining = this.stats.cooldown
-    this.spawnFlight(from, position.clone(), flight, team)
-    return { from, to: position.clone(), flight }
+    this.spawnFlight(from, position.clone(), flight, team, this.gadget, points)
+    return { from, to: position.clone(), flight, velocity }
   }
 
-  // Auch für die Würfe anderer (Server-Meldung): Bogen zeigen, bei der Landung die Wolke
-  spawnFlight(from: THREE.Vector3, to: THREE.Vector3, duration: number, team: Team, kind: GadgetId = this.gadget) {
+  // Auch für die Würfe anderer (Server-Meldung): Bogen zeigen, bei der Landung die Wolke.
+  // Mit Startgeschwindigkeit rechnet jeder denselben Weg samt Abprallern nach; weicht der Landepunkt
+  // vom gemeldeten ab (andere Welt/Version), gilt der gemeldete mit einfachem Bogen.
+  spawnRemoteFlight(from: THREE.Vector3, to: THREE.Vector3, duration: number, team: Team, kind: GadgetId, velocity?: THREE.Vector3) {
+    if (velocity) {
+      const sim = this.simulateFlight(from, velocity, GADGETS[kind].maxFlightTime)
+      if (sim.to.distanceTo(to) < 1.5) {
+        this.spawnFlight(from, sim.to, sim.flight, team, kind, sim.points)
+        return
+      }
+    }
+    this.spawnFlight(from, to, duration, team, kind)
+  }
+
+  spawnFlight(from: THREE.Vector3, to: THREE.Vector3, duration: number, team: Team, kind: GadgetId = this.gadget, points?: THREE.Vector3[]) {
     const mesh = new THREE.Mesh(
       this.grenadeGeometry,
       new THREE.MeshBasicMaterial({ color: TeamColor[team], fog: false })
@@ -232,9 +256,10 @@ export class GadgetSystem {
       mesh,
       from: from.clone(),
       to: to.clone(),
-      duration: Math.max(MIN_FLIGHT, duration),
+      duration: points ? points.length * STEP : Math.max(MIN_FLIGHT, duration),
       elapsed: 0,
       arc: Math.min(5, 0.5 + distance * 0.12),
+      points,
       onLand: (position) =>
         kind === 'smoke'
           ? this.spawnCloud(position)
@@ -436,8 +461,15 @@ export class GadgetSystem {
       const flight = this.flights[i]
       flight.elapsed += deltaSeconds
       const t = Math.min(1, flight.elapsed / flight.duration)
-      flight.mesh.position.lerpVectors(flight.from, flight.to, t)
-      flight.mesh.position.y += flight.arc * 4 * t * (1 - t)
+      if (flight.points) {
+        // Entlang des gerechneten Wegs (inkl. Abprallern), zwischen den Schritten glätten
+        const f = Math.min(flight.points.length - 1, flight.elapsed / STEP)
+        const i = Math.floor(f)
+        flight.mesh.position.lerpVectors(flight.points[i], flight.points[Math.min(i + 1, flight.points.length - 1)], f - i)
+      } else {
+        flight.mesh.position.lerpVectors(flight.from, flight.to, t)
+        flight.mesh.position.y += flight.arc * 4 * t * (1 - t)
+      }
       flight.mesh.rotation.x += deltaSeconds * 9
       if (t >= 1) {
         this.scene.remove(flight.mesh)

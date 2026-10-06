@@ -14,6 +14,8 @@ export interface GadgetStats {
   maxFlightTime: number // Sekunden
   radius: number // Meter Rauchwolke
   duration: number // Sekunden, die der Rauch steht
+  throwSpeed: number // m/s Abwurfgeschwindigkeit: jedes Gadget hat seine eigene Flugbahn
+  throwLift: number // Wurf nach oben (Anteil der Geschwindigkeit): größer = höherer Bogen
   fuse?: number // Blendgranate: Sekunden zwischen Landung und Knall (Warnung, um Ecken reagieren zu können)
   // Nur Blendgranate: Wirkung auf jeden, der zum Knall sieht (auch Werfer und Team)
   blind?: {
@@ -28,6 +30,8 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
   smoke: {
     label: 'Rauchgranate',
     cooldown: 25,
+    throwSpeed: 13, // Lob: hoher Bogen, landet weich
+    throwLift: 0.5,
     maxThrowDistance: 40,
     maxFlightTime: 3,
     radius: 5,
@@ -36,6 +40,8 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
   flash: {
     label: 'Blendgranate',
     cooldown: 30,
+    throwSpeed: 19, // schneller, flacher Wurf (kommt schnell an, prallt weit ab)
+    throwLift: 0.1,
     maxThrowDistance: 40,
     maxFlightTime: 3,
     radius: 0,
@@ -47,6 +53,8 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
   jump: {
     label: 'Sprungpad',
     cooldown: 30,
+    throwSpeed: 15, // gerader Wurf mit mittlerem Bogen
+    throwLift: 0.22,
     maxThrowDistance: 40,
     maxFlightTime: 3,
     radius: 0.95,

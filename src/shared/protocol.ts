@@ -88,7 +88,7 @@ export type ClientMessage =
   // Nur für die Leuchtspur bei den anderen
   | { t: 'shot'; from: Vec3; to: Vec3; hit: boolean }
   // Gadget-Wurf: Start, Landepunkt und Flugzeit (s); der Server prüft Abklingzeit und Weite
-  | { t: 'gadget'; kind: GadgetId; from: Vec3; to: Vec3; flight: number }
+  | { t: 'gadget'; kind: GadgetId; from: Vec3; to: Vec3; flight: number; velocity?: Vec3 }
 
 export type RejectReason = 'full' | 'version'
 
@@ -117,7 +117,7 @@ export type ServerMessage =
   | { t: 'roundStart'; scores: Scores }
   // hit: Schuss hat etwas getroffen (Einschlagfunken statt Schuss ins Leere)
   | { t: 'shot'; id: PlayerId; from: Vec3; to: Vec3; hit: boolean; weapon: WeaponId }
-  | { t: 'gadget'; id: PlayerId; kind: GadgetId; from: Vec3; to: Vec3; flight: number }
+  | { t: 'gadget'; id: PlayerId; kind: GadgetId; from: Vec3; to: Vec3; flight: number; velocity?: Vec3 }
   // Nur an den Getroffenen (Richtungsanzeiger)
   | { t: 'hurt'; by: PlayerId }
   | { t: 'pong'; time: number }

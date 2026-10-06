@@ -532,7 +532,7 @@ wss.on('connection', (socket) => {
     } else if (message.t === 'shot') {
       handleShot(client, message.from, message.to, message.hit)
     } else if (message.t === 'gadget') {
-      handleGadget(client, message.kind, message.from, message.to, message.flight)
+      handleGadget(client, message.kind, message.from, message.to, message.flight, message.velocity)
     } else if (message.t === 'setName') {
       client.name = sanitizeName(message.name, client.id)
       broadcastRoster()
@@ -651,7 +651,7 @@ const GADGET_ORIGIN_TOLERANCE = 3 // m um die Spielerposition
 
 // Wurf prüfen (Abklingzeit, Weite, Flugzeit) und an die anderen weitergeben; die Wolke selbst
 // ist reine Optik, Schüsse gehen durch
-function handleGadget(thrower: Client, rawKind: unknown, rawFrom: unknown, rawTo: unknown, rawFlight: unknown) {
+function handleGadget(thrower: Client, rawKind: unknown, rawFrom: unknown, rawTo: unknown, rawFlight: unknown, rawVelocity?: unknown) {
   if (!isGadgetId(rawKind)) return
   const from = sanitizeVec3(rawFrom)
   const to = sanitizeVec3(rawTo)
@@ -666,7 +666,11 @@ function handleGadget(thrower: Client, rawKind: unknown, rawFrom: unknown, rawTo
   if (rawFlight < 0 || rawFlight > stats.maxFlightTime) return
   thrower.gadgetReadyAt = now + stats.cooldown * 1000
   thrower.lastActivityAt = now
-  broadcast({ t: 'gadget', id: thrower.id, kind: rawKind, from, to, flight: rawFlight }, thrower.id)
+  // Startgeschwindigkeit nur weitergeben, wenn sie zur Wurfstärke passt (sonst zeigen die anderen einen einfachen Bogen)
+  const velocity = sanitizeVec3(rawVelocity)
+  const speed = velocity ? Math.hypot(velocity.x, velocity.y, velocity.z) : 0
+  const validVelocity = velocity && speed <= (stats.throwSpeed * (1 + stats.throwLift)) * 1.05 ? velocity : undefined
+  broadcast({ t: 'gadget', id: thrower.id, kind: rawKind, from, to, flight: rawFlight, ...(validVelocity ? { velocity: validVelocity } : {}) }, thrower.id)
 }
 
 let lastTickAt = performance.now()
