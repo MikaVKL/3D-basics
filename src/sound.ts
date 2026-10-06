@@ -172,6 +172,17 @@ export const SYNTHS = {
     tone(ctx, out, 'sine', 180, 60, 0.45, 0.2)
     tone(ctx, out, 'sine', 3800, 3800, 0.12, 1.4, 0.05)
   },
+  // Sprungpad: Aufsetzen = dumpfer Klack mit kurzem Summen, Auslösen = steigendes Wuschen mit Federton
+  padPlace: (ctx, out, noise) => {
+    tone(ctx, out, 'sine', 120, 70, 0.25, 0.12)
+    tone(ctx, out, 'square', 300, 600, 0.12, 0.14, 0.04)
+    noiseBurst(ctx, out, noise, 'bandpass', 1200, 0.2, 0.08)
+  },
+  padLaunch: (ctx, out, noise) => {
+    tone(ctx, out, 'sine', 180, 900, 0.35, 0.3)
+    tone(ctx, out, 'triangle', 360, 1500, 0.2, 0.25, 0.02)
+    noiseBurst(ctx, out, noise, 'highpass', 1500, 0.35, 0.35, 0.03)
+  },
   // Nachladen: Energiezelle löst sich (Anfang) und rastet wieder ein (Ende);
   // zwei getrennte Töne, damit sie zur Nachladezeit der Waffe passen
   reloadOut: (ctx, out, noise) => {

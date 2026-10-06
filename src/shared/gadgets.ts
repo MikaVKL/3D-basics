@@ -1,7 +1,12 @@
 // Gadgets (Fähigkeiten neben den Waffen): Werte für Client und Server
 
-export type GadgetId = 'smoke' | 'flash'
-export const GADGET_IDS: GadgetId[] = ['smoke', 'flash']
+export type GadgetId = 'smoke' | 'flash' | 'jump'
+export const GADGET_IDS: GadgetId[] = ['smoke', 'flash', 'jump']
+
+// Sprungpad: nur auf dem Boden (Landepunkt höchstens so hoch über 0) und mit freiem Himmel darüber
+// (so weit nach oben darf nichts im Weg sein), sonst bleibt man an Stegen/Decken hängen
+export const PAD_MAX_FLOOR_Y = 0.6
+export const PAD_HEADROOM = 7
 
 export interface GadgetStats {
   label: string
@@ -36,6 +41,15 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
     radius: 0,
     duration: 0.3,
     blind: { range: 22, maxTime: 3, fullAngle: 15, viewAngle: 70 },
+  },
+  // radius = Auslöse-Radius des Pads, duration = so lange steht es (nur dein Team kann es nutzen)
+  jump: {
+    label: 'Sprungpad',
+    cooldown: 30,
+    maxThrowDistance: 40,
+    maxFlightTime: 3,
+    radius: 0.95,
+    duration: 20,
   },
 }
 

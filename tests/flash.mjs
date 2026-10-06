@@ -37,7 +37,7 @@ try {
     selected: document.querySelector('#loadout-gadget .gadget-card.selected')?.dataset.gadget,
     weaponSelected: document.querySelectorAll('.weapon-card.selected').length,
   }))
-  check('Gadget-Auswahl: Rauchgranate + Blendgranate, Standard Rauch; Waffenkarten unberührt', cards.ids === 'smoke,flash' && cards.selected === 'smoke' && cards.weaponSelected === 2, JSON.stringify(cards))
+  check('Gadget-Auswahl: Rauch-, Blendgranate, Sprungpad, Standard Rauch; Waffenkarten unberührt', cards.ids === 'smoke,flash,jump' && cards.selected === 'smoke' && cards.weaponSelected === 2, JSON.stringify(cards))
   await pickOption(page, '.gadget-card[data-gadget="flash"]')
   check('Blendgranate gewählt und im Browser gemerkt', (await page.evaluate(() => localStorage.getItem('duskArena.gadget'))) === 'flash')
   await page.click('#loadout-play-button')

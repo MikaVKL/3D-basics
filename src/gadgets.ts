@@ -3,7 +3,7 @@
 // meldet nur Start, Landepunkt und Flugzeit; alle zeigen denselben Bogen und dieselbe Wolke.
 
 import * as THREE from 'three'
-import { GADGETS, DEFAULT_GADGET, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
+import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, PAD_MAX_FLOOR_Y, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
 const THROW_SPEED = 15 // m/s
@@ -26,6 +26,17 @@ interface Flight {
   elapsed: number
   arc: number
   onLand: (position: THREE.Vector3) => void
+}
+
+export interface Pad {
+  group: THREE.Group
+  position: THREE.Vector3 // Mitte der Oberfläche am Boden
+  team: Team
+  age: number
+  duration: number
+  pulse: number // 1 -> 0 nach einem Auslösen (Aufleuchten)
+  arrows: THREE.Mesh[]
+  ring: THREE.Mesh
 }
 
 interface Burst {
@@ -68,6 +79,9 @@ export class GadgetSystem {
   private blindTotal = 0
   private blindStrengthNow = 0 // höchste Stärke des laufenden Blendens (0..1)
   private readonly bursts: Burst[] = []
+  readonly pads: Pad[] = []
+  // Warum der letzte Wurf nicht ging (z. B. kein Platz fürs Sprungpad), für einen Hinweis
+  rejectReason = ''
   // Blick des eigenen Spielers (für die Blendwirkung)
   viewer: THREE.Camera | null = null
   readonly clouds: Cloud[] = []
@@ -77,6 +91,10 @@ export class GadgetSystem {
   private readonly raycaster = new THREE.Raycaster()
   private readonly grenadeGeometry = new THREE.IcosahedronGeometry(0.11, 0)
   private readonly burstGeometry = new THREE.IcosahedronGeometry(1, 1)
+  private readonly padBaseGeometry = new THREE.CylinderGeometry(GADGETS.jump.radius, GADGETS.jump.radius * 1.08, 0.1, 8)
+  private readonly padRingGeometry = new THREE.TorusGeometry(GADGETS.jump.radius * 0.82, 0.045, 5, 8)
+  private readonly padArrowGeometry = new THREE.ConeGeometry(0.2, 0.3, 4)
+  private readonly padBaseMaterial = new THREE.MeshStandardMaterial({ color: 0x0a0e14, roughness: 0.5, metalness: 0.4 })
   private readonly cubeGeometry = new THREE.BoxGeometry(1, 1, 1)
   private readonly cubeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x2a3446, flatShading: true })
   private readonly tmpMatrix = new THREE.Matrix4()
@@ -180,6 +198,11 @@ export class GadgetSystem {
       flight += STEP
     }
     if (flight < MIN_THROW_TIME) return null
+    this.rejectReason = ''
+    if (this.gadget === 'jump' && !this.padSpotOk(position)) {
+      this.rejectReason = 'Hier passt kein Sprungpad (nur freier Boden ohne Dach)'
+      return null
+    }
     this.cooldownRemaining = this.stats.cooldown
     this.spawnFlight(from, position.clone(), flight, team)
     return { from, to: position.clone(), flight }
@@ -201,8 +224,62 @@ export class GadgetSystem {
       duration: Math.max(MIN_FLIGHT, duration),
       elapsed: 0,
       arc: Math.min(5, 0.5 + distance * 0.12),
-      onLand: (position) => (kind === 'smoke' ? this.spawnCloud(position) : this.spawnBurst(kind, position)),
+      onLand: (position) =>
+        kind === 'smoke' ? this.spawnCloud(position) : kind === 'jump' ? this.spawnPad(position, team) : this.spawnBurst(kind, position),
     })
+  }
+
+  // Sprungpad geht nur auf dem Boden (nicht auf Kisten/Stegen) mit freiem Himmel darüber: sonst stößt man
+  // an Decken, und die Höhenbegrenzung (Karte nicht verlassen) bliebe unnötig oft aktiv
+  padSpotOk(landing: THREE.Vector3): boolean {
+    if (landing.y > PAD_MAX_FLOOR_Y) return false
+    // Frei über der Mitte UND rund um das Pad (Radius + Reserve): sonst steht man halb unter einem Steg
+    // und stößt beim Hochschleudern an dessen Kante
+    const reach = GADGETS.jump.radius + 0.4
+    const up = new THREE.Vector3(0, 1, 0)
+    for (let i = -1; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2
+      const dx = i < 0 ? 0 : Math.cos(angle) * reach
+      const dz = i < 0 ? 0 : Math.sin(angle) * reach
+      this.raycaster.set(new THREE.Vector3(landing.x + dx, landing.y + 0.1, landing.z + dz), up)
+      this.raycaster.far = PAD_HEADROOM
+      if (this.raycaster.intersectObjects(this.world, false).length > 0) return false
+    }
+    return true
+  }
+
+  spawnPad(landing: THREE.Vector3, team: Team) {
+    if (!this.padSpotOk(landing)) return // alle Clients rechnen gleich: dann zeigt es keiner
+    const group = new THREE.Group()
+    const position = new THREE.Vector3(landing.x, Math.max(0, landing.y - 0.25), landing.z)
+    group.position.copy(position)
+    const color = TeamColor[team]
+    const base = new THREE.Mesh(this.padBaseGeometry, this.padBaseMaterial)
+    base.position.y = 0.05
+    const ring = new THREE.Mesh(this.padRingGeometry, new THREE.MeshBasicMaterial({ color, fog: false }))
+    ring.rotation.x = Math.PI / 2
+    ring.position.y = 0.11
+    group.add(base, ring)
+    const arrows: THREE.Mesh[] = []
+    for (let i = 0; i < 3; i++) {
+      const arrow = new THREE.Mesh(this.padArrowGeometry, new THREE.MeshBasicMaterial({ color, transparent: true, fog: false }))
+      arrow.rotation.y = Math.PI / 4
+      group.add(arrow)
+      arrows.push(arrow)
+    }
+    this.scene.add(group)
+    this.pads.push({ group, position, team, age: 0, duration: GADGETS.jump.duration, pulse: 0, arrows, ring })
+    this.onLand?.('jump', position)
+  }
+
+  // Steht jemand mit den Füßen auf einem Pad seines Teams? (nur eigenes Team nutzt es)
+  padAt(x: number, z: number, feetY: number, team: Team): Pad | null {
+    const radius = GADGETS.jump.radius
+    for (const pad of this.pads) {
+      if (pad.team !== team || pad.age < 0.3) continue
+      if (Math.hypot(x - pad.position.x, z - pad.position.z) < radius && Math.abs(feetY - pad.position.y) < 0.6) return pad
+    }
+    return null
   }
 
   // Blendgranate: kurzer Lichtblitz; wer zum Knall sieht (freie Sicht, Winkel, Abstand), ist geblendet
@@ -342,6 +419,30 @@ export class GadgetSystem {
       }
     }
 
+    for (let i = this.pads.length - 1; i >= 0; i--) {
+      const pad = this.pads[i]
+      pad.age += deltaSeconds
+      pad.pulse = Math.max(0, pad.pulse - deltaSeconds * 3)
+      if (pad.age >= pad.duration) {
+        this.scene.remove(pad.group)
+        for (const arrow of pad.arrows) (arrow.material as THREE.Material).dispose()
+        ;(pad.ring.material as THREE.Material).dispose()
+        this.pads.splice(i, 1)
+        continue
+      }
+      // Auftauchen (0,3 s) und Verblassen in der letzten Sekunde
+      const grow = Math.min(1, pad.age / 0.3)
+      const fade = Math.min(1, (pad.duration - pad.age) / 1)
+      pad.group.scale.setScalar(Math.max(0.001, grow * (0.7 + 0.3 * fade)))
+      pad.ring.scale.setScalar(1 + 0.18 * pad.pulse)
+      // Pfeile steigen nacheinander auf und blenden oben aus; beim Auslösen schneller und heller
+      for (let a = 0; a < pad.arrows.length; a++) {
+        const phase = (pad.age * (0.9 + 2.5 * pad.pulse) + a / pad.arrows.length) % 1
+        const arrow = pad.arrows[a]
+        arrow.position.y = 0.2 + phase * 0.9
+        ;(arrow.material as THREE.MeshBasicMaterial).opacity = (1 - phase) * (0.55 + 0.45 * pad.pulse) * fade
+      }
+    }
     if (this.blindRemaining > 0) {
       this.blindRemaining = Math.max(0, this.blindRemaining - deltaSeconds)
       if (this.blindRemaining === 0) {

@@ -152,10 +152,11 @@ const sound = new SoundFx()
 // --- Gadget: Rauchgranate (Taste G / Button) ---
 const gadgets = new GadgetSystem(scene, worldMeshes)
 gadgets.viewer = camera
-gadgets.onLand = (kind, position) => sound.playAt(kind === 'flash' ? 'flashBang' : 'smokePop', position, 1)
+gadgets.onLand = (kind, position) => sound.playAt(kind === 'flash' ? 'flashBang' : kind === 'jump' ? 'padPlace' : 'smokePop', position, 1)
 function throwGadget() {
   if (!isActive || !player.isAlive) return
   const thrown = gadgets.tryThrow(camera, player.team)
+  if (!thrown && gadgets.rejectReason) showNotice(gadgets.rejectReason)
   if (thrown) {
     sound.play('throw', 0.6)
     network.sendGadget(gadgets.gadget, thrown.from, thrown.to, thrown.flight)
@@ -878,6 +879,7 @@ const flashOverlay = document.querySelector<HTMLDivElement>('#flash-overlay')!
 const smokeOverlay = document.querySelector<HTMLDivElement>('#smoke-overlay')!
 const GADGET_ICONS: Record<GadgetId, string> = {
   smoke: '<circle cx="9" cy="14" r="5" fill="currentColor"/><circle cx="15" cy="10" r="4.5" fill="currentColor" opacity="0.7"/><circle cx="16" cy="16" r="3.5" fill="currentColor" opacity="0.5"/>',
+  jump: '<path d="M12 3l7 8h-4.2v5H9.2v-5H5z" fill="currentColor"/><rect x="6" y="19" width="12" height="2.4" rx="1.2" fill="currentColor"/>',
   flash: '<path d="M12 2l2.2 6.3L21 6.5l-4.2 5.5L22 14l-6.4 1.3L17 22l-5-4.2L7 22l1.4-6.7L2 14l5.2-2L3 6.5l6.8 1.8z" fill="currentColor"/>',
 }
 // Name, Taste-Symbol und Beschriftung folgen dem gewählten Gadget
@@ -1000,6 +1002,14 @@ function animate() {
   if (!player.isAlive) weapon.cancelFire()
   wasAlive = player.isAlive
   gadgets.update(deltaSeconds)
+  // Sprungpad des eigenen Teams unter den Füßen: hochschleudern
+  if (isActive && player.isAlive && gadgets.pads.length > 0) {
+    const pad = gadgets.padAt(camera.position.x, camera.position.z, player.feetHeight, player.team)
+    if (pad && player.launchFromPad()) {
+      pad.pulse = 1
+      sound.play('padLaunch', 0.7)
+    }
+  }
   weapon.setMotion(player.isAlive && isActive ? player.horizontalSpeed : 0, player.isOnGround)
   weapon.update(deltaSeconds)
   for (const target of targets) {

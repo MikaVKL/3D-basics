@@ -78,7 +78,13 @@ Weiterarbeiten wissen muss.
   (Touch: Restzeit auf dem Button). Online: Werfer schickt `gadget` (Start, Ziel, Flugzeit), Server
   (`handleGadget`) prüft Abklingzeit (±1 s), Startpunkt ≤ 3 m am Spieler, Weite, Flugzeit, lebt,
   keine Rundenpause, und gibt es an die anderen weiter; die lassen den Bogen + die Wolke am
-  selben Ort nachspielen. Weitere Gadgets später (Blendgranate, Sprungpad, Schildwand).
+  selben Ort nachspielen. Weitere Gadgets später (Schildwand).
+  **Sprungpad** (`jump`, 30 s, Pad steht 20 s): gleicher Wurf, am Boden entsteht ein flaches Neon-Pad in Teamfarbe (`GadgetSystem.spawnPad`);
+  nur das EIGENE Team schleudert es hoch (`padAt` in der Hauptschleife -> `Player.launchFromPad`: Startgeschwindigkeit so, dass die
+  Fußhöhe im höchsten Punkt `PAD_APEX_FEET` 4,4 m erreicht, harte Obergrenze 4,8 m - Wände sind 6 m, man kommt nie hinüber;
+  Landen auf dem Pad schleudert wieder hoch, 0,5 s Pause). Platz: nur Boden (Landepunkt ≤ 0,6 m) mit 7 m freiem Himmel über der
+  Mitte UND rund um das Pad (`padSpotOk`), sonst abgelehnt mit Hinweis ohne Abklingzeit (alle Clients rechnen gleich). Server
+  relayt nur; die Bewegungsprüfung braucht keine Anpassung (Guthaben 14 m hoch deckt 4,4 m ab, `tests/pad.mjs` simuliert 20 s Dauerhüpfen).
 - `src/sky.ts` – Abendhimmel-Kuppel (Farbverlauf), folgt der Kamera
 - `src/surfaceTextures.ts` – Kisten-/Plattenmuster (Canvas, Graustufen x
   Palettenfarbe); `worldBox()` statt BoxGeometry, damit Muster nicht verzerren
@@ -143,6 +149,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   selben Ort, Server lehnt Abklingzeit, zu weites Ziel, falschen Startpunkt, Flugzeit, Tote ab
 - `tests/flash.mjs` (in `test:gadget`) – Blendgranate: Gadget-Karten im Menü (passt in 5 Bildschirmgrößen),
   Dauer nach Winkel/Abstand, Rücken/zu weit/Wand = keine Wirkung, Ausblenden, Wurf per G, online geblendet
+- `tests/pad.mjs` (in `test:gadget`) – Sprungpad: Wurf, Pad am Boden, Start ~4,4 m (nie über 4,8), Gegnerteam nutzt es nicht, Platzregeln (Steg, Stegrand, Kiste), abgelehnter Wurf kostet nichts, Fuzz 60 Starts nie außerhalb der Karte, online sichtbar, Bewegungsprüfung ohne Fehlalarm
 - `tests/lean.mjs` (in `npm test`) – Lehnen (Q links / E rechts): 0,45 m seitlich + ~12° Kippen, weich, Wand stoppt die Kamera, 75 % Tempo, Sprint/Rutschen/Tod beenden es, Netzwerk-Position ohne Versatz
 - `tests/lean-net.mjs` (in `npm test`) – Lehnen online: B sieht A's Lehnwert, Kopf-Kasten ±0,45 m, Treffer nur auf den neuen Kopfort, Server begrenzt gefälschte Werte
 - `tests/wall-close.mjs` (in `npm test`) – dicht vor Wand/Kiste: steckt die Mündung im Hindernis (Mündung liegt 0,9-1,15 m vor, 0,3 m rechts der Kamera), schlägt der Schuss dort ein statt vorbeizugehen (Pistole/Gewehr/Shotgun); im Freien unverändert

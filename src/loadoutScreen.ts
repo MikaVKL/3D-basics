@@ -191,6 +191,7 @@ const GADGET_KEY = 'duskArena.gadget'
 const GADGET_DESCRIPTIONS: Record<GadgetId, string> = {
   smoke: 'Sichtschutz für 8 s',
   flash: 'Blendet, wer hinsieht',
+  jump: 'Katapult fürs Team, 20 s',
 }
 
 export function loadStoredGadget(): GadgetId {

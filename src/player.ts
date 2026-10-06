@@ -33,6 +33,11 @@ const LEAN_SPEED_MULTIPLIER = 0.75
 const LEAN_CAMERA_RADIUS = 0.12 // so dicht darf die Kamera an Wände (Körper hält 0,3 m)
 const JUMP_SPEED = 7.6 // ~1.6m Sprunghöhe: reicht für die 1.4m-Kisten
 const GRAVITY = 18
+// Sprungpad: Fußhöhe im höchsten Punkt (Wände sind 6 m hoch, so bleibt viel Luft darunter) und harte
+// Obergrenze, falls etwas anderes (Bunny-Hop o. Ä.) dazukommt: über die Wand kommt man nie
+export const PAD_APEX_FEET = 4.4
+const PAD_MAX_FEET = 4.8
+const PAD_RETRIGGER = 0.5 // s bis zum nächsten Auslösen
 const PLAYER_RADIUS = 0.4
 
 const MAX_STAMINA = 100
@@ -103,6 +108,7 @@ export class Player implements Damageable {
   private crouchPressed = false
   private groundTime = Infinity // seit der letzten Landung
   private jumpBuffer = 0
+  private padCooldown = 0
   onSlide?: () => void
   private onGround = true
   onJump?: () => void
@@ -304,6 +310,18 @@ export class Player implements Damageable {
     this.wantsToSprint = sprinting
   }
 
+  // Sprungpad: nach oben geschleudert, bis die Fußhöhe PAD_APEX_FEET erreicht (nie darüber); false in der Pause
+  launchFromPad(): boolean {
+    if (!this.isAlive || this.padCooldown > 0) return false
+    const speed = Math.sqrt(2 * GRAVITY * Math.max(0.5, PAD_APEX_FEET - this.bodyY))
+    this.velocity.y = speed
+    this.onGround = false
+    this.sliding = false
+    this.jumpBuffer = 0
+    this.padCooldown = PAD_RETRIGGER
+    return true
+  }
+
   jump() {
     if (!this.isAlive) return
     if (!this.onGround) {
@@ -338,6 +356,7 @@ export class Player implements Damageable {
 
     // isSprinting stammt hier noch vom letzten Frame
     this.slideCooldown = Math.max(0, this.slideCooldown - deltaSeconds)
+    this.padCooldown = Math.max(0, this.padCooldown - deltaSeconds)
     this.jumpBuffer = Math.max(0, this.jumpBuffer - deltaSeconds)
     if (this.crouchPressed && this.onGround && this.isSprinting && this.slideCooldown === 0) {
       this.startSlide(SLIDE_BOOST)
@@ -395,6 +414,10 @@ export class Player implements Damageable {
     // schon unter der Kante, auf der man landen soll
     const feetBefore = this.bodyY
     this.bodyY += this.velocity.y * deltaSeconds
+    if (this.bodyY > PAD_MAX_FEET) {
+      this.bodyY = PAD_MAX_FEET
+      this.velocity.y = Math.min(this.velocity.y, 0)
+    }
     if (this.velocity.y > 0) this.stopAtCeiling(feetBefore)
 
     const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z, feetBefore)
