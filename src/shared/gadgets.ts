@@ -29,7 +29,7 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
     cooldown: 25,
     maxThrowDistance: 40,
     maxFlightTime: 3,
-    radius: 3.2,
+    radius: 5,
     duration: 8,
   },
   flash: {

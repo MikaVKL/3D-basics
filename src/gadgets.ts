@@ -12,7 +12,7 @@ const GRAVITY = 16
 const STEP = 1 / 60
 const MIN_FLIGHT = 0.15 // kürzeste gezeigte Flugzeit (Animation)
 const MIN_THROW_TIME = 0.03 // darunter steckt man mit der Nase in der Wand: kein Wurf
-const CLOUD_CUBES = 240 // Rauch aus vielen kleinen Würfeln (Retro-Look, wie Feuer in alten Spielen)
+const CLOUD_CUBES = 640 // Rauch aus vielen kleinen Würfeln (Retro-Look, wie Feuer in alten Spielen)
 const SMOKE_TONES = [0xa3afc1, 0x8793a8, 0xbac5d6, 0x6f7b91]
 const GROW_TIME = 0.6
 const SHRINK_TIME = 2.2
@@ -335,7 +335,7 @@ export class GadgetSystem {
       // Gleichmäßig in einer am Boden abgeflachten Kugel; kleine Würfel außen, größere innen
       const direction = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
       const reach = Math.cbrt(Math.random())
-      const size = 0.3 + (1 - reach) * 0.35 + Math.random() * 0.2
+      const size = 0.5 + (1 - reach) * 0.5 + Math.random() * 0.3
       const x = direction.x * reach * stats.radius * 0.95
       const z = direction.z * reach * stats.radius * 0.95
       const y = Math.max(size * 0.5, stats.radius * 0.5 + direction.y * reach * stats.radius * 0.75)

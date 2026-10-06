@@ -99,7 +99,25 @@ try {
       outside: Number(at(6, 1.5, 0).toFixed(2)),
     }
   })
-  check('Rauch besteht aus 240 Würfeln', look.cubes === 240 && look.isBox === 'BoxGeometry', JSON.stringify(look))
+  check('Rauch besteht aus 640 Würfeln', look.cubes === 640 && look.isBox === 'BoxGeometry', JSON.stringify(look))
+  // Sichtdichte: waagerechte Strahlen durch die ausgewachsene Wolke auf Augenhöhe müssen (fast) immer einen Würfel treffen
+  const seeThrough = await page.evaluate(() => {
+    const G = __dusk.gadgets
+    const cloud = G.clouds[0]
+    const V = cloud.group.position.constructor
+    const R = __dusk.weapon.raycaster.constructor
+    cloud.group.updateMatrixWorld(true)
+    const c = cloud.group.position
+    const rad = cloud.radius
+    let blocked = 0
+    const n = 300
+    for (let i = 0; i < n; i++) {
+      const from = new V(c.x + (Math.random() * 2 - 1) * 0.6 * rad, 0.3 + Math.random() * 1.9, c.z + rad + 4)
+      if (new R(from, new V(0, 0, -1), 0, rad * 2 + 8).intersectObject(cloud.mesh, false).length > 0) blocked++
+    }
+    return { radius: rad, blocked: blocked / n }
+  })
+  check('Rauch: Radius 5 m, Strahlen auf Augenhöhe zu >= 98 % geblockt', seeThrough.radius === 5 && seeThrough.blocked >= 0.98, JSON.stringify(seeThrough))
   check('Dichte: in der Mitte voll, am Rand dünner, außerhalb 0', look.centre > 0.95 && look.edge < look.centre && look.outside === 0, JSON.stringify(look))
   await page.evaluate(() => {
     const c = __dusk.gadgets.clouds[0].group.position

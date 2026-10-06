@@ -73,7 +73,7 @@ Weiterarbeiten wissen muss.
   `shared/gadgets.ts`, Karte kommt von selbst, Icon in `GADGET_ICONS` (main.ts).
   Rauchgranate:
   Flug wird beim Werfer gegen die feste Welt gerechnet (`worldMeshes`, Wand/Decke prallen ab,
-  fällt auf den Boden), Wolke = 240 kleine Würfel (InstancedMesh, Retro-Pixel-Rauch, 3,2 m, 8 s, Auf-/Abschwellen; Kamera mitten drin = grauer Schleier `#smoke-overlay` nach `smokeDensity()`), Sichtsperre
+  fällt auf den Boden), Wolke = 640 Würfel (InstancedMesh, Retro-Pixel-Rauch, Radius 5 m, bis ~6 m hoch, 8 s; Nutzer: vorher 3,2 m/240 Würfel "man sieht noch zu viel"; Strahltest auf Augenhöhe 99,3 % -> 100 % geblockt, Auf-/Abschwellen; Kamera mitten drin = grauer Schleier `#smoke-overlay` nach `smokeDensity()`), Sichtsperre
   (Schüsse gehen durch), Abklingzeit 25 s, am Anfang jedes Lebens bereit. Anzeige im Waffenfeld
   (Touch: Restzeit auf dem Button). Online: Werfer schickt `gadget` (Start, Ziel, Flugzeit), Server
   (`handleGadget`) prüft Abklingzeit (±1 s), Startpunkt ≤ 3 m am Spieler, Weite, Flugzeit, lebt,
