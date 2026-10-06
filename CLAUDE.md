@@ -86,6 +86,15 @@ Weiterarbeiten wissen muss.
   schleudert wieder hoch, 0,5 s Pause). Platz: jede ebene Fläche (Boden, Stege, Kisten) mit 4 m freiem Raum über der
   Mitte UND rund um das Pad (`padSpotOk`), sonst abgelehnt mit Hinweis ohne Abklingzeit (alle Clients rechnen gleich). Server
   relayt nur; die Bewegungsprüfung braucht keine Anpassung (Guthaben 14 m hoch deckt 4,4 m ab, `tests/pad.mjs` simuliert 20 s Dauerhüpfen).
+- **Enterhaken** (`grapple`, 4. Gadget, G, 10 s; Nutzerwahl "Titanfall, die einfachste/sicherste Variante"): der Haken trifft sofort die erste Fläche im Fadenkreuz
+  (Reichweite `GRAPPLE_REACH` 22 m, sonst "Kein Ziel in Reichweite" ohne Abklingzeit), dann zieht `Player.updateGrapple` die Körpermitte geradlinig mit
+  `GRAPPLE_SPEED` 15 m/s zur Zielposition (Wand: 0,7 m davor, Füße ~1,3 m über dem Haken, damit man Kanten/Geländer überwindet, plus Stoß in die Wand;
+  Boden: darüber; Decke: darunter). Normale Kollision bleibt, Ende bei Ankunft (< 0,7 m), 1,8 s, oder wenn man 0,25 s nicht vorankommt (Hindernis).
+  Sprung, Tod und Spawn beenden den Zug; Schwung danach begrenzt (4 m/s waagerecht, 4 m/s steigend). Schießen/Wechseln während des Zugs erlaubt. Seil =
+  gestreckter Quader in Teamfarbe (`spawnRope`), beim Werfer solange der Zug läuft; die anderen bekommen die normale `gadget`-Nachricht (from = Auge, to = Haken,
+  flight = Zugzeit; `velocity` 0) und zeigen das Seil von der Figur zum Haken. Server prüft wie bei allen Gadgets Abklingzeit, Startpunkt, Reichweite
+  (24 m), Zugzeit (<= 2,1 s). Die Bewegungsprüfung braucht keine Anpassung (`tests/grapple.mjs` simuliert Züge gegen `checkMovement`: 0 Fehlalarme).
+  Nicht gebaut: Pendeln/Schwingen (zu fehleranfällig), Haken an Spielern.
 - `src/sky.ts` – Abendhimmel-Kuppel (Farbverlauf), folgt der Kamera
 - `src/surfaceTextures.ts` – Kisten-/Plattenmuster (Canvas, Graustufen x
   Palettenfarbe); `worldBox()` statt BoxGeometry, damit Muster nicht verzerren
@@ -151,6 +160,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `tests/flash.mjs` (in `test:gadget`) – Blendgranate: Gadget-Karten im Menü (passt in 5 Bildschirmgrößen),
   Dauer nach Winkel/Abstand, Rücken/zu weit/Wand = keine Wirkung, Ausblenden, Wurf per G, online geblendet
 - `tests/flight.mjs` (in `test:gadget`, `npm test`) – Flugbahnen: je Gadget eigene Wurfwerte (`throwSpeed`/`throwLift` in shared: Rauch Lob 13/0,5, Blend schnell+flach 19/0,1, Pad 15/0,22), gleicher Wurf = gleiche Bahn, Abprall an Wänden (`BOUNCE` 0,45), B spielt dieselbe Bahn wie A. Der Wurf schickt `velocity` mit (optional im Protokoll, Server prüft Betrag); jeder Client rechnet den Weg selbst (`simulateFlight`, `spawnRemoteFlight`), weicht der Landepunkt > 1,5 m vom gemeldeten ab, gilt der gemeldete mit einfachem Bogen
+- `tests/grapple.mjs` + `tests/grapple-net.mjs` (in `npm test`) – Enterhaken: kein Ziel = kein Zug, Zugzeit = Entfernung/15, Abklingzeit, Sprung/Tod beenden, Steg erklimmen (Fuß 2,8 m), Fuzz 200 Würfe (nie außerhalb, nie > 1,9 s), Server-Bewegungsprüfung, Seilform, online sieht B das Seil am selben Haken, Server lehnt Abklingzeit ab
 - `tests/pad.mjs` (in `test:gadget`) – Sprungpad: Wurf, Pad am Boden, Start ~4,4 m (nie über 4,8), Gegnerteam nutzt es nicht, Platzregeln (Steg, Stegrand, Kiste), abgelehnter Wurf kostet nichts, Fuzz 60 Starts nie außerhalb der Karte, online sichtbar, Bewegungsprüfung ohne Fehlalarm
 - `tests/lean.mjs` (in `npm test`) – Lehnen (Q links / E rechts, Umschalter): 0,45 m seitlich + ~12° Kippen, weich, Wand stoppt die Kamera, 75 % Tempo, Sprint/Rutschen/Tod beenden es, Netzwerk-Position ohne Versatz
 - `tests/lean-net.mjs` (in `npm test`) – Lehnen online: B sieht A's Lehnwert, Kopf-Kasten ±0,45 m, Treffer nur auf den neuen Kopfort, Server begrenzt gefälschte Werte

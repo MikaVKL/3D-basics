@@ -15,7 +15,7 @@ try {
   await page.click('#start-button')
   await pickOption(page, '.gadget-card[data-gadget="jump"]')
   const ids = await page.evaluate(() => [...document.querySelectorAll('#loadout-gadget .gadget-card')].map((c) => c.dataset.gadget).join())
-  check('Gadget-Auswahl hat das Sprungpad (smoke, flash, jump)', ids === 'smoke,flash,jump', ids)
+  check('Gadget-Auswahl hat das Sprungpad (smoke, flash, jump, grapple)', ids === 'smoke,flash,jump,grapple', ids)
   await page.click('#loadout-play-button')
   await wait(500)
   await page.setViewportSize({ width: 480, height: 270 })

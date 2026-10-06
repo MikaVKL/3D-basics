@@ -1,7 +1,12 @@
 // Gadgets (Fähigkeiten neben den Waffen): Werte für Client und Server
 
-export type GadgetId = 'smoke' | 'flash' | 'jump'
-export const GADGET_IDS: GadgetId[] = ['smoke', 'flash', 'jump']
+export type GadgetId = 'smoke' | 'flash' | 'jump' | 'grapple'
+export const GADGET_IDS: GadgetId[] = ['smoke', 'flash', 'jump', 'grapple']
+
+// Enterhaken (Titanfall-Art): der Haken trifft sofort den Punkt im Fadenkreuz, dann zieht es dich geradlinig hin
+export const GRAPPLE_REACH = 22 // m
+export const GRAPPLE_SPEED = 15 // m/s Zuggeschwindigkeit
+export const GRAPPLE_MAX_TIME = 1.8 // s, danach ist Schluss (steckt man fest)
 
 // Sprungpad: auf jeder ebenen Fläche (Boden, Stege, Kisten), solange darüber so weit nichts im Weg ist,
 // sonst stößt man beim Hochschleudern an Stegunterseiten und Dächer
@@ -59,6 +64,17 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
     maxFlightTime: 3,
     radius: 0.95,
     duration: 20,
+  },
+  // Enterhaken: kein Wurf; maxThrowDistance = Reichweite (mit Zuschlag), maxFlightTime = längster Zug
+  grapple: {
+    label: 'Enterhaken',
+    cooldown: 10,
+    throwSpeed: 0,
+    throwLift: 0,
+    maxThrowDistance: GRAPPLE_REACH + 2,
+    maxFlightTime: GRAPPLE_MAX_TIME + 0.3,
+    radius: 0,
+    duration: 0,
   },
 }
 

@@ -5,6 +5,7 @@ import type { Damageable } from './damageable'
 import type { Team } from './team'
 import type { PlayerNetworkState } from './shared/protocol'
 import { WEAPONS, DEFAULT_WEAPON, type WeaponId } from './shared/weapons'
+import { GRAPPLE_SPEED, GRAPPLE_MAX_TIME } from './shared/gadgets'
 import {
   MAX_HEALTH,
   MAX_SHIELD,
@@ -37,6 +38,9 @@ const GRAVITY = 18
 // über die Wände kommt man trotzdem nie, weil volle Wände für die Kollision unbegrenzt hoch sind (arena.ts)
 const PAD_RISE = 4.4
 const PAD_RETRIGGER = 0.5 // s bis zum nächsten Auslösen
+const GRAPPLE_ARRIVE = 0.7 // m: so nah an der Zielposition ist der Zug zu Ende
+const GRAPPLE_KEEP_SPEED = 4 // m/s Schwung, den man nach dem Zug behält (waagerecht)
+const GRAPPLE_KEEP_RISE = 4 // m/s Steigen, das man behält (kommt über Kanten)
 const PLAYER_RADIUS = 0.4
 
 const MAX_STAMINA = 100
@@ -108,6 +112,7 @@ export class Player implements Damageable {
   private groundTime = Infinity // seit der letzten Landung
   private jumpBuffer = 0
   private padCooldown = 0
+  private grapple: { target: THREE.Vector3; push: THREE.Vector2; time: number; stuck: number; lastDistance: number } | null = null
   onSlide?: () => void
   private onGround = true
   onJump?: () => void
@@ -172,12 +177,14 @@ export class Player implements Damageable {
     this.resetLean()
     this.velocity.set(0, 0, 0)
     this.horizontalVelocity.set(0, 0)
+    this.grapple = null
     this.sliding = false
     this.bodyY = position.y - this.eyeHeight
   }
 
   spawn(position: THREE.Vector3) {
     this.spawnPoint.copy(position)
+    this.grapple = null
     this.camera.position.copy(position)
     this.resetLean()
     this.velocity.set(0, 0, 0)
@@ -275,6 +282,7 @@ export class Player implements Damageable {
 
   private die() {
     this.respawnRemaining = RESPAWN_DELAY
+    this.grapple = null
     this.velocity.set(0, 0, 0)
     this.horizontalVelocity.set(0, 0)
     this.sliding = false
@@ -325,8 +333,64 @@ export class Player implements Damageable {
     return true
   }
 
+  // Enterhaken: gerade Linie zur Zielposition (Körpermitte); push = Schwung am Ende (über die Kante)
+  startGrapple(target: THREE.Vector3, push: THREE.Vector2): boolean {
+    if (!this.isAlive) return false
+    this.grapple = { target: target.clone(), push: push.clone(), time: 0, stuck: 0, lastDistance: Infinity }
+    this.sliding = false
+    this.jumpBuffer = 0
+    return true
+  }
+
+  get isGrappling(): boolean {
+    return this.grapple !== null
+  }
+
+  private endGrapple(arrived: boolean) {
+    const grapple = this.grapple
+    if (!grapple) return
+    this.grapple = null
+    // Schwung behalten, aber begrenzt; angekommen = noch ein Stoß über die Kante
+    const speed = this.horizontalVelocity.length()
+    if (speed > GRAPPLE_KEEP_SPEED) this.horizontalVelocity.multiplyScalar(GRAPPLE_KEEP_SPEED / speed)
+    if (arrived) this.horizontalVelocity.add(grapple.push)
+    this.velocity.y = Math.min(this.velocity.y, GRAPPLE_KEEP_RISE)
+  }
+
+  // Ein Schritt des Zugs (statt Schwerkraft und Eingabe); false = kein Zug aktiv
+  private updateGrapple(deltaSeconds: number): boolean {
+    const grapple = this.grapple
+    if (!grapple) return false
+    const centre = new THREE.Vector3(this.camera.position.x, this.bodyY + 1, this.camera.position.z)
+    const to = grapple.target.clone().sub(centre)
+    const distance = to.length()
+    grapple.time += deltaSeconds
+    // Kein Fortschritt (Wand/Decke im Weg): abbrechen statt am Hindernis kleben
+    grapple.stuck = grapple.lastDistance - distance < GRAPPLE_SPEED * deltaSeconds * 0.25 ? grapple.stuck + deltaSeconds : 0
+    grapple.lastDistance = distance
+    if (distance < GRAPPLE_ARRIVE) {
+      this.endGrapple(true)
+      return false
+    }
+    if (grapple.time > GRAPPLE_MAX_TIME || (grapple.stuck > 0.25 && grapple.time > 0.2)) {
+      this.endGrapple(false)
+      return false
+    }
+    const speed = Math.min(GRAPPLE_SPEED, distance / deltaSeconds)
+    to.multiplyScalar(speed / distance)
+    this.horizontalVelocity.set(to.x, to.z)
+    this.velocity.y = to.y
+    this.onGround = false
+    return true
+  }
+
   jump() {
     if (!this.isAlive) return
+    if (this.grapple) {
+      // Sprung beendet den Zug (Schwung bleibt)
+      this.endGrapple(false)
+      return
+    }
     if (!this.onGround) {
       this.jumpBuffer = JUMP_BUFFER
       return
@@ -408,10 +472,14 @@ export class Player implements Damageable {
       this.stamina = Math.min(MAX_STAMINA, this.stamina + STAMINA_REGEN_RATE * deltaSeconds)
     }
 
-    this.velocity.y -= GRAVITY * deltaSeconds
+    if (this.grapple && !this.isAlive) this.grapple = null
+    const pulled = this.updateGrapple(deltaSeconds)
+    if (!pulled) this.velocity.y -= GRAVITY * deltaSeconds
 
-    if (this.sliding) this.updateSlide(deltaSeconds)
-    if (!this.sliding) this.updateMomentum(deltaSeconds)
+    if (!pulled) {
+      if (this.sliding) this.updateSlide(deltaSeconds)
+      if (!this.sliding) this.updateMomentum(deltaSeconds)
+    }
     this.moveHorizontally(deltaSeconds)
 
     // Fuß-Höhe vor dem Fallen als Referenz: nach schnellem Fall liegt bodyY

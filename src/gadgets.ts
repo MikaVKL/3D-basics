@@ -3,7 +3,7 @@
 // meldet nur Start, Landepunkt und Flugzeit; alle zeigen denselben Bogen und dieselbe Wolke.
 
 import * as THREE from 'three'
-import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
+import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, GRAPPLE_REACH, GRAPPLE_SPEED, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
 const BOUNCE = 0.45 // Anteil der Geschwindigkeit, der beim Aufprall an einer Wand erhalten bleibt
@@ -79,6 +79,17 @@ export interface ThrowResult {
   to: THREE.Vector3
   flight: number
   velocity: THREE.Vector3
+  // Enterhaken: Zielposition der Körpermitte und Schwung am Ende (über die Kante)
+  pull?: { target: THREE.Vector3; push: THREE.Vector2 }
+}
+
+interface Rope {
+  mesh: THREE.Mesh
+  anchor: THREE.Vector3
+  origin: () => THREE.Vector3
+  age: number
+  ttl: number
+  alive?: () => boolean // beim Werfer: so lange der Zug läuft
 }
 
 export class GadgetSystem {
@@ -90,6 +101,8 @@ export class GadgetSystem {
   private blindStrengthNow = 0 // höchste Stärke des laufenden Blendens (0..1)
   private readonly bursts: Burst[] = []
   private readonly fuses: Fuse[] = []
+  private readonly ropes: Rope[] = []
+  private readonly ropeGeometry = new THREE.BoxGeometry(0.07, 0.07, 1)
   readonly pads: Pad[] = []
   // Warum der letzte Wurf nicht ging (z. B. kein Platz fürs Sprungpad), für einen Hinweis
   rejectReason = ''
@@ -139,6 +152,11 @@ export class GadgetSystem {
     this.blindRemaining = 0
     this.blindTotal = 0
     this.blindStrengthNow = 0
+    for (const rope of this.ropes) {
+      this.scene.remove(rope.mesh)
+      ;(rope.mesh.material as THREE.Material).dispose()
+    }
+    this.ropes.length = 0
   }
 
   // Auswahl gilt ab dem nächsten Leben (startLife); die Abklingzeit bleibt
@@ -213,6 +231,7 @@ export class GadgetSystem {
     if (!this.ready) return null
     const direction = new THREE.Vector3()
     camera.getWorldDirection(direction)
+    if (this.gadget === 'grapple') return this.tryGrapple(camera, direction)
     const from = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(direction, 0.4)
     from.y -= 0.15
     const velocity = direction.clone().multiplyScalar(this.stats.throwSpeed)
@@ -228,6 +247,42 @@ export class GadgetSystem {
     this.cooldownRemaining = this.stats.cooldown
     this.spawnFlight(from, position.clone(), flight, team, this.gadget, points)
     return { from, to: position.clone(), flight, velocity }
+  }
+
+  // Haken: trifft sofort die erste Fläche im Fadenkreuz. Zielposition (Körpermitte) liegt davor:
+  // an Wänden gut einen Meter über dem Treffpunkt (Füße), damit man auch Geländer überwindet (man kommt über die Kante) mit Stoß in die Wand hinein,
+  // auf Böden darüber, an Decken darunter.
+  private tryGrapple(camera: THREE.Camera, direction: THREE.Vector3): ThrowResult | null {
+    const from = camera.getWorldPosition(new THREE.Vector3())
+    this.raycaster.set(from, direction)
+    this.raycaster.far = GRAPPLE_REACH
+    const hit = this.raycaster.intersectObjects(this.world, false)[0]
+    if (!hit || !hit.face) {
+      this.rejectReason = 'Kein Ziel in Reichweite'
+      return null
+    }
+    this.rejectReason = ''
+    const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
+    const target = hit.point.clone()
+    const push = new THREE.Vector2()
+    if (normal.y > 0.5) {
+      target.y += 1
+    } else if (normal.y < -0.5) {
+      target.addScaledVector(normal, 1)
+    } else {
+      target.addScaledVector(normal, 0.7)
+      target.y += 2.3
+      push.set(-normal.x * 1.5, -normal.z * 1.5)
+    }
+    this.cooldownRemaining = this.stats.cooldown
+    return { from, to: hit.point.clone(), flight: from.distanceTo(hit.point) / GRAPPLE_SPEED, velocity: new THREE.Vector3(), pull: { target, push } }
+  }
+
+  // Seil vom Werfer zum Haken (auch für die Züge anderer); beim Werfer so lange der Zug läuft
+  spawnRope(anchor: THREE.Vector3, team: Team, origin: () => THREE.Vector3, ttl: number, alive?: () => boolean) {
+    const mesh = new THREE.Mesh(this.ropeGeometry, new THREE.MeshBasicMaterial({ color: TeamColor[team], fog: false }))
+    this.scene.add(mesh)
+    this.ropes.push({ mesh, anchor: anchor.clone(), origin, age: 0, ttl, alive })
   }
 
   // Auch für die Würfe anderer (Server-Meldung): Bogen zeigen, bei der Landung die Wolke.
@@ -477,6 +532,21 @@ export class GadgetSystem {
         this.flights.splice(i, 1)
         flight.onLand(flight.to)
       }
+    }
+
+    for (let i = this.ropes.length - 1; i >= 0; i--) {
+      const rope = this.ropes[i]
+      rope.age += deltaSeconds
+      if (rope.age >= 0.12 && (rope.alive ? !rope.alive() : rope.age >= rope.ttl) || rope.age > 3) {
+        this.scene.remove(rope.mesh)
+        ;(rope.mesh.material as THREE.Material).dispose()
+        this.ropes.splice(i, 1)
+        continue
+      }
+      const start = rope.origin()
+      rope.mesh.position.copy(start).add(rope.anchor).multiplyScalar(0.5)
+      rope.mesh.scale.set(1, 1, Math.max(0.01, start.distanceTo(rope.anchor)))
+      rope.mesh.lookAt(rope.anchor)
     }
 
     for (let i = this.fuses.length - 1; i >= 0; i--) {

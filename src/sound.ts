@@ -172,6 +172,12 @@ export const SYNTHS = {
     tone(ctx, out, 'sine', 180, 60, 0.45, 0.2)
     tone(ctx, out, 'sine', 3800, 3800, 0.12, 1.4, 0.05)
   },
+  // Enterhaken: Abschuss mit schnellem Zischen, Einschlag als dumpfer Klack
+  hookShot: (ctx, out, noise) => {
+    noiseBurst(ctx, out, noise, 'bandpass', 2400, 0.4, 0.15)
+    tone(ctx, out, 'sawtooth', 900, 300, 0.1, 0.12)
+    tone(ctx, out, 'square', 140, 90, 0.08, 0.1, 0.1)
+  },
   fuseBeep: (ctx, out) => {
     tone(ctx, out, 'square', 1900, 1900, 0.07, 0.1)
   },

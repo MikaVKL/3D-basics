@@ -154,12 +154,23 @@ const gadgets = new GadgetSystem(scene, worldMeshes)
 gadgets.viewer = camera
 gadgets.onFuseBeep = (position) => sound.playAt('fuseBeep', position, 0.8)
 gadgets.onLand = (kind, position) => sound.playAt(kind === 'flash' ? 'flashBang' : kind === 'jump' ? 'padPlace' : 'smokePop', position, 1)
+// Seil-Ursprung: rechts unten vor der Kamera (wo die Hand wäre)
+function ropeStart(cam: THREE.Camera): THREE.Vector3 {
+  const origin = new THREE.Vector3(0.25, -0.22, -0.5)
+  return cam.localToWorld(origin)
+}
 function throwGadget() {
   if (!isActive || !player.isAlive) return
   const thrown = gadgets.tryThrow(camera, player.team)
   if (!thrown && gadgets.rejectReason) showNotice(gadgets.rejectReason)
-  if (thrown) {
+  if (thrown?.pull) {
+    sound.play('hookShot', 0.7)
+    player.startGrapple(thrown.pull.target, thrown.pull.push)
+    gadgets.spawnRope(thrown.to, player.team, () => ropeStart(camera), thrown.flight + 0.5, () => player.isGrappling)
+  } else if (thrown) {
     sound.play('throw', 0.6)
+  }
+  if (thrown) {
     network.sendGadget(gadgets.gadget, thrown.from, thrown.to, thrown.flight, thrown.velocity)
   }
 }
@@ -278,6 +289,13 @@ const network: NetworkClient = new NetworkClient({
     weapon.showRemoteTracer(start, new THREE.Vector3(to.x, to.y, to.z), network.roster.get(shooter)?.team ?? 'red', shotWeapon)
   },
   onRemoteGadget: (kind, from, to, flight, thrower, velocity) => {
+    if (kind === 'grapple') {
+      sound.playAt('hookShot', from, 0.7)
+      const team = network.roster.get(thrower)?.team ?? 'red'
+      const hand = new THREE.Vector3(from.x, from.y - 0.4, from.z)
+      gadgets.spawnRope(new THREE.Vector3(to.x, to.y, to.z), team, () => remotePlayers.getMuzzle(thrower) ?? hand, flight + 0.5)
+      return
+    }
     sound.playAt('throw', from, 0.6)
     gadgets.spawnRemoteFlight(
       new THREE.Vector3(from.x, from.y, from.z),
@@ -883,6 +901,7 @@ const smokeOverlay = document.querySelector<HTMLDivElement>('#smoke-overlay')!
 const GADGET_ICONS: Record<GadgetId, string> = {
   smoke: '<circle cx="9" cy="14" r="5" fill="currentColor"/><circle cx="15" cy="10" r="4.5" fill="currentColor" opacity="0.7"/><circle cx="16" cy="16" r="3.5" fill="currentColor" opacity="0.5"/>',
   jump: '<path d="M12 3l7 8h-4.2v5H9.2v-5H5z" fill="currentColor"/><rect x="6" y="19" width="12" height="2.4" rx="1.2" fill="currentColor"/>',
+  grapple: '<circle cx="6" cy="18" r="2.4" fill="currentColor"/><path d="M7.5 16.5L17 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 4h7v7z" fill="currentColor"/>',
   flash: '<path d="M12 2l2.2 6.3L21 6.5l-4.2 5.5L22 14l-6.4 1.3L17 22l-5-4.2L7 22l1.4-6.7L2 14l5.2-2L3 6.5l6.8 1.8z" fill="currentColor"/>',
 }
 // Name, Taste-Symbol und Beschriftung folgen dem gewählten Gadget
