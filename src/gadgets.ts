@@ -18,6 +18,15 @@ const GROW_TIME = 0.6
 const SHRINK_TIME = 2.2
 const DISSOLVE_TIME = 0.9 // so lange schrumpft ein einzelner Würfel am Ende
 
+interface Fuse {
+  mesh: THREE.Mesh
+  kind: GadgetId
+  position: THREE.Vector3
+  age: number
+  beeps: number
+  fuse: number
+}
+
 interface Flight {
   mesh: THREE.Mesh
   from: THREE.Vector3
@@ -79,6 +88,7 @@ export class GadgetSystem {
   private blindTotal = 0
   private blindStrengthNow = 0 // höchste Stärke des laufenden Blendens (0..1)
   private readonly bursts: Burst[] = []
+  private readonly fuses: Fuse[] = []
   readonly pads: Pad[] = []
   // Warum der letzte Wurf nicht ging (z. B. kein Platz fürs Sprungpad), für einen Hinweis
   rejectReason = ''
@@ -105,6 +115,7 @@ export class GadgetSystem {
   private readonly tmpColor = new THREE.Color()
   // Landung (Rauch geht auf / Blendgranate knallt) für den Ton
   onLand?: (kind: GadgetId, position: THREE.Vector3) => void
+  onFuseBeep?: (position: THREE.Vector3) => void
   // Blendgranate hat bei dir gewirkt (Sekunden)
   onBlinded?: (seconds: number) => void
 
@@ -225,7 +236,11 @@ export class GadgetSystem {
       elapsed: 0,
       arc: Math.min(5, 0.5 + distance * 0.12),
       onLand: (position) =>
-        kind === 'smoke' ? this.spawnCloud(position) : kind === 'jump' ? this.spawnPad(position, team) : this.spawnBurst(kind, position),
+        kind === 'smoke'
+          ? this.spawnCloud(position)
+          : kind === 'jump'
+            ? this.spawnPad(position, team)
+            : this.armFuse(kind, position, team),
     })
   }
 
@@ -279,6 +294,20 @@ export class GadgetSystem {
       if (Math.hypot(x - pad.position.x, z - pad.position.z) < radius && Math.abs(feetY - pad.position.y) < 0.6) return pad
     }
     return null
+  }
+
+  // Blendgranate liegt nach der Landung noch kurz und piept (Nutzerwunsch: um Ecken werfen, Gegner können reagieren)
+  armFuse(kind: GadgetId, position: THREE.Vector3, team: Team) {
+    const fuse = GADGETS[kind].fuse ?? 0
+    if (fuse <= 0) {
+      this.spawnBurst(kind, position)
+      return
+    }
+    const mesh = new THREE.Mesh(this.grenadeGeometry, new THREE.MeshBasicMaterial({ color: TeamColor[team], fog: false }))
+    mesh.position.copy(position)
+    mesh.scale.setScalar(1.5)
+    this.scene.add(mesh)
+    this.fuses.push({ mesh, kind, position: position.clone(), age: 0, beeps: 0, fuse })
   }
 
   // Blendgranate: kurzer Lichtblitz; wer zum Knall sieht (freie Sicht, Winkel, Abstand), ist geblendet
@@ -415,6 +444,25 @@ export class GadgetSystem {
         ;(flight.mesh.material as THREE.Material).dispose()
         this.flights.splice(i, 1)
         flight.onLand(flight.to)
+      }
+    }
+
+    for (let i = this.fuses.length - 1; i >= 0; i--) {
+      const fuse = this.fuses[i]
+      fuse.age += deltaSeconds
+      // Piepen wird schneller: bei 0, 0,45, 0,75, 0,9 (Anteile der Zündzeit)
+      const beepAt = [0, 0.45, 0.75, 0.9][fuse.beeps]
+      if (beepAt !== undefined && fuse.age >= beepAt * fuse.fuse) {
+        fuse.beeps++
+        this.onFuseBeep?.(fuse.position)
+      }
+      const on = Math.floor(fuse.age * (6 + fuse.age * 10)) % 2 === 0
+      ;(fuse.mesh.material as THREE.MeshBasicMaterial).color.setHex(on ? 0xffffff : 0x333333)
+      if (fuse.age >= fuse.fuse) {
+        this.scene.remove(fuse.mesh)
+        ;(fuse.mesh.material as THREE.Material).dispose()
+        this.fuses.splice(i, 1)
+        this.spawnBurst(fuse.kind, fuse.position)
       }
     }
 

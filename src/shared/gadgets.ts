@@ -14,6 +14,7 @@ export interface GadgetStats {
   maxFlightTime: number // Sekunden
   radius: number // Meter Rauchwolke
   duration: number // Sekunden, die der Rauch steht
+  fuse?: number // Blendgranate: Sekunden zwischen Landung und Knall (Warnung, um Ecken reagieren zu können)
   // Nur Blendgranate: Wirkung auf jeden, der zum Knall sieht (auch Werfer und Team)
   blind?: {
     range: number // Meter, weiter weg passiert nichts
@@ -39,6 +40,7 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
     maxFlightTime: 3,
     radius: 0,
     duration: 0.3,
+    fuse: 1,
     blind: { range: 22, maxTime: 3, fullAngle: 15, viewAngle: 70 },
   },
   // radius = Auslöse-Radius des Pads, duration = so lange steht es (nur dein Team kann es nutzen)

@@ -172,6 +172,9 @@ export const SYNTHS = {
     tone(ctx, out, 'sine', 180, 60, 0.45, 0.2)
     tone(ctx, out, 'sine', 3800, 3800, 0.12, 1.4, 0.05)
   },
+  fuseBeep: (ctx, out) => {
+    tone(ctx, out, 'square', 1900, 1900, 0.07, 0.1)
+  },
   // Sprungpad: Aufsetzen = dumpfer Klack mit kurzem Summen, Auslösen = steigendes Wuschen mit Federton
   padPlace: (ctx, out, noise) => {
     tone(ctx, out, 'sine', 120, 70, 0.25, 0.12)

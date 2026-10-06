@@ -152,6 +152,7 @@ const sound = new SoundFx()
 // --- Gadget: Rauchgranate (Taste G / Button) ---
 const gadgets = new GadgetSystem(scene, worldMeshes)
 gadgets.viewer = camera
+gadgets.onFuseBeep = (position) => sound.playAt('fuseBeep', position, 0.8)
 gadgets.onLand = (kind, position) => sound.playAt(kind === 'flash' ? 'flashBang' : kind === 'jump' ? 'padPlace' : 'smokePop', position, 1)
 function throwGadget() {
   if (!isActive || !player.isAlive) return

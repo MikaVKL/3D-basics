@@ -153,12 +153,23 @@ try {
     __dusk.camera.rotation.set(0, 0, 0, 'YXZ')
     __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
   })
+  await page.evaluate(() => {
+    window.__times = []
+    const playAt = __dusk.sound.playAt
+    __dusk.sound.playAt = (n, p, v) => (window.__times.push([n, performance.now()]), playAt.call(__dusk.sound, n, p, v))
+  })
   await page.keyboard.press('KeyG')
   const cooldown = await page.evaluate(() => __dusk.gadgets.cooldownRemaining)
   check('Wurf: Abklingzeit 30 s', cooldown > 29.5 && cooldown <= 30, String(cooldown))
-  await wait(3500)
+  await wait(4800)
   const sounds = await page.evaluate(() => window.__sounds)
   check('Knall nach dem Flug (genau einmal)', sounds.filter((s) => s === '@flashBang').length === 1, sounds.join())
+  const fuse = await page.evaluate(() => {
+    const beeps = window.__times.filter((t) => t[0] === 'fuseBeep').map((t) => t[1])
+    const bang = window.__times.find((t) => t[0] === 'flashBang')?.[1]
+    return { beeps: beeps.length, sinceFirstBeep: bang && beeps.length ? (bang - beeps[0]) / 1000 : null }
+  })
+  check('Zündverzögerung: 4 Pieptöne ab der Landung, Knall ~1 s nach dem ersten', fuse.beeps === 4 && fuse.sinceFirstBeep > 0.8 && fuse.sinceFirstBeep < 1.4, JSON.stringify(fuse))
 
   // Online: B sieht A's Wurf, A und B stehen so, dass B zum Knall blickt
   const A = await openGame(browser, { name: 'Anna', errors })
@@ -181,7 +192,7 @@ try {
     __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     __dusk.throwGadget()
   })
-  await wait(2600)
+  await wait(3400)
   const blinded = await B.evaluate(() => ({ remaining: __dusk.gadgets.blindRemaining, total: __dusk.gadgets.blindLevel }))
   check('Online: B sieht den Wurf und ist geblendet (blickt zum Knall)', blinded.remaining > 0, JSON.stringify(blinded))
 

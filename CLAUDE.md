@@ -65,7 +65,7 @@ Weiterarbeiten wissen muss.
   Blendgranate (Auswahl im Waffenauswahl-Fenster als drei Aufklapplisten Primary/Secondary/Gadget, `Dropdown` in
   `loadoutScreen.ts`, Nutzerwunsch: ein Haupt-Gadget je Leben, nicht alle; `GadgetPicker`, gemerkt unter `duskArena.gadget`,
   gilt ab dem nächsten Spawn; eine gemeinsame Abklingzeit, Rauch 25 s / Blend 30 s). Blendgranate:
-  gleicher Wurf wie Rauch, knallt bei der Landung; jeder Client rechnet für SICH selbst
+  gleicher Wurf wie Rauch (prallt an Wänden ab), liegt nach der Landung 1 s und piept 4x (schneller werdend, blinkt; `armFuse`, `fuse` in shared; Nutzerwunsch: um Ecken werfen, Gegner können reagieren), dann Knall; jeder Client rechnet für SICH selbst
   (`blindDuration()`/`blindStrength()` in shared: Abstand ≤ 22 m, volle Wirkung bis 15° neben dem Knall, dann quadratisch
   abfallend bis 0 bei 70° (= Bildrand: außerhalb des Bildes fast nichts), max. 3 s, Schleier-Deckkraft 0,2+Faktor, freie
   Sichtlinie), weißer Schleier `#flash-overlay` (Verlauf x Stärke, `blindOpacity`). Trifft auch Werfer
