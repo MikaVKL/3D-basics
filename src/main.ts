@@ -268,15 +268,12 @@ const network: NetworkClient = new NetworkClient({
       sound.playAt('knife', from, 0.8)
       return
     }
-    sound.playAt(SHOT_SOUNDS[shotWeapon], from, 0.8)
-    effects.muzzleFlash(new THREE.Vector3(from.x, from.y, from.z))
+    // Der Strahl startet am Lauf der Waffe, die man an der Figur sieht (nicht an der Ego-Mündung des Schützen)
+    const start = remotePlayers.getMuzzle(shooter) ?? new THREE.Vector3(from.x, from.y, from.z)
+    sound.playAt(SHOT_SOUNDS[shotWeapon], start, 0.8)
+    effects.muzzleFlash(start)
     if (hit) effects.impactSparks(new THREE.Vector3(to.x, to.y, to.z))
-    weapon.showRemoteTracer(
-      new THREE.Vector3(from.x, from.y, from.z),
-      new THREE.Vector3(to.x, to.y, to.z),
-      network.roster.get(shooter)?.team ?? 'red',
-      shotWeapon
-    )
+    weapon.showRemoteTracer(start, new THREE.Vector3(to.x, to.y, to.z), network.roster.get(shooter)?.team ?? 'red', shotWeapon)
   },
   onRemoteGadget: (kind, from, to, flight, thrower) => {
     sound.playAt('throw', from, 0.6)

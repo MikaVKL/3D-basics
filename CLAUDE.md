@@ -146,6 +146,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `tests/lean.mjs` (in `npm test`) – Lehnen (Q links / E rechts): 0,45 m seitlich + ~12° Kippen, weich, Wand stoppt die Kamera, 75 % Tempo, Sprint/Rutschen/Tod beenden es, Netzwerk-Position ohne Versatz
 - `tests/lean-net.mjs` (in `npm test`) – Lehnen online: B sieht A's Lehnwert, Kopf-Kasten ±0,45 m, Treffer nur auf den neuen Kopfort, Server begrenzt gefälschte Werte
 - `tests/wall-close.mjs` (in `npm test`) – dicht vor Wand/Kiste: steckt die Mündung im Hindernis (Mündung liegt 0,9-1,15 m vor, 0,3 m rechts der Kamera), schlägt der Schuss dort ein statt vorbeizugehen (Pistole/Gewehr/Shotgun); im Freien unverändert
+- `tests/remote-muzzle.mjs` (in `npm test`) – Schüsse anderer: Strahl/Mündungsfeuer starten am Lauf der Figur (`PlayerAvatar.getMuzzleWorldPosition`, `BARREL_TIPS` je Modell = Vorderkante der Waffenteile), nicht an der Ego-Mündung des Schützen; Laufende bei allen 6 Modellen < 3 cm von der Kante
 - `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
   gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als

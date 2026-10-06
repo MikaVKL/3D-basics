@@ -66,6 +66,8 @@ export class PlayerAvatar {
   // Gehaltene Waffe, je eine Gruppe (nur die aktive sichtbar)
   private readonly weaponModels: Record<WeaponId, THREE.Group>
   heldWeapon: WeaponId = DEFAULT_WEAPON
+  // Laufende der Waffenmodelle (Strahlen und Mündungsfeuer anderer starten hier, nicht an der Ego-Waffe des Schützen)
+  private readonly muzzles = {} as Record<WeaponId, THREE.Object3D>
   private hitFlashRemaining = 0
   private walkPhase = 0
   private walkSwing = 0
@@ -190,6 +192,21 @@ export class PlayerAvatar {
         [bladeMaterial, [0.03, 0.09, 0.3], [0.18, 1.28, -0.7]],
       ]),
     }
+    // Vorderkante = Mitte der Hauptbox minus halbe Länge (siehe oben), Höhe der Laufachse
+    const BARREL_TIPS: Record<Exclude<WeaponId, 'knife'>, [number, number]> = {
+      pistol: [1.3, -0.7],
+      rifle: [1.28, -0.925],
+      shotgun: [1.29, -1.025],
+      sniper: [1.29, -1.125],
+      heavyPistol: [1.3, -0.75],
+      smg: [1.29, -0.8],
+    }
+    for (const [id, [y, z]] of Object.entries(BARREL_TIPS) as Array<[Exclude<WeaponId, 'knife'>, [number, number]]>) {
+      const muzzle = new THREE.Object3D()
+      muzzle.position.set(0.18, y, z)
+      this.weaponModels[id].add(muzzle)
+      this.muzzles[id] = muzzle
+    }
     this.setWeapon(DEFAULT_WEAPON)
 
     this.team = team
@@ -212,6 +229,14 @@ export class PlayerAvatar {
   setWeapon(weapon: WeaponId) {
     this.heldWeapon = weapon
     for (const [id, group] of Object.entries(this.weaponModels)) group.visible = id === weapon
+  }
+
+  // Laufende der gehaltenen Waffe in Weltkoordinaten (null beim Messer)
+  getMuzzleWorldPosition(target: THREE.Vector3): THREE.Vector3 | null {
+    const muzzle = this.muzzles[this.heldWeapon]
+    if (!muzzle) return null
+    this.root.updateMatrixWorld(true)
+    return muzzle.getWorldPosition(target)
   }
 
   // Körpermitte in Weltkoordinaten (z.B. Richtung für den Schadensanzeiger)

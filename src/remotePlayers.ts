@@ -165,6 +165,11 @@ export class RemotePlayers {
     return this.players.get(id)?.avatar.root.position.clone() ?? null
   }
 
+  // Lauf der Waffe, die die Figur gerade hält (null: unbekannt oder Messer)
+  getMuzzle(id: PlayerId): THREE.Vector3 | null {
+    return this.players.get(id)?.avatar.getMuzzleWorldPosition(new THREE.Vector3()) ?? null
+  }
+
   getPosition(id: PlayerId): THREE.Vector3 | null {
     return this.players.get(id)?.avatar.centerPosition ?? null
   }
