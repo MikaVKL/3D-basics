@@ -3,7 +3,7 @@
 // meldet nur Start, Landepunkt und Flugzeit; alle zeigen denselben Bogen und dieselbe Wolke.
 
 import * as THREE from 'three'
-import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, PAD_MAX_FLOOR_Y, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
+import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
 const THROW_SPEED = 15 // m/s
@@ -200,7 +200,7 @@ export class GadgetSystem {
     if (flight < MIN_THROW_TIME) return null
     this.rejectReason = ''
     if (this.gadget === 'jump' && !this.padSpotOk(position)) {
-      this.rejectReason = 'Hier passt kein Sprungpad (nur freier Boden ohne Dach)'
+      this.rejectReason = 'Hier passt kein Sprungpad (zu wenig Platz darüber)'
       return null
     }
     this.cooldownRemaining = this.stats.cooldown
@@ -229,10 +229,9 @@ export class GadgetSystem {
     })
   }
 
-  // Sprungpad geht nur auf dem Boden (nicht auf Kisten/Stegen) mit freiem Himmel darüber: sonst stößt man
-  // an Decken, und die Höhenbegrenzung (Karte nicht verlassen) bliebe unnötig oft aktiv
+  // Sprungpad geht auf jeder ebenen Fläche (Boden, Stege, Kisten) mit freiem Raum darüber: sonst stößt man
+  // beim Hochschleudern an Decken und Stegunterseiten
   padSpotOk(landing: THREE.Vector3): boolean {
-    if (landing.y > PAD_MAX_FLOOR_Y) return false
     // Frei über der Mitte UND rund um das Pad (Radius + Reserve): sonst steht man halb unter einem Steg
     // und stößt beim Hochschleudern an dessen Kante
     const reach = GADGETS.jump.radius + 0.4

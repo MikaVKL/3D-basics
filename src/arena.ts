@@ -13,6 +13,9 @@ import {
 // Baut die Arena aus reiner Geometrie (keine Texturen). "solids" sind alle
 // Objekte mit Kollision, jeweils mit fertiger Bounding Box.
 
+// Höhe der Kollisionsbox voller Wände (Meter)
+const WALL_COLLISION_TOP = 100
+
 export interface Solid {
   mesh: THREE.Object3D
   box: THREE.Box3
@@ -771,6 +774,13 @@ export function buildArena(): ArenaResult {
   addLabel(group, 'A', new THREE.Vector3(15, 1.4, -3), v(0, -1))
   // Rampe B: West-Plattform, Schild auf der Westseite
   addLabel(group, 'B', new THREE.Vector3(WEST_PLATFORM_CENTER_X - WEST_PLATFORM_SIZE / 2, 1.2, WEST_PLATFORM_CENTER_Z), v(-1, 0), 1.1)
+
+  // Unsichtbare Mauern: volle Wände (6 m) blockieren für die Kollision nach oben unbegrenzt. Wer per Sprungpad
+  // über 6 m kommt, fliegt so nie über eine Wand und landet nicht auf Wandkronen. Nur die Kollisionsbox,
+  // Optik und Schüsse bleiben bei 6 m. Es gibt bewusst keine unsichtbare Decke.
+  for (const solid of solids) {
+    if (solid.kind === 'wall' && solid.box.max.y >= 5.9) solid.box.max.y = WALL_COLLISION_TOP
+  }
 
   const spawnPoints = SPAWN_POINTS.map((p) => new THREE.Vector3(p.x, p.y, p.z))
 

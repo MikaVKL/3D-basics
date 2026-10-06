@@ -33,10 +33,9 @@ const LEAN_SPEED_MULTIPLIER = 0.75
 const LEAN_CAMERA_RADIUS = 0.12 // so dicht darf die Kamera an Wände (Körper hält 0,3 m)
 const JUMP_SPEED = 7.6 // ~1.6m Sprunghöhe: reicht für die 1.4m-Kisten
 const GRAVITY = 18
-// Sprungpad: Fußhöhe im höchsten Punkt (Wände sind 6 m hoch, so bleibt viel Luft darunter) und harte
-// Obergrenze, falls etwas anderes (Bunny-Hop o. Ä.) dazukommt: über die Wand kommt man nie
-export const PAD_APEX_FEET = 4.4
-const PAD_MAX_FEET = 4.8
+// Sprungpad: Steighöhe über dem Pad (überall gleich, auch auf Stegen). Es gibt bewusst keine unsichtbare Decke;
+// über die Wände kommt man trotzdem nie, weil volle Wände für die Kollision unbegrenzt hoch sind (arena.ts)
+const PAD_RISE = 4.4
 const PAD_RETRIGGER = 0.5 // s bis zum nächsten Auslösen
 const PLAYER_RADIUS = 0.4
 
@@ -310,10 +309,10 @@ export class Player implements Damageable {
     this.wantsToSprint = sprinting
   }
 
-  // Sprungpad: nach oben geschleudert, bis die Fußhöhe PAD_APEX_FEET erreicht (nie darüber); false in der Pause
+  // Sprungpad: nach oben geschleudert, PAD_RISE m über die Fußhöhe; false in der Pause
   launchFromPad(): boolean {
     if (!this.isAlive || this.padCooldown > 0) return false
-    const speed = Math.sqrt(2 * GRAVITY * Math.max(0.5, PAD_APEX_FEET - this.bodyY))
+    const speed = Math.sqrt(2 * GRAVITY * PAD_RISE)
     this.velocity.y = speed
     this.onGround = false
     this.sliding = false
@@ -392,7 +391,8 @@ export class Player implements Damageable {
 
     // Sprint nur ungeduckt, in Bewegung und mit Stamina
     const isMoving = this.moveInputX !== 0 || this.moveInputZ !== 0
-    if (this.wantsToSprint && !this.isCrouching && !this.aiming && isMoving) {
+    // Wer lehnt, sprintet nicht: man läuft gelehnt mit 75 % Tempo weiter (statt dass Laufen das Lehnen abbricht)
+    if (this.wantsToSprint && !this.isCrouching && !this.aiming && isMoving && this.leanInput === 0) {
       this.isSprinting = this.isSprinting ? this.stamina > 0 : this.stamina >= MIN_STAMINA_TO_START_SPRINT
     } else {
       this.isSprinting = false
@@ -414,10 +414,6 @@ export class Player implements Damageable {
     // schon unter der Kante, auf der man landen soll
     const feetBefore = this.bodyY
     this.bodyY += this.velocity.y * deltaSeconds
-    if (this.bodyY > PAD_MAX_FEET) {
-      this.bodyY = PAD_MAX_FEET
-      this.velocity.y = Math.min(this.velocity.y, 0)
-    }
     if (this.velocity.y > 0) this.stopAtCeiling(feetBefore)
 
     const groundHeight = this.groundHeightAt(this.camera.position.x, this.camera.position.z, feetBefore)
@@ -453,10 +449,10 @@ export class Player implements Damageable {
     this.leanApplied.set(0, 0, 0)
   }
 
-  // Gelehnt wird nur im Stehen/Gehen/Ducken, nicht beim Sprinten oder Rutschen. Die Kamera geht
+  // Gelehnt wird im Stehen, Gehen und Ducken (auch in Bewegung, dann ohne Sprint), nicht beim Rutschen. Die Kamera geht
   // seitlich, bis sie dicht an eine Wand kommt (hinter einer Kante hervorlugen, nie durch sie hindurch).
   private updateLean(deltaSeconds: number) {
-    const target = this.isSprinting || this.sliding ? 0 : this.leanInput
+    const target = this.sliding ? 0 : this.leanInput
     const step = LEAN_SPEED * deltaSeconds
     this.leanSmooth += THREE.MathUtils.clamp(target - this.leanSmooth, -step, step)
 

@@ -3,10 +3,9 @@
 export type GadgetId = 'smoke' | 'flash' | 'jump'
 export const GADGET_IDS: GadgetId[] = ['smoke', 'flash', 'jump']
 
-// Sprungpad: nur auf dem Boden (Landepunkt höchstens so hoch über 0) und mit freiem Himmel darüber
-// (so weit nach oben darf nichts im Weg sein), sonst bleibt man an Stegen/Decken hängen
-export const PAD_MAX_FLOOR_Y = 0.6
-export const PAD_HEADROOM = 7
+// Sprungpad: auf jeder ebenen Fläche (Boden, Stege, Kisten), solange darüber so weit nichts im Weg ist,
+// sonst stößt man beim Hochschleudern an Stegunterseiten und Dächer
+export const PAD_HEADROOM = 4
 
 export interface GadgetStats {
   label: string

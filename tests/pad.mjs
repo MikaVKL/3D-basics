@@ -1,5 +1,6 @@
-// Sprungpad: Wurf, Landung als Pad, nur eigenes Team schleudert hoch, Höhenlimit (nie über die 6-m-Wand),
-// nur freier Boden ohne Dach, Wiederauslösen erst nach 0,5 s, Fuzz gegen Verlassen der Karte, online + Bewegungsprüfung.
+// Sprungpad: Wurf, Landung als Pad (auch oben auf Stegen/Kisten), nur eigenes Team schleudert hoch, keine Decke
+// (gleiche Steighöhe auf jeder Ebene), Wände unsichtbar unbegrenzt hoch, Platzregeln, Fuzz gegen Verlassen der Karte,
+// online + Bewegungsprüfung.
 //
 //   node tests/pad.mjs
 import { startServers, launchBrowser, openGame, play, pickOption, wait, teleport, createChecks } from './lib.mjs'
@@ -28,8 +29,8 @@ try {
     const G = __dusk.gadgets
     window.__real = Object.getPrototypeOf(G).update.bind(G)
     G.update = () => {}
-    window.__setup = (x, z, yaw = 0) => {
-      __dusk.player.spawn({ x, y: 1.7, z, clone() { return this } })
+    window.__setup = (x, z, yaw = 0, eye = 1.7) => {
+      __dusk.player.spawn({ x, y: eye, z, clone() { return this } })
       __dusk.camera.rotation.set(0, yaw, 0, 'YXZ')
       __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     }
@@ -75,7 +76,7 @@ try {
     __dusk.gadgets.pads.push(...saved)
     return { maxFeet: +maxFeet.toFixed(2), launches: firstLaunches, landed: P.isOnGround, feet: +P.feetHeight.toFixed(2) }
   }, pad)
-  check('Auf dem Pad: ein Start, Fußhöhe im höchsten Punkt ~4,4 m (nie über 4,8 m)', launch.launches === 1 && launch.maxFeet > 4.2 && launch.maxFeet <= 4.8, JSON.stringify(launch))
+  check('Auf dem Pad (Boden): ein Start, Steighöhe ~4,4 m', launch.launches === 1 && launch.maxFeet > 4.2 && launch.maxFeet < 4.6, JSON.stringify(launch))
   check('Ohne Pad wieder gelandet (am Boden)', launch.landed && launch.feet < 0.1, JSON.stringify(launch))
 
   // Gegnerisches Team nutzt das Pad nicht
@@ -104,9 +105,10 @@ try {
       unterSteg: G.padSpotOk(new V(0, 0.25, -19.5)),
       amStegrand: G.padSpotOk(new V(49.5, 0.25, 17.68)),
       aufKiste: crate ? G.padSpotOk(new V((crate.box.min.x + crate.box.max.x) / 2, crate.box.max.y + 0.25, (crate.box.min.z + crate.box.max.z) / 2)) : null,
+      aufSteg: G.padSpotOk(new V(0, 3.05, -19.5)),
     }
   })
-  check('Platz fürs Pad: offener Boden ja, unter dem Steg und knapp am Stegrand nein, auf einer Kiste nein', spots.offen === true && spots.unterSteg === false && spots.amStegrand === false && spots.aufKiste === false, JSON.stringify(spots))
+  check('Platz fürs Pad: offener Boden, Steg oben und Kisten ja; unter dem Steg und knapp am Stegrand nein', spots.offen === true && spots.aufSteg === true && spots.aufKiste === true && spots.unterSteg === false && spots.amStegrand === false, JSON.stringify(spots))
 
   // Abgelehnter Wurf verbraucht die Abklingzeit nicht: dicht unter den Steg werfen
   const reject = await page.evaluate(() => {
@@ -121,6 +123,52 @@ try {
   })
   check('Wurf unter den Steg: abgelehnt mit Hinweis, Abklingzeit bleibt 0', reject.cooldown === 0 && reject.reason.includes('Sprungpad'), JSON.stringify(reject))
 
+  // Oben auf dem Nordsteg (Fußhöhe 2,8 m): gleiche Steighöhe, also bis ~7,2 m - ohne Decke, über der 6-m-Wand
+  const upper = await page.evaluate(() => {
+    const G = __dusk.gadgets
+    const P = __dusk.player
+    const V = __dusk.camera.position.constructor
+    G.pads.length = 0
+    G.spawnPad(new V(0, 3.05, -19.5), P.team)
+    G.pads[0].age = 1
+    window.__launches = 0
+    window.__setup(0, -19.5, 0, 4.6)
+    window.__run(1.2) // fällt auf den Steg und wird gleich hochgeschleudert
+    let maxFeet = 0
+    for (let t = 0; t < 1.4; t += 1 / 60) {
+      window.__frame(1 / 60)
+      maxFeet = Math.max(maxFeet, P.feetHeight)
+    }
+    const walls = __dusk.arena.solids.filter((s) => s.kind === 'wall' && s.box.max.y >= 90).length
+    G.pads.length = 0
+    return { maxFeet: +maxFeet.toFixed(2), launches: window.__launches, tallWalls: walls }
+  })
+  check('Pad oben auf dem Steg: Steighöhe wie unten (~7,2 m Fußhöhe), keine Decke bei 4,8 m', upper.launches >= 1 && upper.maxFeet > 6.8 && upper.maxFeet < 8, JSON.stringify(upper))
+  check('Volle Wände sind für die Kollision unbegrenzt hoch (unsichtbare Mauern)', upper.tallWalls >= 8, JSON.stringify(upper))
+  // Von oben gegen die Außenwand sprinten: bleibt in der Halle, landet nicht auf der Wandkrone
+  const wall = await page.evaluate(() => {
+    const G = __dusk.gadgets
+    const P = __dusk.player
+    const V = __dusk.camera.position.constructor
+    G.pads.length = 0
+    G.spawnPad(new V(0, 3.05, -19.5), P.team)
+    G.pads[0].age = 1
+    window.__setup(0, -19.5, 0, 4.6) // blickt nach Norden (-z), direkt auf die Nordwand
+    P.setSprinting(true)
+    P.setMoveInput(0, 1)
+    let minZ = 0, crown = 0, maxFeet = 0
+    for (let f = 0; f < 60 * 8; f++) {
+      window.__frame(1 / 60)
+      minZ = Math.min(minZ, __dusk.camera.position.z)
+      maxFeet = Math.max(maxFeet, P.feetHeight)
+      if (P.isOnGround && P.feetHeight > 5.8 && P.feetHeight < 6.3) crown++
+    }
+    P.setSprinting(false); P.setMoveInput(0, 0)
+    G.pads.length = 0
+    return { minZ: +minZ.toFixed(2), crown, maxFeet: +maxFeet.toFixed(2) }
+  })
+  check('Hoch oben gegen die Nordwand gelaufen: nie hinter die Wand (z > -21), nie auf der Wandkrone', wall.minZ > -21 && wall.crown === 0 && wall.maxFeet > 6.8, JSON.stringify(wall))
+
   // Fuzz: viele Starts an zufälligen Stellen, mit Anlauf zur Wand und Sprüngen - nie über die Karte hinaus, nie höher als 4,8 m, nie festgesteckt
   const fuzz = await page.evaluate(() => {
     const G = __dusk.gadgets
@@ -130,8 +178,8 @@ try {
     G.reset()
     let seed = 99
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296)
-    const bounds = { minX: -33, maxX: 53, minZ: -22, maxZ: 22 }
-    let started = 0, maxFeet = 0, maxX = 0, maxZ = 0, stuck = 0, outside = 0
+    const bounds = { minX: -32, maxX: 52, minZ: -21, maxZ: 21 }
+    let started = 0, maxFeet = 0, maxX = 0, maxZ = 0, stuck = 0, outside = 0, crown = 0, crownAt = null
     for (let run = 0; run < 60; run++) {
       // freie Bodenstelle suchen
       let x, z
@@ -155,6 +203,7 @@ try {
         const p = __dusk.camera.position
         maxFeet = Math.max(maxFeet, P.feetHeight)
         maxX = Math.max(maxX, Math.abs(p.x)); maxZ = Math.max(maxZ, Math.abs(p.z))
+        if (P.isOnGround && P.feetHeight > 5.8 && P.feetHeight < 6.3) { crown++; crownAt ??= { x: +p.x.toFixed(2), z: +p.z.toFixed(2), feet: +P.feetHeight.toFixed(2), run } }
         if (p.x < bounds.minX || p.x > bounds.maxX || p.z < bounds.minZ || p.z > bounds.maxZ) outside++
       }
       if (window.__launches > 0) started++
@@ -162,9 +211,9 @@ try {
       for (let f = 0; f < 120; f++) window.__frame(1 / 60)
       if (!P.isOnGround) stuck++
     }
-    return { started, maxFeet: +maxFeet.toFixed(2), outside, stuck }
+    return { started, maxFeet: +maxFeet.toFixed(2), outside, stuck, crown, crownAt }
   })
-  check('Fuzz (60 Starts mit Anlauf/Sprüngen): gestartet, nie über 4,8 m, nie außerhalb der Karte, am Ende am Boden', fuzz.started > 30 && fuzz.maxFeet <= 4.81 && fuzz.outside === 0 && fuzz.stuck === 0, JSON.stringify(fuzz))
+  check('Fuzz (60 Starts mit Anlauf/Sprüngen): gestartet, nie außerhalb der Karte, nie auf einer Wandkrone, am Ende am Boden', fuzz.started > 30 && fuzz.outside === 0 && fuzz.crown === 0 && fuzz.stuck === 0, JSON.stringify(fuzz))
 
   // Online: B sieht das Pad von A an derselben Stelle; Start ohne Korrektur durch die Bewegungsprüfung (enforce)
   const A = await openGame(browser, { name: 'Anna', errors })
@@ -203,7 +252,7 @@ try {
     }
     return { maxFeet: +maxFeet.toFixed(2), corrections: window.__corrections, launchSound: window.__sounds.includes('padLaunch') }
   })
-  check('Online: Start bis ~4,4 m, Start-Ton', flight.maxFeet > 3.5 && flight.maxFeet <= 4.81 && flight.launchSound, JSON.stringify(flight))
+  check('Online: Start bis ~4,4 m, Start-Ton', flight.maxFeet > 3.5 && flight.maxFeet < 4.7 && flight.launchSound, JSON.stringify(flight))
   // Server-Bewegungsprüfung (shared/movementRules): 20 s Dauer-Hüpfen auf dem Pad mit 20 Zuständen/s, wie sie gesendet würden
   const rules = await page.evaluate(async () => {
     const { createMovementCheck, checkMovement } = await import('/3D-basics/src/shared/movementRules.ts')

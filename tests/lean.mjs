@@ -121,21 +121,22 @@ try {
     }
     const straight = walk(0)
     const leaning = walk(1)
-    // Sprint hebt das Lehnen auf
+    // Beim Lehnen gibt es keinen Sprint: man läuft mit 75 % Tempo weiter, gelehnt (Shift/Joystick voll ändern daran nichts)
     window.__setup(-8, 12)
     P.setLean(1)
     P.setSprinting(true)
     P.setMoveInput(0, 1)
     window.__run(0.8)
     const sprintLean = P.lean
+    const sprintSpeed = P.horizontalSpeed
     P.setSprinting(false)
     P.setMoveInput(0, 0)
     P.setLean(0)
     window.__run(0.3)
-    return { straight: Number(straight.toFixed(2)), leaning: Number(leaning.toFixed(2)), sprintLean: Number(sprintLean.toFixed(2)) }
+    return { straight: Number(straight.toFixed(2)), leaning: Number(leaning.toFixed(2)), sprintLean: Number(sprintLean.toFixed(2)), sprintSpeed: Number(sprintSpeed.toFixed(2)) }
   })
   check('Gelehnt gehen: 75 % des Tempos', Math.abs(speeds.leaning / speeds.straight - 0.75) < 0.03, JSON.stringify(speeds))
-  check('Sprinten beendet das Lehnen', speeds.sprintLean === 0, JSON.stringify(speeds))
+  check('Lehnen + Sprint-Eingabe: bleibt gelehnt und läuft mit Geh-Tempo x 0,75 (kein Sprint)', speeds.sprintLean === 1 && Math.abs(speeds.sprintSpeed - speeds.leaning) < 0.1, JSON.stringify(speeds))
 
   // Tod und Neu-Spawn: gerade
   const dead = await page.evaluate(() => {

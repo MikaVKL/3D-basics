@@ -79,10 +79,11 @@ Weiterarbeiten wissen muss.
   (`handleGadget`) prüft Abklingzeit (±1 s), Startpunkt ≤ 3 m am Spieler, Weite, Flugzeit, lebt,
   keine Rundenpause, und gibt es an die anderen weiter; die lassen den Bogen + die Wolke am
   selben Ort nachspielen. Weitere Gadgets später (Schildwand).
-  **Sprungpad** (`jump`, 30 s, Pad steht 20 s): gleicher Wurf, am Boden entsteht ein flaches Neon-Pad in Teamfarbe (`GadgetSystem.spawnPad`);
+  **Sprungpad** (`jump`, 30 s, Pad steht 20 s): gleicher Wurf, am Boden entsteht ein flaches Neon-Pad in Teamfarbe (`GadgetSystem.spawnPad`); **unsichtbare Mauern**: volle Wände (6 m) haben in der Kollision `WALL_COLLISION_TOP` 100 m (arena.ts),
+  damit man per Pad nie über eine Wand kommt/auf einer Wandkrone landet;
   nur das EIGENE Team schleudert es hoch (`padAt` in der Hauptschleife -> `Player.launchFromPad`: Startgeschwindigkeit so, dass die
-  Fußhöhe im höchsten Punkt `PAD_APEX_FEET` 4,4 m erreicht, harte Obergrenze 4,8 m - Wände sind 6 m, man kommt nie hinüber;
-  Landen auf dem Pad schleudert wieder hoch, 0,5 s Pause). Platz: nur Boden (Landepunkt ≤ 0,6 m) mit 7 m freiem Himmel über der
+  Steighöhe `PAD_RISE` 4,4 m über dem Pad, überall gleich, KEINE unsichtbare Decke (Nutzerwunsch); Landen auf dem Pad
+  schleudert wieder hoch, 0,5 s Pause). Platz: jede ebene Fläche (Boden, Stege, Kisten) mit 4 m freiem Raum über der
   Mitte UND rund um das Pad (`padSpotOk`), sonst abgelehnt mit Hinweis ohne Abklingzeit (alle Clients rechnen gleich). Server
   relayt nur; die Bewegungsprüfung braucht keine Anpassung (Guthaben 14 m hoch deckt 4,4 m ab, `tests/pad.mjs` simuliert 20 s Dauerhüpfen).
 - `src/sky.ts` – Abendhimmel-Kuppel (Farbverlauf), folgt der Kamera
@@ -99,7 +100,7 @@ Weiterarbeiten wissen muss.
   (`leanApplied`, 0,45 m), Körper/Kollision/Netz-Position bleiben am Körper: `update()` zieht den Versatz
   zuerst ab und setzt ihn am Ende neu; `getNetworkState()` zieht ihn ab. Kippen ~12° über
   `SlideView.apply(..., lean)` (nur beim Zeichnen). Wand: Kamera hält 0,12 m Abstand (`leanClearance`).
-  Nicht beim Sprinten/Rutschen, Tempo 75 %. Wer `camera.position` direkt setzt: `spawn()`/`moveTo()`.
+  Lehnen verhindert Sprinten (man läuft gelehnt mit 75 % Tempo weiter, Nutzerwunsch), nur Rutschen beendet es. Wer `camera.position` direkt setzt: `spawn()`/`moveTo()`.
   Touch: Tasten `#lean-left-button`/`#lean-right-button` links in der Mitte, **Umschalter** (Nutzerwunsch: Tippen lehnt,
   nochmal Tippen richtet auf, andere Seite wechselt direkt; neues Leben/Menü setzen zurück über `resetTouchLean`).
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
