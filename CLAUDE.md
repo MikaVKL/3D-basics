@@ -142,6 +142,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Dauer nach Winkel/Abstand, Rücken/zu weit/Wand = keine Wirkung, Ausblenden, Wurf per G, online geblendet
 - `tests/lean.mjs` (in `npm test`) – Lehnen (Q links / E rechts): 0,45 m seitlich + ~12° Kippen, weich, Wand stoppt die Kamera, 75 % Tempo, Sprint/Rutschen/Tod beenden es, Netzwerk-Position ohne Versatz
 - `tests/lean-net.mjs` (in `npm test`) – Lehnen online: B sieht A's Lehnwert, Kopf-Kasten ±0,45 m, Treffer nur auf den neuen Kopfort, Server begrenzt gefälschte Werte
+- `tests/wall-close.mjs` (in `npm test`) – dicht vor Wand/Kiste: steckt die Mündung im Hindernis (Mündung liegt 0,9-1,15 m vor, 0,3 m rechts der Kamera), schlägt der Schuss dort ein statt vorbeizugehen (Pistole/Gewehr/Shotgun); im Freien unverändert
 - `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
   gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als
@@ -241,6 +242,11 @@ Stolperfallen bei Headless-Tests:
 - **Menü-Button (Touch)**: Zahnrad oben links (`#menu-button`, in
   `#touch-controls`), öffnet das Pausenmenü (Touch hat kein ESC); sitzt rechts neben dem Waffenfeld
   (oben links, fest 160 px breit). Am Rechner nicht sichtbar.
+- **Schuss dicht an der Wand** (Nutzerbug: "man schießt durch Wände"): Der Schuss geht von der Kamera aus, die Mündung liegt aber
+  0,9-1,15 m davor; steht man dicht an einer Kante, steckt sie im Hindernis. `Weapon.muzzleBlocker()` prüft den Weg
+  Kamera -> Mündung; trifft er eine Wand/Kiste (keine Spieler), schlägt der Schuss dort ein (Marker, kurze Leuchtspur ab
+  Kamera, an andere gemeldet). Nebenwirkung gewollt: dicht an einer Ecke kann man nicht an ihr vorbei schießen, solange die
+  Waffe in der Wand stünde. Waffe zurückziehen (Viewmodel) wäre eine mögliche Verfeinerung, nicht gebaut.
 - **Eigene Waffe in Teamfarbe**: Leuchtteile der Ego-Waffe (`WeaponView.setTeamColor`) folgen `weapon.shooterTeam` (Rot/Blau, auch bei Teamwechsel) - gegen Verwechslung mit dem Gegner.
 - Ducken wird überall gehalten, auch auf Touch (Nutzerwunsch, kein Umschalter):
   Rutschen nur, solange gehalten.

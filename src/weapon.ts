@@ -367,6 +367,17 @@ export class Weapon {
     }
 
     const muzzlePosition = this.view.getMuzzleWorldPosition(new THREE.Vector3())
+    // Steckt die Mündung in einer Wand/Kiste (man steht dicht davor), schlägt der Schuss dort ein,
+    // statt vom Fadenkreuz aus an der Waffe vorbei durch die Wand zu gehen
+    const blocker = this.muzzleBlocker(muzzlePosition)
+    if (blocker) {
+      this.spawnImpactMarker(blocker)
+      const start = this.camera.getWorldPosition(new THREE.Vector3())
+      this.spawnTracer(start, blocker.point, this.shooterTeam, this.weaponId)
+      this.onShot?.(start, blocker.point, true)
+      if (this.ammo === 0) this.reload()
+      return true
+    }
     if (this.stats.pellets > 1) {
       this.firePellets(muzzlePosition)
       if (this.ammo === 0) this.reload()
@@ -388,6 +399,17 @@ export class Weapon {
       this.reload()
     }
     return true
+  }
+
+  // Erste Wand/Kiste zwischen Kamera und Mündung (nur Hindernisse, keine Spieler)
+  private muzzleBlocker(muzzle: THREE.Vector3): THREE.Intersection | null {
+    const origin = this.camera.getWorldPosition(new THREE.Vector3())
+    const toMuzzle = muzzle.clone().sub(origin)
+    const distance = toMuzzle.length()
+    if (distance < 0.05) return null
+    const ray = new THREE.Raycaster(origin, toMuzzle.divideScalar(distance), 0, distance)
+    const hit = ray.intersectObjects(this.shootables, false).find((h) => h.object.visible && !h.object.userData.damageable)
+    return hit ?? null
   }
 
   // Schrot: jedes Korn ein eigener Strahl im Kegel; Treffer je Gegner werden zu einem
