@@ -144,6 +144,30 @@ try {
     return { maxFeet: +maxFeet.toFixed(2), launches: window.__launches, tallWalls: walls }
   })
   check('Pad oben auf dem Steg: Steighöhe wie unten (~7,2 m Fußhöhe), keine Decke bei 4,8 m', upper.launches >= 1 && upper.maxFeet > 6.8 && upper.maxFeet < 8, JSON.stringify(upper))
+
+  // Block über dem Südost-Tunnel (Nordarm, Oberkante 6 m): ohne unsichtbare Barriere vom Steg aus erreichbar
+  const block = await page.evaluate(() => {
+    const G = __dusk.gadgets
+    const P = __dusk.player
+    const V = __dusk.camera.position.constructor
+    G.pads.length = 0
+    G.spawnPad(new V(34.5, 3.05, 19.2), P.team)
+    G.pads[0].age = 1
+    window.__launches = 0
+    window.__setup(34.5, 19.2, 0, 4.6) // blickt nach Norden (-z), auf den Block zu
+    P.setMoveInput(0, 1)
+    window.__run(1.0)
+    let maxFeet = 0
+    for (let t = 0; t < 2.5; t += 1 / 60) {
+      window.__frame(1 / 60)
+      maxFeet = Math.max(maxFeet, P.feetHeight)
+    }
+    P.setMoveInput(0, 0)
+    window.__run(1)
+    G.pads.length = 0
+    return { feet: +P.feetHeight.toFixed(2), maxFeet: +maxFeet.toFixed(2), x: +__dusk.camera.position.x.toFixed(1), z: +__dusk.camera.position.z.toFixed(1), launches: window.__launches }
+  })
+  check('Sprungpad auf dem Steg: man landet oben auf dem 6-m-Block über dem Südost-Tunnel', block.feet > 5.9 && block.feet < 6.1 && block.z < 17.7, JSON.stringify(block))
   check('Volle Wände sind für die Kollision unbegrenzt hoch (unsichtbare Mauern)', upper.tallWalls >= 8, JSON.stringify(upper))
   // Von oben gegen die Außenwand sprinten: bleibt in der Halle, landet nicht auf der Wandkrone
   const wall = await page.evaluate(() => {

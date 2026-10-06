@@ -779,7 +779,11 @@ export function buildArena(): ArenaResult {
   // über 6 m kommt, fliegt so nie über eine Wand und landet nicht auf Wandkronen. Nur die Kollisionsbox,
   // Optik und Schüsse bleiben bei 6 m. Es gibt bewusst keine unsichtbare Decke.
   for (const solid of solids) {
-    if (solid.kind === 'wall' && solid.box.max.y >= 5.9) solid.box.max.y = WALL_COLLISION_TOP
+    if (solid.kind !== 'wall' || solid.box.max.y < 5.9) continue
+    // Ausnahme: der 6-m-Block über dem Südost-Tunnel (Nordarm) ist per Sprungpad vom Steg aus erreichbar (Nutzerwunsch);
+    // ringsum stehen weiter volle Wände (auch der Sturz bei z 12), man kommt von dort nirgends hinaus
+    if (solid.box.min.y > 1 && solid.box.min.x > 30 && solid.box.min.z > 12.4) continue
+    solid.box.max.y = WALL_COLLISION_TOP
   }
 
   const spawnPoints = SPAWN_POINTS.map((p) => new THREE.Vector3(p.x, p.y, p.z))

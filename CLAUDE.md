@@ -80,7 +80,7 @@ Weiterarbeiten wissen muss.
   keine Rundenpause, und gibt es an die anderen weiter; die lassen den Bogen + die Wolke am
   selben Ort nachspielen. Weitere Gadgets später (Schildwand).
   **Sprungpad** (`jump`, 30 s, Pad steht 20 s): gleicher Wurf, am Boden entsteht ein flaches Neon-Pad in Teamfarbe (`GadgetSystem.spawnPad`); **unsichtbare Mauern**: volle Wände (6 m) haben in der Kollision `WALL_COLLISION_TOP` 100 m (arena.ts),
-  damit man per Pad nie über eine Wand kommt/auf einer Wandkrone landet;
+  damit man per Pad nie über eine Wand kommt/auf einer Wandkrone landet; **Ausnahme** (Nutzerwunsch): der 6-m-Block über dem Südost-Tunnel (Nordarm, x 33..36, z 12,5..17,75) hat Kollision nur bis 6 m - per Pad vom Steg aus begehbar, ringsum Vollwände (auch der Sturz bei z 12);
   nur das EIGENE Team schleudert es hoch (`padAt` in der Hauptschleife -> `Player.launchFromPad`: Startgeschwindigkeit so, dass die
   Steighöhe `PAD_RISE` 4,4 m über dem Pad, überall gleich, KEINE unsichtbare Decke (Nutzerwunsch); Landen auf dem Pad
   schleudert wieder hoch, 0,5 s Pause). Platz: jede ebene Fläche (Boden, Stege, Kisten) mit 4 m freiem Raum über der
