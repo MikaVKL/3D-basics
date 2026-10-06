@@ -43,39 +43,48 @@ try {
   const rest = await read()
   check('Ohne Taste: gerade, Kamera auf der Körperposition', rest.lean === 0 && rest.camX === -8 && rest.netX === -8, JSON.stringify(rest))
 
-  await page.keyboard.down('KeyE')
+  await page.keyboard.press('KeyE')
   await page.evaluate(() => window.__run(0.5))
   const right = await read()
   check('E: ganz nach rechts gelehnt (+0,45 m seitlich), Netzwerk-Position bleibt am Körper', right.lean === 1 && Math.abs(right.camX - (-8 + 0.45)) < 0.01 && right.netX === -8, JSON.stringify(right))
   await wait(250)
   const tilted = await read()
   check('Kamera kippt im Bild nach rechts (Uhrzeigersinn, ~12°)', tilted.roll < -0.15 && tilted.roll > -0.3, `Roll ${tilted.roll}`)
-  await page.keyboard.up('KeyE')
+  await page.keyboard.press('KeyE')
   await page.evaluate(() => window.__run(0.5))
   const back = await read()
-  check('E loslassen: zurück auf die Körperposition', back.lean === 0 && back.camX === -8, JSON.stringify(back))
+  check('E nochmal: aufgerichtet, zurück auf die Körperposition', back.lean === 0 && back.camX === -8, JSON.stringify(back))
   await wait(250)
   check('Kippen wieder weg', Math.abs((await read()).roll) < 0.02)
 
-  await page.keyboard.down('KeyQ')
+  await page.keyboard.press('KeyQ')
   await page.evaluate(() => window.__run(0.5))
   const left = await read()
   check('Q: ganz nach links (-0,45 m)', left.lean === -1 && Math.abs(left.camX - (-8 - 0.45)) < 0.01 && left.netX === -8, JSON.stringify(left))
-  await page.keyboard.down('KeyE')
+  await page.keyboard.press('KeyE')
   await page.evaluate(() => window.__run(0.5))
-  check('Q und E zusammen: gerade', (await read()).lean === 0)
-  await page.keyboard.up('KeyE')
-  await page.keyboard.up('KeyQ')
+  check('Q aktiv, dann E: wechselt direkt auf die andere Seite', (await read()).lean === 1)
+  await page.keyboard.press('KeyE')
+  await page.evaluate(() => window.__run(0.5))
+  check('Taste gehalten (Wiederholung) schaltet nicht hin und her', (await read()).lean === 0)
+  await page.evaluate(() => {
+    for (let i = 0; i < 3; i++) window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', repeat: i > 0 }))
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE' }))
+    window.__run(0.5)
+  })
+  check('Gehaltenes E (1 Druck + Wiederholungen): bleibt gelehnt, Loslassen richtet nicht auf', (await read()).lean === 1)
+  await page.keyboard.press('KeyE')
+  await page.evaluate(() => window.__run(0.5))
 
   // Weich: nicht in einem Frame
-  await page.keyboard.down('KeyE')
+  await page.keyboard.press('KeyE')
   const soft = await page.evaluate(() => {
     window.__run(0.5 * 0) // nichts
     __dusk.player.update(1 / 60)
     return Number(__dusk.player.lean.toFixed(2))
   })
   check('Lehnen läuft weich ein (nach 1 Frame erst ein Teil, nie sofort ganz)', soft > 0 && soft < 0.5, String(soft))
-  await page.keyboard.up('KeyE')
+  await page.keyboard.press('KeyE')
   await page.evaluate(() => window.__run(0.5))
 
   // Wand: dicht neben einer Wand stoppt die Kamera davor
@@ -92,17 +101,16 @@ try {
   })
   if (!wall) check('Wand zum Testen gefunden', false)
   else {
-    await page.keyboard.down('KeyE')
+    await page.keyboard.press('KeyE')
     await page.evaluate(() => window.__run(0.6))
     const nearWall = await read()
     const gap = wall.wallX - nearWall.camX
     check('Dicht an der Wand (rechts): Kamera stoppt davor, nicht durch die Wand', gap >= 0.1 && nearWall.camX - wall.x < 0.25 && nearWall.lean > 0 && nearWall.lean < 0.5, JSON.stringify({ gap: Number(gap.toFixed(3)), ...nearWall }))
-    await page.keyboard.up('KeyE')
-    await page.keyboard.down('KeyQ')
+    await page.keyboard.press('KeyQ') // wechselt direkt auf links
     await page.evaluate(() => window.__run(0.6))
     const awayFromWall = await read()
     check('Zur freien Seite (links) volles Lehnen', awayFromWall.lean === -1, JSON.stringify(awayFromWall))
-    await page.keyboard.up('KeyQ')
+    await page.keyboard.press('KeyQ')
   }
 
   // Tempo und Sprint

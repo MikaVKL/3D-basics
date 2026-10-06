@@ -96,7 +96,7 @@ Weiterarbeiten wissen muss.
   Look: fast schwarze Rüstung (Weste, Helm) mit Leuchtteilen in Teamfarbe
 - `src/minimap.ts` – Minimap rechts oben (Norden oben): Grenzen und Zeichnung aus
   `arena.solids` + `arena.ramps`, Pfeil für dich, Punkte für dein Team
-- **Lehnen** (`player.ts`, `updateLean`): Q links, E rechts (gehalten). Die Kamera liegt seitlich versetzt
+- **Lehnen** (`player.ts`, `updateLean`): Q links, E rechts, **Umschalter** auch am Rechner (Nutzerwunsch: Taste lehnt, nochmal Taste richtet auf, andere Seite wechselt direkt; Tastenwiederholung zählt nicht; Zustand = `player.leanTarget`; neues Leben/Menü richten auf). Die Kamera liegt seitlich versetzt
   (`leanApplied`, 0,45 m), Körper/Kollision/Netz-Position bleiben am Körper: `update()` zieht den Versatz
   zuerst ab und setzt ihn am Ende neu; `getNetworkState()` zieht ihn ab. Kippen ~12° über
   `SlideView.apply(..., lean)` (nur beim Zeichnen). Wand: Kamera hält 0,12 m Abstand (`leanClearance`).
@@ -152,7 +152,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Dauer nach Winkel/Abstand, Rücken/zu weit/Wand = keine Wirkung, Ausblenden, Wurf per G, online geblendet
 - `tests/flight.mjs` (in `test:gadget`, `npm test`) – Flugbahnen: je Gadget eigene Wurfwerte (`throwSpeed`/`throwLift` in shared: Rauch Lob 13/0,5, Blend schnell+flach 19/0,1, Pad 15/0,22), gleicher Wurf = gleiche Bahn, Abprall an Wänden (`BOUNCE` 0,45), B spielt dieselbe Bahn wie A. Der Wurf schickt `velocity` mit (optional im Protokoll, Server prüft Betrag); jeder Client rechnet den Weg selbst (`simulateFlight`, `spawnRemoteFlight`), weicht der Landepunkt > 1,5 m vom gemeldeten ab, gilt der gemeldete mit einfachem Bogen
 - `tests/pad.mjs` (in `test:gadget`) – Sprungpad: Wurf, Pad am Boden, Start ~4,4 m (nie über 4,8), Gegnerteam nutzt es nicht, Platzregeln (Steg, Stegrand, Kiste), abgelehnter Wurf kostet nichts, Fuzz 60 Starts nie außerhalb der Karte, online sichtbar, Bewegungsprüfung ohne Fehlalarm
-- `tests/lean.mjs` (in `npm test`) – Lehnen (Q links / E rechts): 0,45 m seitlich + ~12° Kippen, weich, Wand stoppt die Kamera, 75 % Tempo, Sprint/Rutschen/Tod beenden es, Netzwerk-Position ohne Versatz
+- `tests/lean.mjs` (in `npm test`) – Lehnen (Q links / E rechts, Umschalter): 0,45 m seitlich + ~12° Kippen, weich, Wand stoppt die Kamera, 75 % Tempo, Sprint/Rutschen/Tod beenden es, Netzwerk-Position ohne Versatz
 - `tests/lean-net.mjs` (in `npm test`) – Lehnen online: B sieht A's Lehnwert, Kopf-Kasten ±0,45 m, Treffer nur auf den neuen Kopfort, Server begrenzt gefälschte Werte
 - `tests/lean-muzzle.mjs` (in `npm test`) – Strahl-Start am gezeichneten Lauf beim Lehnen (Kamera kippt nur beim Zeichnen, `Weapon.renderedMuzzle` dreht den Lauf um dasselbe Kippen: vorher 8,3-8,8 cm daneben)
 - `tests/wall-close.mjs` (in `npm test`) – dicht vor Wand/Kiste: steckt die Mündung im Hindernis (Mündung liegt 0,9-1,15 m vor, 0,3 m rechts der Kamera), schlägt der Schuss dort ein statt vorbeizugehen (Pistole/Gewehr/Shotgun); im Freien unverändert

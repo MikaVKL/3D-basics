@@ -645,6 +645,7 @@ if (isTouchDevice) {
     setActive(locked)
   })
   desktopInput.onGadget = throwGadget
+  resetTouchLean = () => player.setLean(0) // Umschalter: neues Leben/Menü richtet auf
 
   activate = () => desktopInput.requestActivation()
   overlay.addEventListener('click', activateFromOverlay)

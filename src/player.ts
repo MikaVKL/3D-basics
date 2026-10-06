@@ -295,7 +295,11 @@ export class Player implements Damageable {
     this.aiming = aiming
   }
 
-  // -1 links, 0 gerade, 1 rechts (gehalten)
+  get leanTarget() {
+    return this.leanInput
+  }
+
+  // -1 links, 0 gerade, 1 rechts (Wunsch; die Kamera gleitet dorthin)
   setLean(direction: -1 | 0 | 1) {
     this.leanInput = direction
   }

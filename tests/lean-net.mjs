@@ -43,7 +43,7 @@ try {
   check('Gerade: Kopf-Kasten mittig über dem Körper', Math.abs(straight.headX - straight.rootX) < 0.02, JSON.stringify(straight))
 
   // A lehnt nach rechts (E gehalten); B sieht es nach Netz + Interpolation
-  await A.keyboard.down('KeyE')
+  await A.keyboard.press('KeyE')
   await A.evaluate(() => {
     const P = __dusk.player
     for (let t = 0; t < 0.5; t += 1 / 60) P.update(1 / 60)
@@ -83,7 +83,7 @@ try {
   check('Strahl auf die alte Kopfstelle: kein Kopftreffer mehr', rays.atOldHead?.head !== true, JSON.stringify(rays))
 
   // Loslassen: zurück
-  await A.keyboard.up('KeyE')
+  await A.keyboard.press('KeyE')
   await A.evaluate(() => {
     const P = __dusk.player
     for (let t = 0; t < 0.5; t += 1 / 60) P.update(1 / 60)
@@ -93,7 +93,7 @@ try {
   check('Loslassen: Kopf wieder mittig', Math.abs(back.headX - back.rootX) < 0.03, JSON.stringify(back))
 
   // Q: nach links
-  await A.keyboard.down('KeyQ')
+  await A.keyboard.press('KeyQ')
   await A.evaluate(() => {
     const P = __dusk.player
     for (let t = 0; t < 0.5; t += 1 / 60) P.update(1 / 60)
@@ -101,7 +101,7 @@ try {
   await wait(900)
   const left = await avatarOf(B)
   check('Q: Kopf rückt nach links (-x)', left.headX - left.rootX < -0.35, JSON.stringify(left))
-  await A.keyboard.up('KeyQ')
+  await A.keyboard.press('KeyQ')
   await A.evaluate(() => {
     for (let t = 0; t < 0.5; t += 1 / 60) __dusk.player.update(1 / 60)
   })
