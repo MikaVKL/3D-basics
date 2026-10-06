@@ -66,8 +66,9 @@ Weiterarbeiten wissen muss.
   `loadoutScreen.ts`, Nutzerwunsch: ein Haupt-Gadget je Leben, nicht alle; `GadgetPicker`, gemerkt unter `duskArena.gadget`,
   gilt ab dem nächsten Spawn; eine gemeinsame Abklingzeit, Rauch 25 s / Blend 30 s). Blendgranate:
   gleicher Wurf wie Rauch, knallt bei der Landung; jeder Client rechnet für SICH selbst
-  (`blindDuration()` in shared: Abstand ≤ 22 m, Blick ≤ 100° neben dem Knall, 0,6-3 s, freie
-  Sichtlinie), weißer Schleier `#flash-overlay` (voll, dann weiches Ausblenden). Trifft auch Werfer
+  (`blindDuration()`/`blindStrength()` in shared: Abstand ≤ 22 m, volle Wirkung bis 15° neben dem Knall, dann quadratisch
+  abfallend bis 0 bei 70° (= Bildrand: außerhalb des Bildes fast nichts), max. 3 s, Schleier-Deckkraft 0,2+Faktor, freie
+  Sichtlinie), weißer Schleier `#flash-overlay` (Verlauf x Stärke, `blindOpacity`). Trifft auch Werfer
   und Team (so gewollt). Server relayt nur (kein Zustand nötig). Neue Gadgets: ID + Werte in
   `shared/gadgets.ts`, Karte kommt von selbst, Icon in `GADGET_ICONS` (main.ts).
   Rauchgranate:

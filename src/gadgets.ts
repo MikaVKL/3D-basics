@@ -3,7 +3,7 @@
 // meldet nur Start, Landepunkt und Flugzeit; alle zeigen denselben Bogen und dieselbe Wolke.
 
 import * as THREE from 'three'
-import { GADGETS, DEFAULT_GADGET, blindDuration, type GadgetId } from './shared/gadgets'
+import { GADGETS, DEFAULT_GADGET, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
 const THROW_SPEED = 15 // m/s
@@ -66,6 +66,7 @@ export class GadgetSystem {
   // Geblendet: Restzeit und Gesamtdauer (für das Ausblenden)
   blindRemaining = 0
   private blindTotal = 0
+  private blindStrengthNow = 0 // höchste Stärke des laufenden Blendens (0..1)
   private readonly bursts: Burst[] = []
   // Blick des eigenen Spielers (für die Blendwirkung)
   viewer: THREE.Camera | null = null
@@ -107,6 +108,7 @@ export class GadgetSystem {
     this.cooldownRemaining = 0
     this.blindRemaining = 0
     this.blindTotal = 0
+    this.blindStrengthNow = 0
   }
 
   // Auswahl gilt ab dem nächsten Leben (startLife); die Abklingzeit bleibt
@@ -115,6 +117,11 @@ export class GadgetSystem {
   }
 
   // 0..1: erst voll weiß, dann weiches Ausblenden
+  // Deckkraft des weißen Schleiers: Verlauf x Stärke (direkt hingesehen voll, schräg schwächer)
+  get blindOpacity(): number {
+    return this.blindLevel * this.blindStrengthNow
+  }
+
   get blindLevel(): number {
     if (this.blindTotal <= 0 || this.blindRemaining <= 0) return 0
     const p = this.blindRemaining / this.blindTotal
@@ -218,7 +225,7 @@ export class GadgetSystem {
     const eye = camera.getWorldPosition(new THREE.Vector3())
     const toBurst = position.clone().sub(eye)
     const distance = toBurst.length()
-    if (distance < 0.01) return this.applyBlind(GADGETS[kind].blind?.maxTime ?? 0)
+    if (distance < 0.01) return this.applyBlind(GADGETS[kind].blind?.maxTime ?? 0, 1)
     toBurst.divideScalar(distance)
     const forward = camera.getWorldDirection(new THREE.Vector3())
     const angle = THREE.MathUtils.radToDeg(Math.acos(Math.min(1, Math.max(-1, forward.dot(toBurst)))))
@@ -228,11 +235,12 @@ export class GadgetSystem {
     this.raycaster.set(eye, toBurst)
     this.raycaster.far = Math.max(0, distance - 0.4)
     if (this.raycaster.intersectObjects(this.world, false).length > 0) return
-    this.applyBlind(seconds)
+    this.applyBlind(seconds, blindStrength(GADGETS[kind], angle))
   }
 
-  private applyBlind(seconds: number) {
+  private applyBlind(seconds: number, strength: number) {
     if (seconds <= 0) return
+    this.blindStrengthNow = Math.max(this.blindStrengthNow, strength)
     this.blindRemaining = Math.max(this.blindRemaining, seconds)
     this.blindTotal = Math.max(this.blindTotal, this.blindRemaining)
     this.onBlinded?.(seconds)
@@ -336,7 +344,10 @@ export class GadgetSystem {
 
     if (this.blindRemaining > 0) {
       this.blindRemaining = Math.max(0, this.blindRemaining - deltaSeconds)
-      if (this.blindRemaining === 0) this.blindTotal = 0
+      if (this.blindRemaining === 0) {
+        this.blindTotal = 0
+        this.blindStrengthNow = 0
+      }
     }
     for (let i = this.bursts.length - 1; i >= 0; i--) {
       const burst = this.bursts[i]

@@ -59,14 +59,21 @@ try {
   }))
   check('Im Spiel: Blendgranate, Anzeige und Button-Beschriftung folgen', ui.gadget === 'flash' && ui.name === 'Blendgranate' && ui.label === 'Blendgranate werfen', JSON.stringify(ui))
 
-  // Rechenregel
+  // Rechenregel: nach Blickwinkel (Dauer und Stärke) und Abstand
   const rule = await page.evaluate(async () => {
-    const { GADGETS, blindDuration } = await import('/3D-basics/src/shared/gadgets.ts')
+    const { GADGETS, blindDuration, blindStrength } = await import('/3D-basics/src/shared/gadgets.ts')
     const s = GADGETS.flash
     const r = (d, a) => Number(blindDuration(s, d, a).toFixed(2))
-    return { front: r(1, 0), mid: r(10, 0), edge: r(1, 90), behind: r(1, 130), far: r(30, 0) }
+    const q = (a) => Number(blindStrength(s, a).toFixed(2))
+    return {
+      front: r(1, 0), near15: r(1, 15), mid: r(10, 0), a30: r(1, 30), a45: r(1, 45), a60: r(1, 60), a90: r(1, 90), behind: r(1, 130), far: r(30, 0),
+      s0: q(0), s15: q(15), s30: q(30), s45: q(45), s60: q(60), s70: q(70),
+    }
   })
-  check('Dauer: direkt davor ~2,9 s, 10 m ~2,3 s, Randblick unter 1 s, Rücken/zu weit 0', rule.front > 2.8 && rule.mid > 2 && rule.mid < rule.front && rule.edge > 0.5 && rule.edge < 1 && rule.behind === 0 && rule.far === 0, JSON.stringify(rule))
+  check('Dauer: direkt davor ~2,9 s (auch bei 15° daneben), 10 m ~2,3 s', rule.front > 2.8 && rule.near15 === rule.front && rule.mid > 2.2 && rule.mid < rule.front, JSON.stringify(rule))
+  check('Je mehr man hinsieht, desto länger: 30° ~1,6 s, 45° ~0,6 s, 60° kaum (< 0,2 s)', rule.a30 > 1.2 && rule.a30 < 2 && rule.a45 > 0.4 && rule.a45 < 0.8 && rule.a60 < 0.2 && rule.front > rule.a30 && rule.a30 > rule.a45 && rule.a45 > rule.a60, JSON.stringify(rule))
+  check('Außerhalb des Bildes (90°, Rücken, zu weit): keine Wirkung', rule.a90 === 0 && rule.behind === 0 && rule.far === 0, JSON.stringify(rule))
+  check('Stärke des Schleiers: direkt 1, 30° ~0,6, 45° ~0,4, 60° ~0,2, 70° 0', rule.s0 === 1 && rule.s15 === 1 && rule.s30 > 0.5 && rule.s30 < 0.8 && rule.s45 > 0.3 && rule.s45 < 0.5 && rule.s60 > 0.15 && rule.s60 < 0.3 && rule.s70 === 0, JSON.stringify(rule))
 
   // Wirkung im Spiel: Kamera direkt setzen und im selben evaluate knallen lassen
   const burst = (spec) =>
@@ -79,13 +86,13 @@ try {
       cam.lookAt(new V(...s.look))
       cam.updateMatrixWorld(true)
       G.spawnBurst('flash', new V(...s.at))
-      return { remaining: G.blindRemaining, level: G.blindLevel }
+      return { remaining: G.blindRemaining, level: G.blindLevel, opacity: Number(G.blindOpacity.toFixed(2)) }
     }, spec)
 
   const ahead = await burst({ eye: [-8, 1.7, 8], look: [-8, 1.7, 0], at: [-8, 0.5, 0] })
   check('Blick zum Knall (8 m): geblendet, volle Stärke', ahead.remaining > 2 && ahead.level === 1, JSON.stringify(ahead))
   await wait(250)
-  check('Weißer Schleier liegt über dem Bild', Number(await page.evaluate(() => getComputedStyle(document.querySelector('#flash-overlay')).opacity)) > 0.95)
+  check('Weißer Schleier liegt über dem Bild (direkt hingesehen: voll)', Number(await page.evaluate(() => getComputedStyle(document.querySelector('#flash-overlay')).opacity)) > 0.95)
   check('Knall-Ton', (await page.evaluate(() => window.__sounds)).includes('@flashBang'))
   const fade = await page.evaluate(() => {
     const G = __dusk.gadgets
@@ -103,8 +110,13 @@ try {
   check('Knall im Rücken: nichts', away.remaining === 0, JSON.stringify(away))
   const far = await burst({ eye: [-8, 1.7, 20], look: [-8, 1.7, 0], at: [-8, 0.5, -8] })
   check('Zu weit weg (28 m): nichts', far.remaining === 0, JSON.stringify(far))
-  const side = await burst({ eye: [-8, 1.7, 8], look: [-8, 1.7, 0], at: [-8 + 14, 0.5, 8 - 3] })
-  check('Knall im Augenwinkel (~78°): kurz geblendet', side.remaining > 0.3 && side.remaining < 1.4, JSON.stringify(side))
+  // Schräg: Winkel 35° bei 8 m Tiefe (x-Versatz = tan(35°) * 8 = 5,6 m)
+  const side = await burst({ eye: [-8, 1.7, 8], look: [-8, 1.7, 0], at: [-8 - 5.6, 0.5, 0] })
+  check('Knall schräg im Bild (~35°): mittellang geblendet, Schleier nur teilweise', side.remaining > 0.5 && side.remaining < 1.4 && side.opacity > 0.4 && side.opacity < 0.85, JSON.stringify(side))
+  const off = await burst({ eye: [-8, 1.7, 8], look: [-8, 1.7, 0], at: [-8 + 14, 0.5, 8 - 3] })
+  check('Knall außerhalb des Bildes (~78°): kein Effekt', off.remaining === 0 && off.opacity === 0, JSON.stringify(off))
+  const edge = await burst({ eye: [-8, 1.7, 8], look: [-8, 1.7, 0], at: [-8 + 13.9, 0.5, 0] })
+  check('Knall am Bildrand (~60°): höchstens ein kurzer, schwacher Hauch', edge.remaining < 0.2 && edge.opacity < 0.3, JSON.stringify(edge))
 
   // Wand dazwischen
   const wall = await page.evaluate(() => {

@@ -1017,7 +1017,7 @@ function animate() {
   scoreTable.render(network.roster, network.localId)
   updateAmmoHud()
   updateGadgetHud()
-  flashOverlay.style.opacity = String(gadgets.blindLevel)
+  flashOverlay.style.opacity = String(gadgets.blindOpacity)
   smokeOverlay.style.opacity = String(0.96 * gadgets.smokeDensity(camera.position))
   updateCrosshair()
   updateHealthHud()
