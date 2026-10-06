@@ -93,6 +93,8 @@ Weiterarbeiten wissen muss.
   zuerst ab und setzt ihn am Ende neu; `getNetworkState()` zieht ihn ab. Kippen ~12° über
   `SlideView.apply(..., lean)` (nur beim Zeichnen). Wand: Kamera hält 0,12 m Abstand (`leanClearance`).
   Nicht beim Sprinten/Rutschen, Tempo 75 %. Wer `camera.position` direkt setzt: `spawn()`/`moveTo()`.
+  Touch: Tasten `#lean-left-button`/`#lean-right-button` links in der Mitte, **Umschalter** (Nutzerwunsch: Tippen lehnt,
+  nochmal Tippen richtet auf, andere Seite wechselt direkt; neues Leben/Menü setzen zurück über `resetTouchLean`).
 - `src/network.ts` (Verbindung, join/leave), `src/remotePlayers.ts`
   (Interpolation auf der Uhr des Absenders), `src/player.ts` (Bewegung und
   Kollision: Boden über die ganze Standfläche, Deckenkollision, "nur tiefer

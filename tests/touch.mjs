@@ -160,26 +160,33 @@ try {
   await page.tap('#resume-button')
   await wait(300)
   check('Weiter-Button setzt das Spiel fort', await page.evaluate(() => document.querySelector('#overlay').classList.contains('hidden')))
-  // Lehnen: Tasten links in der Mitte, nur solange der Finger drauf ist
-  const holdButton = async (selector, id) => {
+  // Lehnen: Umschalter - Tippen lehnt, nochmal Tippen richtet auf, andere Seite wechselt direkt
+  const tapButton = async (selector, id) => {
     const b = await page.locator(selector).boundingBox()
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: b.x + b.width / 2, y: b.y + b.height / 2, id }] })
+    const p = { x: b.x + b.width / 2, y: b.y + b.height / 2, id }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] })
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   }
-  const letGo = () => cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   const leanNow = () => page.evaluate(() => Number(__dusk.player.lean.toFixed(2)))
-  await holdButton('#lean-right-button', 11)
+  const isActive = (sel) => page.evaluate((s) => document.querySelector(s).classList.contains('active'), sel)
+  await tapButton('#lean-right-button', 11)
   await wait(900)
   const leanR = await leanNow()
-  check('Touch: rechte Lehn-Taste gehalten = nach rechts gelehnt, Taste leuchtet', leanR > 0.9 && (await page.evaluate(() => document.querySelector('#lean-right-button').classList.contains('active'))), String(leanR))
-  await letGo()
+  check('Touch: rechte Lehn-Taste getippt = nach rechts gelehnt (bleibt ohne Finger), Taste leuchtet', leanR > 0.9 && (await isActive('#lean-right-button')) && !(await isActive('#lean-left-button')), String(leanR))
+  await tapButton('#lean-right-button', 12)
   await wait(900)
-  check('Touch: loslassen = wieder gerade', (await leanNow()) === 0 && !(await page.evaluate(() => document.querySelector('#lean-right-button').classList.contains('active'))))
-  await holdButton('#lean-left-button', 12)
+  check('Touch: nochmal tippen = wieder gerade, Taste aus', (await leanNow()) === 0 && !(await isActive('#lean-right-button')))
+  await tapButton('#lean-right-button', 13)
+  await wait(500)
+  await tapButton('#lean-left-button', 14)
   await wait(900)
   const leanL = await leanNow()
-  check('Touch: linke Lehn-Taste = nach links', leanL < -0.9, String(leanL))
-  await letGo()
-  await wait(700)
+  check('Touch: andere Seite tippen wechselt direkt auf links', leanL < -0.9 && (await isActive('#lean-left-button')) && !(await isActive('#lean-right-button')), String(leanL))
+  // Tod/neues Leben richtet auf
+  await page.evaluate(() => __dusk.player.takeDamage(999))
+  await page.waitForFunction(() => __dusk.player.isAlive, null, { timeout: 15000 })
+  await wait(600)
+  check('Touch: neues Leben = gerade, beide Tasten aus', (await leanNow()) === 0 && !(await isActive('#lean-left-button')) && !(await isActive('#lean-right-button')))
 
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {

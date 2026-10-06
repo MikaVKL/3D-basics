@@ -410,6 +410,9 @@ function cancelLeave() {
   leaveTimer = null
 }
 
+// Touch: Lehn-Umschalter zurücksetzen (neues Leben, Menü); wird mit der Touch-Steuerung belegt
+let resetTouchLean: () => void = () => {}
+
 function setActive(active: boolean) {
   isActive = active
   overlay.classList.toggle('hidden', active)
@@ -419,6 +422,7 @@ function setActive(active: boolean) {
     cancelLeave()
     network.join()
   } else {
+    resetTouchLean()
     showSettings(false)
     scheduleLeave()
   }
@@ -464,6 +468,7 @@ function showSettings(show: boolean) {
 
 // Neues Leben (erster Start, Beitritt, Respawn): gewählte Waffen, volle Magazine, Secondary in der Hand
 function startLife() {
+  resetTouchLean()
   gadgets.reset()
   gadgets.setGadget(gadgetPicker.gadget)
   applyGadgetUi()
@@ -631,6 +636,7 @@ if (isTouchDevice) {
     weapon
   )
   touchInput.onGadget = throwGadget
+  resetTouchLean = () => touchInput.setLeanToggle(0)
 
   document.querySelector('#menu-button')!.addEventListener('click', () => setActive(false))
   overlay.addEventListener('click', activateFromOverlay)

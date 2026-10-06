@@ -43,6 +43,7 @@ export class TouchInput {
 
   // Gadget-Button (setzt main.ts)
   onGadget?: () => void
+  private leanToggle: -1 | 0 | 1 = 0
   private elements: TouchElements
   private player: Player
   private lookControl: LookControl
@@ -103,24 +104,14 @@ export class TouchInput {
     shootButton.addEventListener('touchend', stopShooting)
     shootButton.addEventListener('touchcancel', stopShooting)
 
-    // Lehnen: nur solange der Finger auf der Taste ist (der andere Daumen schießt/zielt)
+    // Lehnen ist ein Umschalter (Nutzerwunsch): Tippen lehnt, nochmal Tippen richtet auf, die andere
+    // Seite wechselt direkt. So bleibt der Daumen zum Schießen/Zielen frei.
     for (const [button, direction] of [[elements.leanLeftButton, -1], [elements.leanRightButton, 1]] as const) {
-      const hold = (e: Event) => {
+      button.addEventListener('touchstart', (e) => {
         e.preventDefault()
         e.stopPropagation()
-        this.player.setLean(direction)
-        button.classList.add('active')
-      }
-      const release = (e: Event) => {
-        e.stopPropagation()
-        button.classList.remove('active')
-        // Nur aufheben, wenn nicht gleich die andere Taste (noch) gehalten wird
-        const other = direction === -1 ? elements.leanRightButton : elements.leanLeftButton
-        this.player.setLean(other.classList.contains('active') ? (direction === -1 ? 1 : -1) : 0)
-      }
-      button.addEventListener('touchstart', hold, { passive: false })
-      button.addEventListener('touchend', release)
-      button.addEventListener('touchcancel', release)
+        this.setLeanToggle(this.leanToggle === direction ? 0 : direction)
+      }, { passive: false })
     }
 
     elements.gadgetButton.addEventListener('touchstart', (e) => {
@@ -158,6 +149,14 @@ export class TouchInput {
     })
     crouchButton.addEventListener('touchend', () => this.setCrouching(false))
     crouchButton.addEventListener('touchcancel', () => this.setCrouching(false))
+  }
+
+  // Lehn-Umschalter setzen (auch von außen: neues Leben/Menü richten wieder auf)
+  setLeanToggle(direction: -1 | 0 | 1) {
+    this.leanToggle = direction
+    this.player.setLean(direction)
+    this.elements.leanLeftButton.classList.toggle('active', direction === -1)
+    this.elements.leanRightButton.classList.toggle('active', direction === 1)
   }
 
   private setCrouching(crouching: boolean) {

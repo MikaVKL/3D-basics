@@ -1750,7 +1750,7 @@ body {
   touch-action: none;
 }
 
-/* Lehnen: zwei kleine Tasten links in der Mitte (zwischen Waffenfeld und Lebensanzeige), gehalten */
+/* Lehnen: zwei kleine Tasten links in der Mitte (zwischen Waffenfeld und Lebensanzeige), Umschalter */
 #lean-left-button,
 #lean-right-button {
   position: fixed;
