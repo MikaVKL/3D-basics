@@ -5,7 +5,7 @@ import type { Damageable } from './damageable'
 import type { Team } from './team'
 import type { PlayerNetworkState } from './shared/protocol'
 import { WEAPONS, DEFAULT_WEAPON, type WeaponId } from './shared/weapons'
-import { GRAPPLE_SPEED, GRAPPLE_MAX_TIME } from './shared/gadgets'
+import { GRAPPLE_SPEED, GRAPPLE_MAX_TIME, GRAPPLE_INTERRUPT_DAMAGE } from './shared/gadgets'
 import {
   MAX_HEALTH,
   MAX_SHIELD,
@@ -268,6 +268,7 @@ export class Player implements Damageable {
   // Nur Singleplayer - online kommt Schaden über applyServerVitals()
   takeDamage(amount: number) {
     if (this.networkControlled) return
+    if (amount > GRAPPLE_INTERRUPT_DAMAGE) this.endGrapple(false)
     if (applyDamage(this.vitals, amount)) this.die()
   }
 
@@ -275,6 +276,8 @@ export class Player implements Damageable {
   applyServerVitals(health: number, shield: number, spawnProtected: boolean) {
     this.spawnProtected = spawnProtected
     const wasAlive = this.isAlive
+    // Schwerer Treffer (Schild + Leben fallen um mehr als die Schwelle) reißt dich vom Seil
+    if (this.vitals.health + this.vitals.shield - (health + shield) > GRAPPLE_INTERRUPT_DAMAGE) this.endGrapple(false)
     this.vitals.health = health
     this.vitals.shield = shield
     if (wasAlive && !this.isAlive) this.die()

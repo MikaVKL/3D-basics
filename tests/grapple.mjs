@@ -59,7 +59,7 @@ try {
     window.__run(0.4)
     return { ...start, time: +t.toFixed(2), left, sounds: window.__sounds.slice(-3) }
   })
-  check('Zug zur Wand: Abklingzeit 10 s, Seil da, Hakenton', wall.cd === 10 && wall.pulling && wall.ropes === 1 && wall.sounds.includes('hookShot'), JSON.stringify(wall))
+  check('Zug zur Wand: Abklingzeit 8 s + 1 s je Meter, Seil da, Hakenton', Math.abs(wall.cd - (8 + wall.dist)) < 0.3 && wall.pulling && wall.ropes === 1 && wall.sounds.includes('hookShot'), JSON.stringify(wall))
   check('Zug dauert Entfernung / 15 m/s (± 0,3 s) und endet dicht am Haken (< 1,3 m)', Math.abs(wall.time - wall.dist / 15) < 0.3 && wall.left < 1.3, JSON.stringify(wall))
   const ropeShape = await page.evaluate(() => {
     __dusk.gadgets.reset()
@@ -119,6 +119,71 @@ try {
     return { pulling, feet: +P.feetHeight.toFixed(2), z: +__dusk.camera.position.z.toFixed(2), x: +__dusk.camera.position.x.toFixed(2), grounded: !P.isGrappling }
   })
   check('Steg erklimmen: nach dem Zug steht man oben auf dem Steg (Fußhöhe 2,8 m, hinter der Kante)', climb.pulling && climb.feet > 2.7 && climb.feet < 3 && climb.z < -17.6, JSON.stringify(climb))
+
+  // Reichweite 18 m: Richtung suchen, in der die erste Fläche zwischen 19 und 22 m (zu weit) bzw. unter 16 m (ok) liegt
+  const reach = await page.evaluate(() => {
+    const G = __dusk.gadgets
+    const V = __dusk.camera.position.constructor
+    const far = []
+    const near = []
+    for (let i = 0; i < 400 && (far.length < 1 || near.length < 1); i++) {
+      const x = -30 + (i * 37) % 70, z = -14 + (i * 11) % 26, yaw = (i * 2.399) % 6.28
+      window.__setup(x, z, yaw, 0)
+      const dir = new V(); __dusk.camera.getWorldDirection(dir)
+      G.raycaster.set(__dusk.camera.position, dir)
+      G.raycaster.far = 40
+      const hit = G.raycaster.intersectObjects(G.world, false)[0]
+      if (!hit) continue
+      if (hit.distance > 19 && hit.distance < 22 && !far.length) far.push({ x, z, yaw, d: hit.distance })
+      if (hit.distance < 16 && hit.distance > 8 && !near.length) near.push({ x, z, yaw, d: hit.distance })
+    }
+    const tryAt = (c) => {
+      G.reset()
+      window.__setup(c.x, c.z, c.yaw, 0)
+      __dusk.throwGadget()
+      return { pulling: __dusk.player.isGrappling, cd: G.cooldownRemaining }
+    }
+    return { far: far[0] && { ...far[0], ...tryAt(far[0]) }, near: near[0] && { ...near[0], ...tryAt(near[0]) } }
+  })
+  check('Reichweite 18 m: Fläche in 19-22 m wird nicht gehakt (kein Zug, keine Abklingzeit)', reach.far && !reach.far.pulling && reach.far.cd === 0, JSON.stringify(reach))
+  check('Fläche in < 16 m wird gehakt', reach.near && reach.near.pulling, JSON.stringify(reach))
+
+  // Abklingzeit nach Strecke: kurzer Zug billig, langer teuer (8 s + 1 s je Meter, höchstens 28 s)
+  const cds = await page.evaluate(async () => {
+    const { grappleCooldown } = await import('/3D-basics/src/shared/gadgets.ts')
+    return [3, 10, 18, 40].map((d) => grappleCooldown(d))
+  })
+  check('Abklingzeit-Formel: 3 m = 11 s, 10 m = 18 s, 18 m = 26 s, gedeckelt bei 28 s', cds.join() === '11,18,26,28', cds.join())
+
+  // Schwere Treffer (> 20 Schaden) unterbrechen den Zug, leichte nicht
+  const hit = await page.evaluate(() => {
+    const P = __dusk.player
+    const G = __dusk.gadgets
+    const res = {}
+    for (const [name, dmg] of [['leicht', 12], ['gleich20', 20], ['schwer', 25]]) {
+      G.reset()
+      window.__setup(-25, -9, 0, 0)
+      __dusk.throwGadget()
+      window.__run(0.1)
+      P.takeDamage(dmg)
+      res[name] = P.isGrappling
+    }
+    // Online-Weg: Server meldet neuen Stand (Schild 25 + Leben 100 -> 60 / 0 = 65 Verlust)
+    G.reset()
+    window.__setup(-25, -9, 0, 0)
+    __dusk.throwGadget()
+    window.__run(0.1)
+    P.applyServerVitals(60, 0, false)
+    res.serverSchwer = P.isGrappling
+    G.reset()
+    window.__setup(-25, -9, 0, 0)
+    __dusk.throwGadget()
+    window.__run(0.1)
+    P.applyServerVitals(100, 15, false)
+    res.serverLeicht = P.isGrappling
+    return res
+  })
+  check('Treffer: 12 und 20 Schaden lassen den Zug laufen, 25 (und ein Serverstand mit 65 Verlust) unterbricht ihn', hit.leicht && hit.gleich20 && !hit.schwer && !hit.serverSchwer && hit.serverLeicht, JSON.stringify(hit))
 
   // Boden/Decke: auf die Decke zielen (unter dem Steg): zieht nach oben, bleibt nicht stecken
   const ceil = await page.evaluate(() => {

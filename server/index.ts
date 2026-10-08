@@ -30,7 +30,7 @@ import {
   type Vitals,
 } from '../src/shared/gameRules.ts'
 import { WEAPONS, DEFAULT_LOADOUT, isWeaponId, isLoadout, loadoutSlots, damageFactor, type Loadout } from '../src/shared/weapons.ts'
-import { GADGETS, isGadgetId } from '../src/shared/gadgets.ts'
+import { GADGETS, isGadgetId, grappleCooldown } from '../src/shared/gadgets.ts'
 import type { Team } from '../src/team.ts'
 
 // Läuft direkt als TypeScript (Node-Type-Stripping, kein Build-Schritt)
@@ -664,7 +664,9 @@ function handleGadget(thrower: Client, rawKind: unknown, rawFrom: unknown, rawTo
   if (Math.hypot(from.x - p.x, from.y - p.y, from.z - p.z) > GADGET_ORIGIN_TOLERANCE) return
   if (Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) > stats.maxThrowDistance) return
   if (rawFlight < 0 || rawFlight > stats.maxFlightTime) return
-  thrower.gadgetReadyAt = now + stats.cooldown * 1000
+  // Haken: Abklingzeit nach Zugstrecke, wie beim Client
+  const cooldown = rawKind === 'grapple' ? grappleCooldown(Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z)) : stats.cooldown
+  thrower.gadgetReadyAt = now + cooldown * 1000
   thrower.lastActivityAt = now
   // Startgeschwindigkeit nur weitergeben, wenn sie zur Wurfstärke passt (sonst zeigen die anderen einen einfachen Bogen)
   const velocity = sanitizeVec3(rawVelocity)

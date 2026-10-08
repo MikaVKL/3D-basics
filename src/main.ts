@@ -918,7 +918,7 @@ function updateGadgetHud() {
   gadgetButtonEl.classList.toggle('cooling', !ready)
   gadgetButtonEl.dataset.time = ready ? '' : String(Math.ceil(gadgets.cooldownRemaining))
   gadgetStatus.textContent = ready ? 'bereit' : `${Math.ceil(gadgets.cooldownRemaining)} s`
-  gadgetBarFill.style.width = `${(1 - gadgets.cooldownRemaining / gadgets.stats.cooldown) * 100}%`
+  gadgetBarFill.style.width = `${(1 - gadgets.cooldownRemaining / Math.max(1, gadgets.cooldownTotal || gadgets.stats.cooldown)) * 100}%`
 }
 
 function updateAmmoHud() {

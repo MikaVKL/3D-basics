@@ -86,14 +86,14 @@ Weiterarbeiten wissen muss.
   schleudert wieder hoch, 0,5 s Pause). Platz: jede ebene Fläche (Boden, Stege, Kisten) mit 4 m freiem Raum über der
   Mitte UND rund um das Pad (`padSpotOk`), sonst abgelehnt mit Hinweis ohne Abklingzeit (alle Clients rechnen gleich). Server
   relayt nur; die Bewegungsprüfung braucht keine Anpassung (Guthaben 14 m hoch deckt 4,4 m ab, `tests/pad.mjs` simuliert 20 s Dauerhüpfen).
-- **Enterhaken** (`grapple`, 4. Gadget, G, 10 s; Nutzerwahl "Titanfall, die einfachste/sicherste Variante"): der Haken trifft sofort die erste Fläche im Fadenkreuz
-  (Reichweite `GRAPPLE_REACH` 22 m, sonst "Kein Ziel in Reichweite" ohne Abklingzeit), dann zieht `Player.updateGrapple` die Körpermitte geradlinig mit
+- **Enterhaken** (`grapple`, 4. Gadget, G, Abklingzeit 8 s + 1 s je Meter Zug (`grappleCooldown`, 11-28 s; Nutzer: war mit 10 s fester Zeit stärker als das Sprungpad); Nutzerwahl "Titanfall, die einfachste/sicherste Variante"): der Haken trifft sofort die erste Fläche im Fadenkreuz
+  (Reichweite `GRAPPLE_REACH` 18 m, sonst "Kein Ziel in Reichweite" ohne Abklingzeit), dann zieht `Player.updateGrapple` die Körpermitte geradlinig mit
   `GRAPPLE_SPEED` 15 m/s zur Zielposition (Wand: 0,7 m davor, Füße ~1,3 m über dem Haken, damit man Kanten/Geländer überwindet, plus Stoß in die Wand;
   Boden: darüber; Decke: darunter). Normale Kollision bleibt, Ende bei Ankunft (< 0,7 m), 1,8 s, oder wenn man 0,25 s nicht vorankommt (Hindernis).
-  Sprung, Tod und Spawn beenden den Zug; Schwung danach begrenzt (4 m/s waagerecht, 4 m/s steigend). Schießen/Wechseln während des Zugs erlaubt. Seil =
+  Sprung, Tod und Spawn beenden den Zug; Schwung danach begrenzt (4 m/s waagerecht, 4 m/s steigend). Schießen/Wechseln während des Zugs erlaubt; **ein Treffer über 20 Schaden (`GRAPPLE_INTERRUPT_DAMAGE`; auch Server-Stand mit > 20 Verlust) unterbricht den Zug** (Gegenspiel, Nutzer-Balance). Seil =
   gestreckter Quader in Teamfarbe (`spawnRope`), beim Werfer solange der Zug läuft; die anderen bekommen die normale `gadget`-Nachricht (from = Auge, to = Haken,
-  flight = Zugzeit; `velocity` 0) und zeigen das Seil von der Figur zum Haken. Server prüft wie bei allen Gadgets Abklingzeit, Startpunkt, Reichweite
-  (24 m), Zugzeit (<= 2,1 s). Die Bewegungsprüfung braucht keine Anpassung (`tests/grapple.mjs` simuliert Züge gegen `checkMovement`: 0 Fehlalarme).
+  flight = Zugzeit; `velocity` 0) und zeigen das Seil von der Figur zum Haken. Server prüft wie bei allen Gadgets Abklingzeit (nach Strecke), Startpunkt, Reichweite
+  (20 m), Zugzeit (<= 2,1 s). Die Bewegungsprüfung braucht keine Anpassung (`tests/grapple.mjs` simuliert Züge gegen `checkMovement`: 0 Fehlalarme).
   Nicht gebaut: Pendeln/Schwingen (zu fehleranfällig), Haken an Spielern.
 - `src/sky.ts` – Abendhimmel-Kuppel (Farbverlauf), folgt der Kamera
 - `src/surfaceTextures.ts` – Kisten-/Plattenmuster (Canvas, Graustufen x

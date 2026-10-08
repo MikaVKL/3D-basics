@@ -4,9 +4,14 @@ export type GadgetId = 'smoke' | 'flash' | 'jump' | 'grapple'
 export const GADGET_IDS: GadgetId[] = ['smoke', 'flash', 'jump', 'grapple']
 
 // Enterhaken (Titanfall-Art): der Haken trifft sofort den Punkt im Fadenkreuz, dann zieht es dich geradlinig hin
-export const GRAPPLE_REACH = 22 // m
+export const GRAPPLE_REACH = 18 // m
 export const GRAPPLE_SPEED = 15 // m/s Zuggeschwindigkeit
 export const GRAPPLE_MAX_TIME = 1.8 // s, danach ist Schluss (steckt man fest)
+export const GRAPPLE_INTERRUPT_DAMAGE = 20 // ein Treffer über diesem Schaden unterbricht den Zug
+// Abklingzeit wächst mit der Strecke (Balance: kurzer Zug zum Steg billig, quer durch die Arena teuer)
+export function grappleCooldown(distance: number): number {
+  return 8 + Math.min(distance, GRAPPLE_REACH + 2)
+}
 
 // Sprungpad: auf jeder ebenen Fläche (Boden, Stege, Kisten), solange darüber so weit nichts im Weg ist,
 // sonst stößt man beim Hochschleudern an Stegunterseiten und Dächer
@@ -68,7 +73,7 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
   // Enterhaken: kein Wurf; maxThrowDistance = Reichweite (mit Zuschlag), maxFlightTime = längster Zug
   grapple: {
     label: 'Enterhaken',
-    cooldown: 10,
+    cooldown: 8, // Grundwert; dazu 1 s je Meter Zug (grappleCooldown)
     throwSpeed: 0,
     throwLift: 0,
     maxThrowDistance: GRAPPLE_REACH + 2,

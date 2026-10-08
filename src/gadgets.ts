@@ -3,7 +3,7 @@
 // meldet nur Start, Landepunkt und Flugzeit; alle zeigen denselben Bogen und dieselbe Wolke.
 
 import * as THREE from 'three'
-import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, GRAPPLE_REACH, GRAPPLE_SPEED, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
+import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, GRAPPLE_REACH, GRAPPLE_SPEED, grappleCooldown, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
 const BOUNCE = 0.45 // Anteil der Geschwindigkeit, der beim Aufprall an einer Wand erhalten bleibt
@@ -95,6 +95,7 @@ interface Rope {
 export class GadgetSystem {
   gadget: GadgetId = DEFAULT_GADGET
   cooldownRemaining = 0
+  cooldownTotal = 0 // Dauer der laufenden Abklingzeit (für die Anzeige; beim Haken je nach Strecke)
   // Geblendet: Restzeit und Gesamtdauer (für das Ausblenden)
   blindRemaining = 0
   private blindTotal = 0
@@ -149,6 +150,7 @@ export class GadgetSystem {
   // Neues Leben: Granate wieder bereit
   reset() {
     this.cooldownRemaining = 0
+    this.cooldownTotal = 0
     this.blindRemaining = 0
     this.blindTotal = 0
     this.blindStrengthNow = 0
@@ -244,6 +246,7 @@ export class GadgetSystem {
       this.rejectReason = 'Hier passt kein Sprungpad (zu wenig Platz darüber)'
       return null
     }
+    this.cooldownTotal = this.stats.cooldown
     this.cooldownRemaining = this.stats.cooldown
     this.spawnFlight(from, position.clone(), flight, team, this.gadget, points)
     return { from, to: position.clone(), flight, velocity }
@@ -274,7 +277,8 @@ export class GadgetSystem {
       target.y += 2.3
       push.set(-normal.x * 1.5, -normal.z * 1.5)
     }
-    this.cooldownRemaining = this.stats.cooldown
+    this.cooldownTotal = grappleCooldown(from.distanceTo(hit.point))
+    this.cooldownRemaining = this.cooldownTotal
     return { from, to: hit.point.clone(), flight: from.distanceTo(hit.point) / GRAPPLE_SPEED, velocity: new THREE.Vector3(), pull: { target, push } }
   }
 
