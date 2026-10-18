@@ -77,15 +77,14 @@ try {
   await page.evaluate(() => window.__run(0.5))
 
   // Weich: nicht in einem Frame
-  await page.keyboard.press('KeyE')
+  // Taste und Schritt im selben evaluate: die Spielschleife läuft sonst dazwischen (bei 8 FPS gleich 0,12 s pro Bild)
   const soft = await page.evaluate(() => {
-    window.__run(0.5 * 0) // nichts
+    __dusk.player.setLean(1)
     __dusk.player.update(1 / 60)
     return Number(__dusk.player.lean.toFixed(2))
   })
   check('Lehnen läuft weich ein (nach 1 Frame erst ein Teil, nie sofort ganz)', soft > 0 && soft < 0.5, String(soft))
-  await page.keyboard.press('KeyE')
-  await page.evaluate(() => window.__run(0.5))
+  await page.evaluate(() => { __dusk.player.setLean(0); window.__run(0.5) })
 
   // Wand: dicht neben einer Wand stoppt die Kamera davor
   const wall = await page.evaluate(() => {
