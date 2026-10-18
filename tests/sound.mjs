@@ -158,12 +158,12 @@ try {
   check('Musik läuft nach dem Start', await page.evaluate(() => __dusk.sound.music?.playing === true))
   await spySounds(page)
 
-  await teleport(page, 3, 1.7, -2) // vor dem Dummy bei (3, 0.8, -6)
+  await teleport(page, -14, 1.7, -2) // vor dem Dummy bei (-14, 0.8, -6)
   await wait(200)
   await takeSounds(page)
-  await shootAt(page, [3, 0.8, -6])
+  await shootAt(page, [-14, 0.8, -6])
   check('Schuss auf Dummy: Schuss + Hitmarker', (await takeSounds(page)).sort().join() === 'hit,shot')
-  for (let i = 0; i < 8; i++) await shootAt(page, [3, 0.8, -6])
+  for (let i = 0; i < 8; i++) await shootAt(page, [-14, 0.8, -6])
   check('Dummy-Kill: Kill-Ton', (await takeSounds(page)).includes('kill'))
 
   await page.evaluate(() => {
@@ -180,13 +180,13 @@ try {
       new Function('P', setupCode)(P)
       for (let i = 0; i < 90; i++) P.update(1 / 60)
     }, setup)
-  await teleport(page, 0, 1.7, 12)
+  await teleport(page, -14, 1.7, 2)
   await takeSounds(page)
   await simulate('P.jump()')
   check('Sprung + Landung', (await takeSounds(page)).join() === 'jump,land')
 
   // Schritte laufen über den Game-Loop (updateOwnFootsteps) - dort echte Frames
-  await teleport(page, 0, 1.7, 12)
+  await teleport(page, -14, 1.7, 2)
   await page.evaluate(() => __dusk.player.setMoveInput(0, 1))
   await wait(2500)
   await page.evaluate(() => __dusk.player.setMoveInput(0, 0))
@@ -194,7 +194,7 @@ try {
   check('Schritte beim Laufen', steps >= 2, `${steps} Schritte`)
 
   // Obere Ebene (Steg): hohler Metallklang statt Bodenschritt, auch beim Landen
-  await teleport(page, 12, 2.8 + 1.7, -19)
+  await teleport(page, 12, 2.8 + 1.7, -26)
   await takeSounds(page)
   await page.evaluate(() => {
     __dusk.camera.rotation.set(0, -Math.PI / 2, 0, 'YXZ') // Blick nach Osten, den Steg entlang
@@ -206,12 +206,12 @@ try {
   const upperSounds = await takeSounds(page)
   const metalSteps = upperSounds.filter((s) => s === 'stepMetal').length
   check('Steg: Metallschritte', metalSteps >= 1 && !upperSounds.includes('step'), `${metalSteps} Schritte, ${upperSounds.join()}`)
-  await teleport(page, 12, 2.8 + 1.7, -19)
+  await teleport(page, 12, 2.8 + 1.7, -26)
   await takeSounds(page)
   await simulate('P.jump()')
   check('Steg: Sprung + Metall-Landung', (await takeSounds(page)).join() === 'jump,landMetal')
 
-  await teleport(page, 0, 1.7, 12)
+  await teleport(page, -14, 1.7, 2)
   await page.evaluate(() => {
     __dusk.player.setCrouching(true)
     __dusk.player.setMoveInput(0, 1)

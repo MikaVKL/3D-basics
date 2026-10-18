@@ -88,8 +88,8 @@ window.addEventListener('keydown', (event) => {
 // --- Ziel-Dummies (nur Singleplayer, respawnen automatisch) ---
 
 const targets = [
-  new Target(new THREE.Vector3(3, 0.8, -6)),
-  new Target(new THREE.Vector3(-3, 0.8, 6)),
+  new Target(new THREE.Vector3(-14, 0.8, -6)), // freie Nord-Süd-Bahn x = -14 (z 8 bis -12)
+  new Target(new THREE.Vector3(14, 0.8, 6)),
 ]
 const effects = new Effects(scene)
 const cameraShake = new CameraShake()

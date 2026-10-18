@@ -32,9 +32,9 @@ try {
   }))
   check('Auswahl: Schwere Pistole auf Taste 1, 7er-Magazin, Slot aktiv', hud.weapon === 'heavyPistol' && hud.slot === 'heavyPistol' && hud.max === 7, JSON.stringify(hud))
 
-  await teleport(page, 3, 1.7, -3)
+  await teleport(page, -14, 1.7, -3)
   await wait(200)
-  await shootAt(page, [3, 1.0, -6])
+  await shootAt(page, [-14, 1.0, -6])
   const shot = await page.evaluate(() => ({ dmg: window.__dmg.slice(), sounds: window.__sounds.slice() }))
   check('Treffer: 45 Schaden, eigener Knall', shot.dmg.join() === '45' && shot.sounds.includes('heavyShot'), JSON.stringify(shot))
 

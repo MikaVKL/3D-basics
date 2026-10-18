@@ -39,13 +39,13 @@ try {
   })
   check('Ausschnitt = alle Objekte + 1,5 m Rand', Math.abs(built.bounds.minX - (built.minX - 1.5)) < 0.01 && Math.abs(built.bounds.maxX - (built.maxX + 1.5)) < 0.01, JSON.stringify(built.bounds))
   check('Seitenverhältnis folgt der Arena', built.aspect.includes('/'), built.aspect)
-  const wall = await pixel(A, 'static', 0, -21)
-  const crate = await pixel(A, 'static', -2, 0)
-  const floor = await pixel(A, 'static', -10, -12)
+  const wall = await pixel(A, 'static', 0, -28.5)
+  const crate = await pixel(A, 'static', 21.5, -3.5)
+  const floor = await pixel(A, 'static', -5, -17)
   check('Außenwand gezeichnet (grau)', near(wall, [0x56, 0x6b, 0x82], 30), JSON.stringify(wall))
   check('Kiste gezeichnet (sandbraun)', near(crate, [0xc9, 0x97, 0x5a], 30), JSON.stringify(crate))
   check('freier Boden bleibt leer', floor[3] === 0, JSON.stringify(floor))
-  const steg = await pixel(A, 'static', 0, -19)
+  const steg = await pixel(A, 'static', 10, -26)
   check('obere Ebene (Nordsteg) türkis durchscheinend', steg[3] > 60 && steg[1] > steg[0], JSON.stringify(steg))
 
   // --- Erweiterung: neues Objekt außerhalb der alten Grenzen ---
@@ -61,7 +61,7 @@ try {
   check('neue Halle erweitert den Ausschnitt', grown.after.maxX >= 94 + 1.5 - 0.01 && grown.after.maxX > grown.before.maxX, `maxX ${grown.before.maxX} -> ${grown.after.maxX}`)
   const added = await pixel(A, 'static', 91, 0)
   check('neues Objekt erscheint auf der Karte', added[3] > 0, JSON.stringify(added))
-  const old = await pixel(A, 'static', -2, 0)
+  const old = await pixel(A, 'static', 21.5, -3.5)
   check('altes Objekt weiter an der richtigen Stelle (Kiste)', near(old, [0xc9, 0x97, 0x5a], 30), JSON.stringify(old))
   await A.evaluate(() => {
     __dusk.arena.solids.pop()
@@ -74,7 +74,7 @@ try {
   const me = await pixel(A, 'live', 10, 8)
   check('eigener Pfeil an der Spielerposition (weiß)', me[3] > 0 && near(me, [255, 255, 255], 120), JSON.stringify(me))
   check('Anzeige UNTEN auf dem Boden', (await A.textContent('.minimap-floor')) === 'UNTEN')
-  await teleport(A, 10, 2.8 + 1.7, -19.5)
+  await teleport(A, 10, 2.8 + 1.7, -26)
   await wait(400)
   check('Anzeige OBEN auf dem Steg', (await A.textContent('.minimap-floor')) === 'OBEN')
   await teleport(A, 10, 1.7, 8)
@@ -98,9 +98,9 @@ try {
   const enemy = await pixel(A, 'live', -12, 8)
   check('Kamerad als Punkt in Teamfarbe', mate[3] > 200, JSON.stringify(mate))
   check('Gegner werden nicht gezeigt', enemy[3] === 0, JSON.stringify(enemy))
-  await teleport(C, 10, 2.8 + 1.7, -19.5) // Kamerad oben
+  await teleport(C, 10, 2.8 + 1.7, -26) // Kamerad oben
   await wait(1500)
-  const upstairs = await pixel(A, 'live', 10, -19.5)
+  const upstairs = await pixel(A, 'live', 10, -26)
   check('Kamerad auf der anderen Etage gedimmt', upstairs[3] > 40 && upstairs[3] < 160, JSON.stringify(upstairs))
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {

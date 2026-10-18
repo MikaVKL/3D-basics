@@ -85,7 +85,11 @@ try {
       cam.position.set(s.eye[0], s.eye[1], s.eye[2])
       cam.lookAt(new V(...s.look))
       cam.updateMatrixWorld(true)
+      // Rechenregeln ohne Hindernisse (die Karte ist dicht): freie Sichtlinie, nur Winkel und Abstand zählen
+      const saved = G.world.slice()
+      G.world.length = 0
       G.spawnBurst('flash', new V(...s.at))
+      G.world.push(...saved)
       return { remaining: G.blindRemaining, level: G.blindLevel, opacity: Number(G.blindOpacity.toFixed(2)) }
     }, spec)
 

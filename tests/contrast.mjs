@@ -12,13 +12,11 @@ const MIN_WEAKEST = 20 // schwächstes Fünftel der Figur-Pixel
 const servers = await startServers({ gameServer: false })
 const browser = await launchBrowser()
 const scenes = [
-  ['Kiste', [-2, 1.5, 9], [-2, 0, 3.2]],
-  // Ostwand des Flankenraums (an Nord-/Südwand stehen jetzt die Laufstege)
-  ['Wand', [44, 1.5, 5], [50.5, 0, 5]],
-  ['Steg-Unterseite', [-6, 1.5, 12], [-6, 0, 19.5]],
-  ['Boden', [10, 6, -2], [10, 0, -6]],
-  // Nicht bei x = 0: dort steht die Deckung vor dem Nord-Spawn
-  ['Weite', [12, 1.7, -19], [18, 0, -11]],
+  ['Kiste', [21.5, 1.5, -12], [21.5, 0, -6.5]], // hinter der Figur die 2,4-m-Kiste bei (21,5 / -3,5)
+  ['Wand', [3, 1.5, -18.5], [8.5, 0, -18.5]], // dahinter die Westwand des Nordost-Bunkers
+  ['Steg-Unterseite', [0, 1.5, 13], [0, 0, 17]], // unter der Südbrücke, Blick Richtung Südsteg
+  ['Boden', [-18, 6, 4], [-18, 0, 0]],
+  ['Weite', [-18, 1.7, 10], [-8, 0, 10]], // lange freie Bahn z = 10
 ]
 try {
   const page = await openGame(browser, { online: false })

@@ -2,13 +2,7 @@ import * as THREE from 'three'
 import { Palette } from './palette'
 import { createCrateTexture, createPanelTexture, worldBox, CRATE_TILE, PANEL_TILE } from './surfaceTextures'
 import { addWallLamps, addLabel } from './decorations'
-import {
-  MAIN_ROOM_WIDTH,
-  MAIN_ROOM_DEPTH,
-  SIDE_ROOM_WIDTH,
-  SIDE_ROOM_DEPTH,
-  SPAWN_POINTS,
-} from './shared/arenaLayout'
+import { ARENA_HALF, SPAWN_POINTS } from './shared/arenaLayout'
 
 // Baut die Arena aus reiner Geometrie (keine Texturen). "solids" sind alle
 // Objekte mit Kollision, jeweils mit fertiger Bounding Box.
@@ -60,14 +54,33 @@ export interface ArenaResult {
   shootables: THREE.Object3D[]
 }
 
-// Bewusst asymmetrisch: Hauptraum plus schmalerer Flankenraum im Osten.
-const MAIN_HALF_W = MAIN_ROOM_WIDTH / 2
-const MAIN_HALF_D = MAIN_ROOM_DEPTH / 2
 
-const SIDE_HALF_D = SIDE_ROOM_DEPTH / 2
-
+// Karte "Nexus": quadratische Arena (56 m) für die Gadgets. Zentralturm mit flachem Dach (nur per Haken oder Sprungpad
+// erreichbar), Laufsteg-Ring auf 2,8 m mit zwei Rampen, vier Brücken zum Turm, vier Eck-Bunker mit Dach.
+// Alles punktsymmetrisch (180° um die Mitte).
 const WALL_HEIGHT = 6
 const WALL_THICKNESS = 1
+const UPPER_TOP = 2.8 // Laufsteg-Ebene (wie Rampen-Höhe der alten Karte)
+const SLAB = 0.3
+const UPPER_BOTTOM = UPPER_TOP - SLAB // Unterkante 2,5 m: stehend passt man darunter
+const CATWALK_DEPTH = 3
+const INNER = ARENA_HALF - WALL_THICKNESS / 2 // Innenseite der Außenwände
+const CATWALK_EDGE = INNER - CATWALK_DEPTH // Innenkante des Laufsteg-Rings
+const RAILING_HEIGHT = 1
+const RAILING_THICKNESS = 0.2
+const TOWER_HALF = 6
+const TOWER_WALL_TOP = 5.5
+const TOWER_TOP = 6
+const DOOR_WIDTH = 3
+const DOOR_HEIGHT = 2.4
+const LEDGE_HALF = 9 // Simsring um den Turm (3 m breit) auf Laufsteg-Höhe
+const BRIDGE_WIDTH = 2.5
+const BUNKER_CENTER = 16
+const BUNKER_SIZE = 7.5
+const BUNKER_WALL = 0.8
+const BUNKER_WALL_TOP = 3.7
+const BUNKER_TOP = 4
+const RAMP_LENGTH = 10 // Steigung ~0,28 wie bisher
 
 // Keil für die Rampen-Optik, steigt entlang +X von 0 auf height. Vertices pro
 // Fläche dupliziert, damit jede Fläche eine flache Normale bekommt (Low-Poly-Look).
@@ -126,372 +139,230 @@ function addEdgeOutline(mesh: THREE.Mesh, color: number = Palette.accentNeon) {
 export function buildArena(): ArenaResult {
   const group = new THREE.Group()
   const solids: Solid[] = []
+  const shootableExtras: THREE.Object3D[] = []
 
-  // --- Boden: zwei Flächen, eine pro Raum (der Flankenraum ist schmaler) ---
-  const groundMaterial = new THREE.MeshStandardMaterial({
-    color: Palette.ground,
-    roughness: 0.9,
-    metalness: 0.05,
-  })
+  // --- Boden und Raster ---
+  const groundMaterial = new THREE.MeshStandardMaterial({ color: Palette.ground, roughness: 0.9, metalness: 0.05 })
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_HALF * 2 + 1, ARENA_HALF * 2 + 1), groundMaterial)
+  ground.rotation.x = -Math.PI / 2 // liegend statt stehend ausrichten
+  group.add(ground)
 
-  const mainGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(MAIN_ROOM_WIDTH, MAIN_ROOM_DEPTH),
-    groundMaterial
-  )
-  mainGround.rotation.x = -Math.PI / 2 // liegend statt stehend ausrichten
-  group.add(mainGround)
+  const grid = new THREE.GridHelper(ARENA_HALF * 2, 28, Palette.accentNeon, 0x2a3a4a)
+  ;(grid.material as THREE.Material).transparent = true
+  ;(grid.material as THREE.Material).opacity = 0.15
+  grid.position.y = 0.01 // knapp über dem Boden, gegen Z-Fighting
+  group.add(grid)
 
-  const sideGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(SIDE_ROOM_WIDTH, SIDE_ROOM_DEPTH),
-    groundMaterial
-  )
-  sideGround.rotation.x = -Math.PI / 2
-  sideGround.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0, 0)
-  group.add(sideGround)
+  const wallMaterial = new THREE.MeshStandardMaterial({ color: Palette.wall, map: createPanelTexture(), roughness: 0.8, metalness: 0.1 })
+  const boxMaterial = new THREE.MeshStandardMaterial({ color: Palette.crate, map: createCrateTexture(), roughness: 0.6, metalness: 0.15 })
 
-  // Nordost-Halle: nördlich des Flankenraums (Bereich zwischen Hauptraum-Ostwand
-  // und Flankenraum-Ostwand), über eine Öffnung in dessen Nordwand erreichbar
-  const HALL_MIN_Z = -MAIN_HALF_D
-  const HALL_MAX_Z = -SIDE_HALF_D
-  const HALL_DOOR_X: [number, number] = [38, 46] // Öffnung in der Flankenraum-Nord- und -Südwand
-  const sideRoomMaxXForHall = MAIN_HALF_W + SIDE_ROOM_WIDTH
-  const hallGround = new THREE.Mesh(new THREE.PlaneGeometry(SIDE_ROOM_WIDTH, HALL_MAX_Z - HALL_MIN_Z), groundMaterial)
-  hallGround.rotation.x = -Math.PI / 2
-  hallGround.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0, (HALL_MIN_Z + HALL_MAX_Z) / 2)
-  group.add(hallGround)
+  // Quader mit Kollision (Wandfarbe = Struktur, sonst Kiste); Kanten leuchten
+  function block(x: number, z: number, width: number, depth: number, bottom: number, top: number, kind?: 'wall' | 'cover', material = wallMaterial) {
+    const mesh = new THREE.Mesh(worldBox(width, top - bottom, depth, material === boxMaterial ? CRATE_TILE : PANEL_TILE), material)
+    mesh.position.set(x, (bottom + top) / 2, z)
+    addEdgeOutline(mesh)
+    group.add(mesh)
+    solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh), kind })
+    return mesh
+  }
 
-  // Südost-Halle: Spiegelbild der Nordost-Halle, schmaler um den Südost-Tunnel (x 32..36)
-  const SE_HALL_MIN_X = 36
-  const seHallGround = new THREE.Mesh(new THREE.PlaneGeometry(sideRoomMaxXForHall - SE_HALL_MIN_X, MAIN_HALF_D - SIDE_HALF_D), groundMaterial)
-  seHallGround.rotation.x = -Math.PI / 2
-  seHallGround.position.set((SE_HALL_MIN_X + sideRoomMaxXForHall) / 2, 0, (SIDE_HALF_D + MAIN_HALF_D) / 2)
-  group.add(seHallGround)
+  const crate = (x: number, z: number, width: number, depth: number, height: number, base = 0) =>
+    block(x, z, width, depth, base, base + height, 'cover', boxMaterial)
 
-  // Boden des Südost-Tunnels (außerhalb der Räume)
-  const tunnelGround = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 9), groundMaterial)
-  tunnelGround.rotation.x = -Math.PI / 2
-  tunnelGround.position.set(34.25, 0, 16.5)
-  group.add(tunnelGround)
+  // Wand entlang einer Achse; mit Tür: zwei Pfosten und ein Sturz darüber
+  function wallRun(x: number, z: number, length: number, thickness: number, alongX: boolean, top: number, doorWidth?: number) {
+    const w = (len: number) => (alongX ? len : thickness)
+    const d = (len: number) => (alongX ? thickness : len)
+    if (!doorWidth) {
+      block(x, z, w(length), d(length), 0, top, 'wall')
+      return
+    }
+    const segment = (length - doorWidth) / 2
+    const offset = doorWidth / 2 + segment / 2
+    block(x + (alongX ? -offset : 0), z + (alongX ? 0 : -offset), w(segment), d(segment), 0, top, 'wall')
+    block(x + (alongX ? offset : 0), z + (alongX ? 0 : offset), w(segment), d(segment), 0, top, 'wall')
+    block(x, z, w(doorWidth), d(doorWidth), DOOR_HEIGHT, top, 'wall')
+  }
 
-  // --- Raster auf den Böden (GridHelper ist quadratisch -> per scale gestreckt) ---
-  const mainGrid = new THREE.GridHelper(MAIN_ROOM_WIDTH, 22, Palette.accentNeon, 0x2a3a4a)
-  mainGrid.scale.z = MAIN_ROOM_DEPTH / MAIN_ROOM_WIDTH
-  ;(mainGrid.material as THREE.Material).transparent = true
-  ;(mainGrid.material as THREE.Material).opacity = 0.15
-  mainGrid.position.y = 0.01 // knapp über dem Boden, gegen Z-Fighting
-  group.add(mainGrid)
-
-  const sideGrid = new THREE.GridHelper(SIDE_ROOM_DEPTH, 8, Palette.accentNeon, 0x2a3a4a)
-  sideGrid.scale.x = SIDE_ROOM_WIDTH / SIDE_ROOM_DEPTH
-  ;(sideGrid.material as THREE.Material).transparent = true
-  ;(sideGrid.material as THREE.Material).opacity = 0.15
-  sideGrid.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0.01, 0)
-  group.add(sideGrid)
-
-  const hallGrid = new THREE.GridHelper(SIDE_ROOM_WIDTH, 8, Palette.accentNeon, 0x2a3a4a)
-  hallGrid.scale.z = (HALL_MAX_Z - HALL_MIN_Z) / SIDE_ROOM_WIDTH
-  ;(hallGrid.material as THREE.Material).transparent = true
-  ;(hallGrid.material as THREE.Material).opacity = 0.15
-  hallGrid.position.set(MAIN_HALF_W + SIDE_ROOM_WIDTH / 2, 0.01, (HALL_MIN_Z + HALL_MAX_Z) / 2)
-  group.add(hallGrid)
-
-  const seHallGrid = new THREE.GridHelper(16, 6, Palette.accentNeon, 0x2a3a4a)
-  seHallGrid.scale.z = (MAIN_HALF_D - SIDE_HALF_D) / 16
-  ;(seHallGrid.material as THREE.Material).transparent = true
-  ;(seHallGrid.material as THREE.Material).opacity = 0.15
-  seHallGrid.position.set((SE_HALL_MIN_X + sideRoomMaxXForHall) / 2, 0.01, (SIDE_HALF_D + MAIN_HALF_D) / 2)
-  group.add(seHallGrid)
-
-  // --- Umgebende Wände ---
-  const wallMaterial = new THREE.MeshStandardMaterial({
-    color: Palette.wall,
-    map: createPanelTexture(),
-    roughness: 0.8,
-    metalness: 0.1,
-  })
-
-  const sideRoomMinX = MAIN_HALF_W
-  const sideRoomMaxX = MAIN_HALF_W + SIDE_ROOM_WIDTH
-  const sideRoomCenterX = (sideRoomMinX + sideRoomMaxX) / 2
-
-  // Innere Trennwand (West-Zone | Hauptraum) mit ebenerdigem Durchgang und
-  // einem erhöhten Einweg-Durchgang auf Höhe der West-Plattform (vom Boden
-  // aus zu hoch). Plattform und Wand liegen ohne Spalt aneinander -
-  // Spalte sind Stecken-Fallen.
-  const DIVIDER_X = -20
-  const DIVIDER_SOLID_SOUTH_Z_MAX = -11
-  const DIVIDER_GAP_Z_MAX = -3 // Durchgang: von SOLID_SOUTH_Z_MAX bis hier
-  // Tunnel unter dem Nordsteg geht durch die Trennwand in die West-Zone (vorher
-  // Sackgasse): Öffnung z -20,5..-17,5, Höhe wie die Stegunterkante
-  const DIVIDER_TUNNEL_Z_MIN = -MAIN_HALF_D + WALL_THICKNESS / 2
-  const DIVIDER_TUNNEL_Z_MAX = -17.5
-  const TUNNEL_HEIGHT = 2.5
-  const dividerSouthDepth = DIVIDER_SOLID_SOUTH_Z_MAX - DIVIDER_TUNNEL_Z_MAX
-
-  const WEST_PLATFORM_CENTER_X = -23
-  const WEST_PLATFORM_CENTER_Z = 14
-  const WEST_PLATFORM_SIZE = 5
-  const WEST_PLATFORM_HEIGHT = 2.8 // = obere Ebene: der Durchgang führt über die Verbindung zum Südsteg
-  const DOORWAY_Z_MIN = WEST_PLATFORM_CENTER_Z - WEST_PLATFORM_SIZE / 2
-  const DOORWAY_Z_MAX = WEST_PLATFORM_CENTER_Z + WEST_PLATFORM_SIZE / 2
-  const DOORWAY_HEIGHT = 2.2 // Kopffreiheit im Durchgang
-  const DOORWAY_TOP = WEST_PLATFORM_HEIGHT + DOORWAY_HEIGHT
-
-  // Südost-Tunnel (L): der Gang unter dem Südsteg (z 17,5..20,5) geht durch die
-  // Hauptraum-Ostwand nach Osten und biegt außerhalb nach Norden ab; er mündet
-  // durch die Flankenraum-Südwand in die Ostzone. Breite 3 m, Höhe 2,5 m.
-  const SE_TUNNEL_Z_MIN = 17.75 // = Stegkante; bündig mit dem Südsteg darüber (Regal-Steg der Südost-Halle)
-  const SE_TUNNEL_Z_MAX = 20.75 // = Innenseite der Südwand
-  const SE_TUNNEL_X_MAX = 36 // Innenkante der Ostwand des Tunnels
-  const SE_TUNNEL_NORTH_X: [number, number] = [33, 36] // Nordarm, mündet bei z 12
-  const dividerNorthLowerDepth = DOORWAY_Z_MIN - DIVIDER_GAP_Z_MAX
-  const dividerNorthUpperDepth = MAIN_HALF_D - DOORWAY_Z_MAX
-
-  const wallDefs: Array<{ w: number; d: number; x: number; z: number; bottom?: number }> = [
-    // Hauptraum (Ost-Wand mit Öffnung zum Flankenraum)
-    { w: MAIN_ROOM_WIDTH, d: WALL_THICKNESS, x: 0, z: -MAIN_HALF_D },
-    { w: MAIN_ROOM_WIDTH, d: WALL_THICKNESS, x: 0, z: MAIN_HALF_D },
-    { w: WALL_THICKNESS, d: MAIN_ROOM_DEPTH, x: -MAIN_HALF_W, z: 0 },
-    // Ostwand südlich der Öffnung, bis zum Durchgang des Südost-Tunnels
-    {
-      w: WALL_THICKNESS,
-      d: SE_TUNNEL_Z_MIN - SIDE_HALF_D,
-      x: MAIN_HALF_W,
-      z: (SIDE_HALF_D + SE_TUNNEL_Z_MIN) / 2,
-    },
-    // Ostwand nördlich der Öffnung: Durchgang für den Regal-Steg (z -20,5..-17,5, siehe unten)
-    { w: WALL_THICKNESS, d: 5.5, x: MAIN_HALF_W, z: -SIDE_HALF_D - 5.5 / 2 },
-    { w: WALL_THICKNESS, d: 0.5, x: MAIN_HALF_W, z: -MAIN_HALF_D + 0.25 },
-    // Flankenraum-Südwand mit Mündung des Südost-Tunnels (Sturz darüber)
-    { w: SE_TUNNEL_NORTH_X[0] - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + SE_TUNNEL_NORTH_X[0]) / 2, z: SIDE_HALF_D },
-    { w: HALL_DOOR_X[0] - SE_TUNNEL_NORTH_X[1], d: WALL_THICKNESS, x: (SE_TUNNEL_NORTH_X[1] + HALL_DOOR_X[0]) / 2, z: SIDE_HALF_D },
-    { w: sideRoomMaxX - HALL_DOOR_X[1], d: WALL_THICKNESS, x: (HALL_DOOR_X[1] + sideRoomMaxX) / 2, z: SIDE_HALF_D },
-    {
-      w: SE_TUNNEL_NORTH_X[1] - SE_TUNNEL_NORTH_X[0],
-      d: WALL_THICKNESS,
-      x: (SE_TUNNEL_NORTH_X[0] + SE_TUNNEL_NORTH_X[1]) / 2,
-      z: SIDE_HALF_D,
-      bottom: TUNNEL_HEIGHT,
-    },
-    // Südost-Tunnel: Südwand, Ostwand, dünne Westwand des Nordarms, Decke über beiden Armen
-    { w: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2 - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + SE_TUNNEL_X_MAX + WALL_THICKNESS / 2) / 2, z: MAIN_HALF_D },
-    // Ostwand des Tunnels = Westwand der Südost-Halle: voll bis zum Steg, an der Steg-Durchfahrt nur als Sockel (siehe unten)
-    { w: WALL_THICKNESS, d: SE_TUNNEL_Z_MIN - (SIDE_HALF_D + WALL_THICKNESS / 2), x: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2, z: (SE_TUNNEL_Z_MIN + SIDE_HALF_D + WALL_THICKNESS / 2) / 2 },
-    { w: WALL_THICKNESS, d: MAIN_HALF_D + WALL_THICKNESS / 2 - SE_TUNNEL_Z_MAX, x: SE_TUNNEL_X_MAX + WALL_THICKNESS / 2, z: (MAIN_HALF_D + WALL_THICKNESS / 2 + SE_TUNNEL_Z_MAX) / 2 },
-    { w: SE_TUNNEL_NORTH_X[0] - (sideRoomMinX + WALL_THICKNESS / 2), d: SE_TUNNEL_Z_MIN - (SIDE_HALF_D + WALL_THICKNESS / 2), x: (sideRoomMinX + WALL_THICKNESS / 2 + SE_TUNNEL_NORTH_X[0]) / 2, z: (SIDE_HALF_D + WALL_THICKNESS / 2 + SE_TUNNEL_Z_MIN) / 2 },
-    { w: SE_TUNNEL_NORTH_X[1] - SE_TUNNEL_NORTH_X[0], d: SE_TUNNEL_Z_MIN - (SIDE_HALF_D + WALL_THICKNESS / 2), x: (SE_TUNNEL_NORTH_X[0] + SE_TUNNEL_NORTH_X[1]) / 2, z: (SIDE_HALF_D + WALL_THICKNESS / 2 + SE_TUNNEL_Z_MIN) / 2, bottom: TUNNEL_HEIGHT },
-    // Nordwand des Flankenraums mit Öffnung zur Halle
-    { w: HALL_DOOR_X[0] - sideRoomMinX, d: WALL_THICKNESS, x: (sideRoomMinX + HALL_DOOR_X[0]) / 2, z: -SIDE_HALF_D },
-    { w: sideRoomMaxX - HALL_DOOR_X[1], d: WALL_THICKNESS, x: (HALL_DOOR_X[1] + sideRoomMaxX) / 2, z: -SIDE_HALF_D },
-    { w: WALL_THICKNESS, d: SIDE_ROOM_DEPTH, x: sideRoomMaxX, z: 0 },
-    // Südost-Halle (Spiegelbild der Nordost-Halle): Süd- und Ostwand, West = Ostwand des Tunnels
-    { w: sideRoomMaxX + WALL_THICKNESS / 2 - (SE_TUNNEL_X_MAX + WALL_THICKNESS), d: WALL_THICKNESS, x: (SE_TUNNEL_X_MAX + WALL_THICKNESS + sideRoomMaxX + WALL_THICKNESS / 2) / 2, z: MAIN_HALF_D },
-    { w: WALL_THICKNESS, d: MAIN_HALF_D - SIDE_HALF_D + WALL_THICKNESS / 2, x: sideRoomMaxX, z: (MAIN_HALF_D + SIDE_HALF_D) / 2 + WALL_THICKNESS / 4 },
-    // Halle: Nord- und Ostwand (West = Hauptraum-Ostwand)
-    { w: SIDE_ROOM_WIDTH, d: WALL_THICKNESS, x: sideRoomCenterX, z: HALL_MIN_Z },
-    { w: WALL_THICKNESS, d: HALL_MAX_Z - HALL_MIN_Z + WALL_THICKNESS / 2, x: sideRoomMaxX, z: (HALL_MIN_Z + HALL_MAX_Z) / 2 - WALL_THICKNESS / 4 },
-    // Trennwand: Süd-Abschnitt, Nord-Abschnitte vor und nach dem erhöhten Durchgang
-    { w: WALL_THICKNESS, d: dividerSouthDepth, x: DIVIDER_X, z: DIVIDER_TUNNEL_Z_MAX + dividerSouthDepth / 2 },
-    // Sturz über dem Tunnel-Durchgang
-    {
-      w: WALL_THICKNESS,
-      d: DIVIDER_TUNNEL_Z_MAX - DIVIDER_TUNNEL_Z_MIN,
-      x: DIVIDER_X,
-      z: (DIVIDER_TUNNEL_Z_MIN + DIVIDER_TUNNEL_Z_MAX) / 2,
-      bottom: TUNNEL_HEIGHT,
-    },
-    {
-      w: WALL_THICKNESS,
-      d: dividerNorthLowerDepth,
-      x: DIVIDER_X,
-      z: DIVIDER_GAP_Z_MAX + dividerNorthLowerDepth / 2,
-    },
-    {
-      w: WALL_THICKNESS,
-      d: dividerNorthUpperDepth,
-      x: DIVIDER_X,
-      z: DOORWAY_Z_MAX + dividerNorthUpperDepth / 2,
-    },
+  // --- Außenwände (6 m, mit Neon-Streifen oben) ---
+  const wallLength = ARENA_HALF * 2 + WALL_THICKNESS
+  const outerWalls: Array<[number, number, number, number]> = [
+    [0, -ARENA_HALF, wallLength, WALL_THICKNESS],
+    [0, ARENA_HALF, wallLength, WALL_THICKNESS],
+    [-ARENA_HALF, 0, WALL_THICKNESS, ARENA_HALF * 2 - WALL_THICKNESS],
+    [ARENA_HALF, 0, WALL_THICKNESS, ARENA_HALF * 2 - WALL_THICKNESS],
   ]
-
-  for (const def of wallDefs) {
-    const wallBottom = def.bottom ?? 0
-    const wallGeometry = worldBox(def.w, WALL_HEIGHT - wallBottom, def.d)
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial)
-    wall.position.set(def.x, wallBottom + (WALL_HEIGHT - wallBottom) / 2, def.z)
-    addEdgeOutline(wall)
-    group.add(wall)
-    solids.push({ mesh: wall, box: new THREE.Box3().setFromObject(wall), kind: 'wall' })
-
-    // Leuchtender Neon-Streifen oben (emissive, ohne echte Lichtquelle)
-    const stripeGeometry = worldBox(
-      def.w * 0.98,
-      0.1,
-      def.d * 0.98 + (def.d === WALL_THICKNESS ? 0.1 : 0)
-    )
-    const stripeMaterial = new THREE.MeshStandardMaterial({
-      color: Palette.accentNeon,
-      emissive: Palette.accentNeon,
-      emissiveIntensity: 1.2,
-    })
-    const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial)
-    stripe.position.set(def.x, WALL_HEIGHT - 0.1, def.z)
+  const stripeMaterial = new THREE.MeshStandardMaterial({ color: Palette.accentNeon, emissive: Palette.accentNeon, emissiveIntensity: 1.2 })
+  for (const [x, z, w, d] of outerWalls) {
+    block(x, z, w, d, 0, WALL_HEIGHT, 'wall')
+    const stripe = new THREE.Mesh(worldBox(w * 0.98, 0.1, d * 0.98 + (d === WALL_THICKNESS ? 0.1 : 0)), stripeMaterial)
+    stripe.position.set(x, WALL_HEIGHT - 0.1, z)
     group.add(stripe)
   }
 
-  // --- Erhöhter Durchgang: Sockel bis Plattformhöhe, darüber die Öffnung, dann Sturz ---
-  const doorwaySillMesh = new THREE.Mesh(
-    worldBox(WALL_THICKNESS, WEST_PLATFORM_HEIGHT, DOORWAY_Z_MAX - DOORWAY_Z_MIN),
-    wallMaterial
-  )
-  doorwaySillMesh.position.set(DIVIDER_X, WEST_PLATFORM_HEIGHT / 2, WEST_PLATFORM_CENTER_Z)
-  addEdgeOutline(doorwaySillMesh)
-  group.add(doorwaySillMesh)
-  solids.push({ mesh: doorwaySillMesh, box: new THREE.Box3().setFromObject(doorwaySillMesh), kind: 'wall' })
+  // --- Zentralturm: hohl, vier Türen, flaches Dach (6 m). Dach = Struktur, nicht "Wand": nur Wände über 5,9 m
+  // bekommen die unsichtbare Verlängerung, auf dem Dach muss man stehen können. ---
+  const towerEdge = TOWER_HALF - WALL_THICKNESS / 2
+  wallRun(0, -towerEdge, TOWER_HALF * 2, WALL_THICKNESS, true, TOWER_WALL_TOP, DOOR_WIDTH)
+  wallRun(0, towerEdge, TOWER_HALF * 2, WALL_THICKNESS, true, TOWER_WALL_TOP, DOOR_WIDTH)
+  wallRun(-towerEdge, 0, TOWER_HALF * 2 - WALL_THICKNESS * 2, WALL_THICKNESS, false, TOWER_WALL_TOP, DOOR_WIDTH)
+  wallRun(towerEdge, 0, TOWER_HALF * 2 - WALL_THICKNESS * 2, WALL_THICKNESS, false, TOWER_WALL_TOP, DOOR_WIDTH)
+  block(0, 0, TOWER_HALF * 2, TOWER_HALF * 2, TOWER_WALL_TOP, TOWER_TOP)
+  crate(0, 0, 2, 2, 2.4) // Mittelblock: nimmt die Sicht von Tür zu Tür
+  // Deckung auf dem Dach (niedrig: der Besitzer überblickt sonst alles)
+  for (const [x, z] of [[-3.2, -3.2], [3.2, 3.2]]) crate(x, z, 2, 2, 1.2, TOWER_TOP)
+  for (const [x, z] of [[3.2, -3.2], [-3.2, 3.2]]) crate(x, z, 1.2, 2.4, 1.2, TOWER_TOP)
 
-  const doorwayLintelHeight = WALL_HEIGHT - DOORWAY_TOP
-  const doorwayLintelMesh = new THREE.Mesh(
-    worldBox(WALL_THICKNESS, doorwayLintelHeight, DOORWAY_Z_MAX - DOORWAY_Z_MIN),
-    wallMaterial
-  )
-  doorwayLintelMesh.position.set(DIVIDER_X, DOORWAY_TOP + doorwayLintelHeight / 2, WEST_PLATFORM_CENTER_Z)
-  addEdgeOutline(doorwayLintelMesh)
-  group.add(doorwayLintelMesh)
-  solids.push({ mesh: doorwayLintelMesh, box: new THREE.Box3().setFromObject(doorwayLintelMesh), kind: 'wall' })
+  // --- Simsring um den Turm (Laufsteg-Höhe, 3 m breit, Platz für ein Sprungpad), Brücken zum Laufsteg-Ring ---
+  const ledgeWidth = LEDGE_HALF - TOWER_HALF
+  const ledgeMid = (LEDGE_HALF + TOWER_HALF) / 2
+  block(0, -ledgeMid, LEDGE_HALF * 2, ledgeWidth, UPPER_BOTTOM, UPPER_TOP)
+  block(0, ledgeMid, LEDGE_HALF * 2, ledgeWidth, UPPER_BOTTOM, UPPER_TOP)
+  block(-ledgeMid, 0, ledgeWidth, TOWER_HALF * 2, UPPER_BOTTOM, UPPER_TOP)
+  block(ledgeMid, 0, ledgeWidth, TOWER_HALF * 2, UPPER_BOTTOM, UPPER_TOP)
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) block(sx * (LEDGE_HALF - 0.2), sz * (LEDGE_HALF - 0.2), 0.4, 0.4, 0, UPPER_BOTTOM)
 
-  // --- Freistehende Wand mit Fenster (Pfosten, Sockel, Sturz) ---
-  function buildWindowWall(centerX: number, centerZ: number, totalWidth: number, windowWidth: number) {
-    const THICKNESS = 0.4
-    const SILL_HEIGHT = 1.1
-    // Per Duck-Sprung durchkletterbar (gewollt): etwas höher als der geduckte
-    // Körper (1.3m), stehend (2.0m) passt man nicht durch
-    const OPENING_HEIGHT = 1.4
-    const WALL_TOP = SILL_HEIGHT + OPENING_HEIGHT + 1.1 // Sturz-Oberkante = Gesamthöhe der Wand
-    const sidePostWidth = (totalWidth - windowWidth) / 2
+  const railing = (x: number, z: number, width: number, depth: number, base = UPPER_TOP) => block(x, z, width, depth, base, base + RAILING_HEIGHT)
+  // Geländer außen am Sims, mit 3 m Lücke an jeder Brücke
+  const gap = DOOR_WIDTH / 2
+  for (const s of [-1, 1]) {
+    const edge = s * (LEDGE_HALF - RAILING_THICKNESS / 2)
+    const seg = (LEDGE_HALF * 2 - 2 * gap) / 2
+    const c = gap + seg / 2
+    railing(-c, edge, seg, RAILING_THICKNESS)
+    railing(c, edge, seg, RAILING_THICKNESS)
+    railing(edge, -c, RAILING_THICKNESS, seg)
+    railing(edge, c, RAILING_THICKNESS, seg)
+  }
 
-    function addPiece(offsetX: number, width: number, bottomY: number, topY: number) {
-      const height = topY - bottomY
-      const mesh = new THREE.Mesh(worldBox(width, height, THICKNESS), wallMaterial)
-      mesh.position.set(centerX + offsetX, bottomY + height / 2, centerZ)
-      addEdgeOutline(mesh)
-      group.add(mesh)
-      solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh) })
+  // Brücken vom Sims zum Laufsteg-Ring (vier, auf den Achsen), Geländer beidseitig mit 4 m Lücke in der Mitte
+  const bridgeLength = CATWALK_EDGE - LEDGE_HALF
+  const bridgeMid = (CATWALK_EDGE + LEDGE_HALF) / 2
+  for (const s of [-1, 1]) {
+    block(s * bridgeMid, 0, bridgeLength, BRIDGE_WIDTH, UPPER_BOTTOM, UPPER_TOP)
+    block(0, s * bridgeMid, BRIDGE_WIDTH, bridgeLength, UPPER_BOTTOM, UPPER_TOP)
+    block(s * bridgeMid, 0, 0.5, 0.5, 0, UPPER_BOTTOM) // Stütze in der Mitte
+    block(0, s * bridgeMid, 0.5, 0.5, 0, UPPER_BOTTOM)
+    const railLen = (bridgeLength - 4) / 2
+    const railMid = LEDGE_HALF + railLen / 2
+    const railMid2 = CATWALK_EDGE - railLen / 2
+    for (const side of [-1, 1]) {
+      const off = side * (BRIDGE_WIDTH / 2 - RAILING_THICKNESS / 2)
+      for (const m of [railMid, railMid2]) {
+        railing(s * m, off, railLen, RAILING_THICKNESS)
+        railing(off, s * m, RAILING_THICKNESS, railLen)
+      }
     }
-
-    addPiece(-(windowWidth + sidePostWidth) / 2, sidePostWidth, 0, WALL_TOP)
-    addPiece((windowWidth + sidePostWidth) / 2, sidePostWidth, 0, WALL_TOP)
-
-    addPiece(0, windowWidth, 0, SILL_HEIGHT)
-    addPiece(0, windowWidth, SILL_HEIGHT + OPENING_HEIGHT, WALL_TOP)
   }
 
-  buildWindowWall(9, -15, 8, 3.5)
-
-  // --- L-förmige Deckung (Deckung aus zwei Richtungen) ---
-  function buildLCover(
-    cornerX: number,
-    cornerZ: number,
-    armLength: number,
-    thickness: number,
-    height: number,
-    armXDir: 1 | -1,
-    armZDir: 1 | -1
-  ) {
-    const armAlongX = new THREE.Mesh(
-      worldBox(armLength, height, thickness),
-      boxMaterial
-    )
-    armAlongX.position.set(
-      cornerX + (armXDir * armLength) / 2,
-      height / 2,
-      cornerZ + (armZDir * thickness) / 2
-    )
-    addEdgeOutline(armAlongX)
-    group.add(armAlongX)
-    solids.push({ mesh: armAlongX, box: new THREE.Box3().setFromObject(armAlongX), kind: 'cover' })
-
-    const armAlongZ = new THREE.Mesh(
-      worldBox(thickness, height, armLength),
-      boxMaterial
-    )
-    armAlongZ.position.set(
-      cornerX + (armXDir * thickness) / 2,
-      height / 2,
-      cornerZ + (armZDir * armLength) / 2
-    )
-    addEdgeOutline(armAlongZ)
-    group.add(armAlongZ)
-    solids.push({ mesh: armAlongZ, box: new THREE.Box3().setFromObject(armAlongZ), kind: 'cover' })
+  // --- Laufsteg-Ring an den Außenwänden ---
+  const stripLength = INNER * 2
+  const stripMid = INNER - CATWALK_DEPTH / 2
+  block(0, -stripMid, stripLength, CATWALK_DEPTH, UPPER_BOTTOM, UPPER_TOP)
+  block(0, stripMid, stripLength, CATWALK_DEPTH, UPPER_BOTTOM, UPPER_TOP)
+  block(-stripMid, 0, CATWALK_DEPTH, CATWALK_EDGE * 2, UPPER_BOTTOM, UPPER_TOP)
+  block(stripMid, 0, CATWALK_DEPTH, CATWALK_EDGE * 2, UPPER_BOTTOM, UPPER_TOP)
+  // Stützen unter dem Ring (ohne Rampen- und Brückenbereiche)
+  for (const p of [-16, -8, 8, 16]) {
+    block(p, -CATWALK_EDGE - 0.1, 0.4, 0.4, 0, UPPER_BOTTOM)
+    block(p, CATWALK_EDGE + 0.1, 0.4, 0.4, 0, UPPER_BOTTOM)
   }
+  for (const p of [-8, 8]) {
+    block(-CATWALK_EDGE - 0.1, p, 0.4, 0.4, 0, UPPER_BOTTOM)
+    block(CATWALK_EDGE + 0.1, p, 0.4, 0.4, 0, UPPER_BOTTOM)
+  }
+  block(-CATWALK_EDGE - 0.1, 16, 0.4, 0.4, 0, UPPER_BOTTOM)
+  block(CATWALK_EDGE + 0.1, -16, 0.4, 0.4, 0, UPPER_BOTTOM)
 
-  // --- Deckungs-Kisten ---
-  const boxMaterial = new THREE.MeshStandardMaterial({
-    color: Palette.crate,
-    map: createCrateTexture(),
-    roughness: 0.6,
-    metalness: 0.15,
-  })
+  // Geländer an der Innenkante; Lücken an Brücken und Rampen-Enden
+  const gapB = BRIDGE_WIDTH / 2 + 0.25
+  const edgeRail = (from: number, to: number, line: number, alongX: boolean) => {
+    const length = to - from
+    if (length <= 0) return
+    const mid = (from + to) / 2
+    if (alongX) railing(mid, line, length, RAILING_THICKNESS)
+    else railing(line, mid, RAILING_THICKNESS, length)
+  }
+  const lineLow = -CATWALK_EDGE - RAILING_THICKNESS / 2 // Geländer liegt im Streifen, an dessen Innenkante
+  const lineHigh = CATWALK_EDGE + RAILING_THICKNESS / 2
+  edgeRail(-CATWALK_EDGE + 3, -gapB, lineLow, true) // Nord: links der Rampe NW (x -24,5..-21,5) bleibt frei
+  edgeRail(gapB, CATWALK_EDGE, lineLow, true)
+  edgeRail(-CATWALK_EDGE, -gapB, lineHigh, true) // Süd
+  edgeRail(gapB, CATWALK_EDGE - 3, lineHigh, true) // rechts frei: Rampe SE
+  edgeRail(-CATWALK_EDGE, -gapB, lineLow, false) // West
+  edgeRail(gapB, CATWALK_EDGE, lineLow, false)
+  edgeRail(-CATWALK_EDGE, -gapB, lineHigh, false) // Ost
+  edgeRail(gapB, CATWALK_EDGE, lineHigh, false)
 
-  // Höhen: 1.4m = Deckung nur im Ducken, erkletterbar (Sprunghöhe ~1.6m);
-  // 2.4m = volle Deckung; 2.8m = sichtbar "Wand, nicht kletterbar".
-  const coverPositions: Array<[number, number, number, number, number]> = [
-    // [x, z, breite (X), tiefe (Z), höhe] - Hauptraum
-    [-14, -8, 3, 3, 2.4],
-    [-12, 7, 4, 1.5, 1.4],
-    [3, -9, 2.6, 2.6, 2.4],
-    [4, 9, 5, 2, 1.4],
-    [-2, 0, 4, 4, 2.4],
-    [24, -14, 1.5, 4, 1.4], // nicht unter den Nord-Laufsteg (dort kein Platz zum Stehen)
-    [24, 9, 2.6, 2.6, 2.8], // vorher (22, 16): dort liegt jetzt die Südost-Rampe
-    // West-Zone
-    [-28, -9, 4.5, 1.8, 2.4],
-    [-27, 8, 3, 3, 2.8],
-    [-24, -16, 3, 2, 2.4],
-    [19, -8, 2, 2, 1.4], // neben statt unter der Nord-Brücke
-    // Deckung vor den mittleren Spawns (0, ±18): dort wurde man im Bot-Test
-    // oft direkt nach dem Spawn getroffen (50-62 % statt 3-9 %).
-    // Front 6 m plus ein Seitenteil auf der Seite, von der geschossen wird
-    // (Bot-Test: Nord-Spawn von Osten, Süd-Spawn von Westen); die andere Seite
-    // bleibt offen, sonst war man eingesperrt (Nutzer). Nord-Ost-Seitenteil
-    // reicht bis an die Fensterwand (x 5), sonst bliebe ein 0,5-m-Spalt.
-    [0, -14, 6, 1, 2.4],
-    [4.25, -16, 1.5, 3, 2.4],
-    [0, 14, 6, 1, 2.4],
-    [-3.5, 16, 1, 3, 2.4],
-    // Nordost-Halle (Nordwand-Streifen z < -17,5 bleibt für den Regal-Steg frei)
-    [42, -15, 3, 1.2, 2.4],
-    [49.5, -15.5, 2, 2.5, 2.4], // deckt den Halle-Spawn (49,5 / -19,2) nach Süden
-    [35, -14.5, 2, 2, 1.4],
-    // Südost-Halle (Spiegelbild; Südwand-Streifen z > 17,75 bleibt für den Regal-Steg frei)
-    [42, 15, 3, 1.2, 2.4],
-    [49.5, 15.5, 2, 2.5, 2.4], // deckt den Halle-Spawn (49,5 / 19,2) nach Norden
-    // Flankenraum
-    [sideRoomMinX + 6, -5, 2.4, 2.4, 2.4],
-    [sideRoomMinX + 13, 7, 2, 4.5, 2.8],
-    [44, -8, 2.2, 2.2, 1.4],
+  // --- Rampen auf den Ring: NW läuft am Nordsteg entlang nach Norden, SE (punktgespiegelt) nach Süden ---
+  function buildRamp(centerX: number, minZ: number, maxZ: number, ascending: boolean, curbSide: -1 | 1): Ramp {
+    const width = CATWALK_DEPTH
+    const ramp: Ramp = {
+      minX: centerX - width / 2,
+      maxX: centerX + width / 2,
+      minZ,
+      maxZ,
+      axis: 'z',
+      ascending,
+      bottomHeight: 0,
+      topHeight: UPPER_TOP,
+    }
+    const mesh = new THREE.Mesh(createWedgeGeometry(maxZ - minZ, width, UPPER_TOP), wallMaterial)
+    mesh.rotation.y = ascending ? -Math.PI / 2 : Math.PI / 2
+    mesh.position.set(centerX, 0, ascending ? minZ : maxZ)
+    addEdgeOutline(mesh)
+    group.add(mesh)
+    shootableExtras.push(mesh)
+    // Seitenborde: Rampe nur von vorne betretbar (seitlich würde man schlagartig auf Rampenhöhe gehoben). Auf der
+    // Ring-Seite stützt die Wand zugleich den Laufsteg (bis zur Unterkante), auf der freien Seite ist sie rampenhoch.
+    block(centerX + curbSide * (width / 2 + 0.1), (minZ + maxZ) / 2, 0.2, maxZ - minZ, 0, UPPER_TOP)
+    block(centerX - curbSide * (width / 2 + 0.1), (minZ + maxZ) / 2, 0.2, maxZ - minZ, 0, UPPER_TOP)
+    return ramp
+  }
+  const rampNorthWest = buildRamp(-(CATWALK_EDGE - CATWALK_DEPTH / 2), -CATWALK_EDGE, -CATWALK_EDGE + RAMP_LENGTH, false, 1)
+  const rampSouthEast = buildRamp(CATWALK_EDGE - CATWALK_DEPTH / 2, CATWALK_EDGE - RAMP_LENGTH, CATWALK_EDGE, true, -1)
+
+  // --- Eck-Bunker: hohl, zwei Türen zur Mitte, Dach auf 4 m (Sprungpad-/Haken-Ziel), Deckung innen ---
+  function buildBunker(cx: number, cz: number) {
+    const half = BUNKER_SIZE / 2
+    const edge = half - BUNKER_WALL / 2
+    const doorX = cx > 0 ? -1 : 1 // Tür auf der Seite zur Mitte
+    const doorZ = cz > 0 ? -1 : 1
+    const inner = BUNKER_SIZE - BUNKER_WALL * 2
+    const door = 2.6
+    // Wände parallel zur X-Achse (Nord/Süd): die zur Mitte hat eine Tür
+    for (const s of [-1, 1]) {
+      const hasDoor = s === doorZ
+      wallRunBunker(cx, cz + s * edge, BUNKER_SIZE, true, hasDoor ? door : undefined)
+      wallRunBunker(cx + s * edge, cz, inner, false, s === doorX ? door : undefined)
+    }
+    block(cx, cz, BUNKER_SIZE, BUNKER_SIZE, BUNKER_WALL_TOP, BUNKER_TOP)
+    crate(cx - doorX * 1.9, cz - doorZ * 1.9, 1.6, 1.6, 1.4) // Deckung im Inneren, hinten
+  }
+  function wallRunBunker(x: number, z: number, length: number, alongX: boolean, doorWidth?: number) {
+    wallRun(x, z, length, BUNKER_WALL, alongX, BUNKER_WALL_TOP, doorWidth)
+  }
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) buildBunker(sx * BUNKER_CENTER, sz * BUNKER_CENTER)
+
+  // --- Deckungs-Kisten (punktsymmetrisch in Paaren) ---
+  const pairs: Array<[number, number, number, number, number]> = [
+    [-9, -12, 2.5, 2.5, 2.4],
+    [12, -5, 3, 1.5, 1.4],
+    [5, -13, 1.5, 3, 1.4],
+    [21.5, -3.5, 2.4, 1.2, 2.4], // vor den Spawns an den Seiten
+    [3.5, -21.5, 1.2, 2.4, 2.4],
+    [-16, 6, 2, 2, 1.4],
   ]
-
-  for (const [x, z, width, depth, height] of coverPositions) {
-    const boxGeometry = worldBox(width, height, depth, CRATE_TILE)
-    const box = new THREE.Mesh(boxGeometry, boxMaterial)
-    box.position.set(x, height / 2, z)
-    addEdgeOutline(box)
-    group.add(box)
-    solids.push({ mesh: box, box: new THREE.Box3().setFromObject(box), kind: 'cover' })
+  for (const [x, z, w, d, h] of pairs) {
+    crate(x, z, w, d, h)
+    crate(-x, -z, w, d, h)
   }
 
-  // --- Neon-Säulen (Kollisionskörper, 6 m hoch, brechen lange Sichtlinien):
-  // dunkler Kern, leuchtende Ringe wie die Streifen oben an den Wänden. Die
-  // Ringe sind reine Optik (nicht in solids/shootables).
+  // --- Neon-Säulen (6 m, Kollisionskörper, Anker für den Haken); Ringe nur Optik ---
   const pillarMaterial = new THREE.MeshStandardMaterial({ color: Palette.pillar, roughness: 0.9, metalness: 0.05 })
-  const pillarRingMaterial = new THREE.MeshStandardMaterial({
-    color: Palette.accentNeon,
-    emissive: Palette.accentNeon,
-    emissiveIntensity: 1.2,
-  })
+  const pillarRingMaterial = new THREE.MeshStandardMaterial({ color: Palette.accentNeon, emissive: Palette.accentNeon, emissiveIntensity: 1.2 })
   const PILLAR_SIZE = 1.2
   const pillarRingGeometry = worldBox(PILLAR_SIZE + 0.08, 0.14, PILLAR_SIZE + 0.08)
-
   function buildPillar(x: number, z: number) {
     const pillar = new THREE.Mesh(worldBox(PILLAR_SIZE, WALL_HEIGHT, PILLAR_SIZE), pillarMaterial)
     pillar.position.set(x, WALL_HEIGHT / 2, z)
@@ -504,286 +375,31 @@ export function buildArena(): ArenaResult {
       group.add(ring)
     }
   }
-
-  buildPillar(11, -10)
-  buildPillar(-10, -4)
-  buildPillar(41, 1)
-
-  // 1.4m: zuverlässig erkletterbar (1.6m lag genau an der Sprunghöhe)
-  buildLCover(sideRoomMinX + 2, -7, 4, 0.8, 1.4, 1, -1)
-  buildLCover(9, 16, 3, 0.7, 1.4, 1, -1)
-  buildLCover(50, 2, 3, 0.7, 1.4, -1, -1)
-
-  // --- Erhöhte Plattformen mit Rampe (Wandfarbe = Struktur, nicht Deckung) ---
-  // Rampen flach halten (Steigung ~0.3): bei steiler Rampe stößt die
-  // Kollisionsbox schon an die Plattformkante, bevor die Rampe hoch genug ist.
-  function buildPlatformWithRamp(
-    centerX: number,
-    centerZ: number,
-    platformSize: number,
-    platformHeight: number,
-    rampLength: number,
-    rampWidth: number,
-    rampAxis: 'x' | 'z',
-    rampAscending: boolean,
-    // lateralOffset: Rampe quer verschieben; omitCurbSide: Bord weglassen, wo eine Wand steht
-    options: { lateralOffset?: number; omitCurbSide?: -1 | 1 } = {}
-  ): Ramp {
-    const lateralOffset = options.lateralOffset ?? 0
-    const rampCenterX = rampAxis === 'z' ? centerX + lateralOffset : centerX
-    const rampCenterZ = rampAxis === 'x' ? centerZ + lateralOffset : centerZ
-    const platformGeometry = worldBox(platformSize, platformHeight, platformSize)
-    const platform = new THREE.Mesh(platformGeometry, wallMaterial)
-    platform.position.set(centerX, platformHeight / 2, centerZ)
-    addEdgeOutline(platform)
-    group.add(platform)
-    solids.push({ mesh: platform, box: new THREE.Box3().setFromObject(platform) })
-
-    const platformHalf = platformSize / 2
-    // Rampe endet exakt an der Plattformkante (nahtloser Übergang)
-    const edgeAtPlatform = rampAscending
-      ? (rampAxis === 'x' ? centerX : centerZ) - platformHalf
-      : (rampAxis === 'x' ? centerX : centerZ) + platformHalf
-    const rampStart = rampAscending ? edgeAtPlatform - rampLength : edgeAtPlatform + rampLength
-    const rampMin = Math.min(edgeAtPlatform, rampStart)
-    const rampMax = Math.max(edgeAtPlatform, rampStart)
-
-    const ramp: Ramp = {
-      minX: rampAxis === 'x' ? rampMin : rampCenterX - rampWidth / 2,
-      maxX: rampAxis === 'x' ? rampMax : rampCenterX + rampWidth / 2,
-      minZ: rampAxis === 'z' ? rampMin : rampCenterZ - rampWidth / 2,
-      maxZ: rampAxis === 'z' ? rampMax : rampCenterZ + rampWidth / 2,
-      axis: rampAxis,
-      ascending: rampAscending,
-      bottomHeight: 0,
-      topHeight: platformHeight,
-    }
-
-    // Keil steigt lokal entlang +X - für Z-Rampen um 90° gedreht
-    const rampMesh = new THREE.Mesh(
-      createWedgeGeometry(rampLength, rampWidth, platformHeight),
-      wallMaterial
-    )
-    if (rampAxis === 'x') {
-      rampMesh.position.set(rampAscending ? rampMin : rampMax, 0, rampCenterZ)
-      if (!rampAscending) rampMesh.rotation.y = Math.PI
-    } else {
-      rampMesh.rotation.y = rampAscending ? -Math.PI / 2 : Math.PI / 2
-      rampMesh.position.set(rampCenterX, 0, rampAscending ? rampMin : rampMax)
-    }
-    addEdgeOutline(rampMesh)
-    group.add(rampMesh)
-    shootableExtras.push(rampMesh)
-
-    // Seitenborde: Rampe nur von vorne betretbar (seitlich würde man
-    // schlagartig auf Rampenhöhe gehoben). Komplett außerhalb der
-    // Rampenbreite und exakt plattformhoch - sonst entstehen Klemmstellen.
-    const curbHeight = platformHeight
-    const curbThickness = 0.2
-    const curbMid = (rampMin + rampMax) / 2
-    const curbLength = rampMax - rampMin
-    for (const side of [-1, 1] as const) {
-      if (side === options.omitCurbSide) continue
-      const curbGeometry =
-        rampAxis === 'x'
-          ? worldBox(curbLength, curbHeight, curbThickness)
-          : worldBox(curbThickness, curbHeight, curbLength)
-      const curb = new THREE.Mesh(curbGeometry, wallMaterial)
-      const outwardOffset = rampWidth / 2 + curbThickness / 2
-      if (rampAxis === 'x') {
-        curb.position.set(curbMid, curbHeight / 2, rampCenterZ + side * outwardOffset)
-      } else {
-        curb.position.set(rampCenterX + side * outwardOffset, curbHeight / 2, curbMid)
-      }
-      addEdgeOutline(curb)
-      group.add(curb)
-      solids.push({ mesh: curb, box: new THREE.Box3().setFromObject(curb) })
-    }
-
-    return ramp
+  for (const [x, z] of [[22, 10], [10, -22]]) {
+    buildPillar(x, z)
+    buildPillar(-x, -z)
   }
 
-  const shootableExtras: THREE.Object3D[] = []
-
-  const PLATFORM_A_X = 15
-  const PLATFORM_A_SIZE = 6
-  const UPPER_TOP = 2.8 // obere Ebene = Höhe von Plattform A
-  const rampToMainPlatform = buildPlatformWithRamp(PLATFORM_A_X, 0, PLATFORM_A_SIZE, UPPER_TOP, 10, 4, 'x', true)
-
-  // --- Obere Ebene: Laufsteg an der Wand, Brücke von Plattform A dorthin ---
-  // Unterkante 2,5 m: stehend passt man darunter (Kopf 2,0 m), im Sprung
-  // stößt man an (Deckenkollision). Hoch kommt man nur über Rampe A.
-  const UPPER_THICKNESS = 0.3
-  const CATWALK_DEPTH = 3
-  const BRIDGE_WIDTH = 2.5
-  const RAILING_HEIGHT = 1
-  const RAILING_THICKNESS = 0.2
-  const upperBottom = UPPER_TOP - UPPER_THICKNESS
-
-  function addBlock(x: number, z: number, width: number, depth: number, bottom: number, top: number) {
-    const mesh = new THREE.Mesh(worldBox(width, top - bottom, depth), wallMaterial)
-    mesh.position.set(x, (bottom + top) / 2, z)
-    addEdgeOutline(mesh)
-    group.add(mesh)
-    solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh) })
-  }
-
-  const westEnd = DIVIDER_X + WALL_THICKNESS / 2
-  const eastEnd = MAIN_HALF_W - WALL_THICKNESS / 2
-  const CORNER_PLATFORM_SIZE = 3
-  const CORNER_RAMP_LENGTH = 10 // Steigung wie Rampe A
-
-  // side: -1 = Nordwand, 1 = Südwand. Eck-Aufgang in der West- bzw. Ostecke:
-  // Plattform bündig an Steg und Wand, Rampe läuft am Steg entlang. Die
-  // Südwest-Ecke bleibt frei - dort mündet der erhöhte Durchgang (2,4 m).
-  function buildUpperSide(side: -1 | 1, cornerEnd: 'west' | 'east', dropGap: [number, number], extraGaps: [number, number][] = []) {
-    const wallFace = side * (MAIN_HALF_D - WALL_THICKNESS / 2)
-    const edge = wallFace - side * CATWALK_DEPTH
-    // Laufsteg über die ganze Hauptraum-Breite (Trennwand bis Ostwand)
-    addBlock((westEnd + eastEnd) / 2, (wallFace + edge) / 2, eastEnd - westEnd, CATWALK_DEPTH, upperBottom, UPPER_TOP)
-
-    // Brücke von der Plattformkante bis zur Stegkante
-    const platformEdge = side * (PLATFORM_A_SIZE / 2)
-    addBlock(PLATFORM_A_X, (platformEdge + edge) / 2, BRIDGE_WIDTH, Math.abs(edge - platformEdge), upperBottom, UPPER_TOP)
-
-    const cornerDir = cornerEnd === 'west' ? 1 : -1
-    const cornerX = (cornerEnd === 'west' ? westEnd : eastEnd) + (cornerDir * CORNER_PLATFORM_SIZE) / 2
-    const cornerRamp = buildPlatformWithRamp(
-      cornerX,
-      edge - (side * CORNER_PLATFORM_SIZE) / 2,
-      CORNER_PLATFORM_SIZE,
-      UPPER_TOP,
-      CORNER_RAMP_LENGTH,
-      CORNER_PLATFORM_SIZE,
-      'x',
-      cornerEnd === 'east',
-      { omitCurbSide: side }
-    )
-    // Statt Bord auf der Stegseite: Wand unter der Stegkante bis zur
-    // Unterkante, sonst käme man von unter dem Steg seitlich auf die Rampe.
-    addBlock(
-      (cornerRamp.minX + cornerRamp.maxX) / 2,
-      edge + side * (RAILING_THICKNESS / 2),
-      cornerRamp.maxX - cornerRamp.minX,
-      RAILING_THICKNESS,
-      0,
-      upperBottom
-    )
-    const cornerGap: [number, number] = [cornerX - CORNER_PLATFORM_SIZE / 2, cornerX + CORNER_PLATFORM_SIZE / 2]
-
-    // Geländer an der Stegkante (Deckung), Lücken: Brücke, Eck-Plattform, Absprung
-    const railZ = edge + side * (RAILING_THICKNESS / 2)
-    const gaps: [number, number][] = [
-      [PLATFORM_A_X - BRIDGE_WIDTH / 2, PLATFORM_A_X + BRIDGE_WIDTH / 2],
-      cornerGap,
-      dropGap,
-      ...extraGaps,
-    ].sort((a, b) => a[0] - b[0]) as [number, number][]
-    let from = westEnd
-    for (const [gapStart, gapEnd] of [...gaps, [eastEnd, eastEnd]]) {
-      if (gapStart > from) addBlock((from + gapStart) / 2, railZ, gapStart - from, RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
-      from = gapEnd
-    }
-
-    // Stützen unter der Stegkante (Abstand zu den Spawns bei x = 0: dort geht es seitlich raus)
-    for (const x of [-12, -7, 8, 24]) {
-      if (x > cornerRamp.minX - 0.2 && x < cornerRamp.maxX + 0.2) continue // dort trägt die Wand
-      addBlock(x, edge + side * 0.2, 0.4, 0.4, 0, upperBottom)
-    }
-    addBlock(PLATFORM_A_X - BRIDGE_WIDTH / 2 + 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
-    addBlock(PLATFORM_A_X + BRIDGE_WIDTH / 2 - 0.2, (platformEdge + edge) / 2, 0.4, 0.4, 0, upperBottom)
-    return cornerRamp
-  }
-  // --- Nordost-Halle: Regal-Steg auf 2,8 m an der Nordwand, Verlängerung des
-  // Nordstegs durch die Ostwand (Öffnung bis zur Oberkante, darunter Sockel;
-  // ohne Sturz, sonst stößt man im Sprung mitten in der Tür an)
-  const SHELF_Z_MIN = -MAIN_HALF_D + WALL_THICKNESS / 2
-  const SHELF_Z_MAX = SHELF_Z_MIN + CATWALK_DEPTH
-  const SHELF_MAX_X = sideRoomMaxX - WALL_THICKNESS / 2
-  const shelfMinX = MAIN_HALF_W + WALL_THICKNESS / 2
-  const shelfDoorZ = (SHELF_Z_MIN + SHELF_Z_MAX) / 2
-  addBlock(MAIN_HALF_W, shelfDoorZ, WALL_THICKNESS, CATWALK_DEPTH, 0, UPPER_TOP)
-  addBlock((shelfMinX + SHELF_MAX_X) / 2, shelfDoorZ, SHELF_MAX_X - shelfMinX, CATWALK_DEPTH, upperBottom, UPPER_TOP)
-  {
-    const railZ = SHELF_Z_MAX - RAILING_THICKNESS / 2
-    const dropGap: [number, number] = [47, 49]
-    addBlock((shelfMinX + dropGap[0]) / 2, railZ, dropGap[0] - shelfMinX, RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
-    addBlock((dropGap[1] + SHELF_MAX_X) / 2, railZ, SHELF_MAX_X - dropGap[1], RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
-    for (const x of [36, 43, 51]) addBlock(x, SHELF_Z_MAX - 0.2, 0.4, 0.4, 0, upperBottom)
-  }
-
-  // --- Südost-Halle: Regal-Steg auf 2,8 m an der Südwand, Verlängerung des Südstegs über
-  // den Südost-Tunnel (Steg-Boden = Tunneldecke) und durch die Ostwand des Tunnels
-  // (dort Sockel, darüber offen), Absprung-Lücke wie im Norden bei x 47..49
-  {
-    const seShelfMinX = MAIN_HALF_W - WALL_THICKNESS / 2
-    const seShelfZ = (SE_TUNNEL_Z_MIN + SE_TUNNEL_Z_MAX) / 2
-    addBlock((seShelfMinX + SHELF_MAX_X) / 2, seShelfZ, SHELF_MAX_X - seShelfMinX, CATWALK_DEPTH, upperBottom, UPPER_TOP)
-    addBlock(SE_TUNNEL_X_MAX + WALL_THICKNESS / 2, seShelfZ, WALL_THICKNESS, CATWALK_DEPTH, 0, UPPER_TOP)
-    const railZ = SE_TUNNEL_Z_MIN + RAILING_THICKNESS / 2
-    const railMinX = SE_TUNNEL_X_MAX + WALL_THICKNESS
-    const dropGap: [number, number] = [47, 49]
-    addBlock((railMinX + dropGap[0]) / 2, railZ, dropGap[0] - railMinX, RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
-    addBlock((dropGap[1] + SHELF_MAX_X) / 2, railZ, SHELF_MAX_X - dropGap[1], RAILING_THICKNESS, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
-    for (const x of [37.5, 43, 51]) addBlock(x, SE_TUNNEL_Z_MIN + 0.2, 0.4, 0.4, 0, upperBottom)
-  }
-
-  const rampNorthWest = buildUpperSide(-1, 'west', [26, 28])
-  // Südsteg: Lücke im Geländer für die Verbindung vom Fenster (siehe unten)
-  const WINDOW_LINK_X: [number, number] = [westEnd, westEnd + 2.5]
-  const rampSouthEast = buildUpperSide(1, 'east', [-16, -14], [WINDOW_LINK_X])
-
-  // Verbindung vom Fenster in der Trennwand (West-Plattform, 2,8 m) zum
-  // Südsteg: 2,5 m breit, Geländer an der Ostseite, Nordende offen (Absprung)
-  const linkDepth = 17.5 - DOORWAY_Z_MIN
-  addBlock((WINDOW_LINK_X[0] + WINDOW_LINK_X[1]) / 2, DOORWAY_Z_MIN + linkDepth / 2, 2.5, linkDepth, upperBottom, UPPER_TOP)
-  addBlock(WINDOW_LINK_X[1] - RAILING_THICKNESS / 2, DOORWAY_Z_MIN + linkDepth / 2, RAILING_THICKNESS, linkDepth, UPPER_TOP, UPPER_TOP + RAILING_HEIGHT)
-  addBlock(WINDOW_LINK_X[1] - 0.2, DOORWAY_Z_MIN + 0.2, 0.4, 0.4, 0, upperBottom)
-
-  // West-Plattform (Rampe B): Plattform und Rampe liegen bündig an der
-  // Trennwand (kein körperbreiter Spalt), die Wand ersetzt dort das Bord.
-  // Oben mündet sie in den erhöhten Durchgang.
-  const WEST_RAMP_WIDTH = 3
-  const westPlatformEastEdge = WEST_PLATFORM_CENTER_X + WEST_PLATFORM_SIZE / 2
-  const rampToWestPlatform = buildPlatformWithRamp(
-    WEST_PLATFORM_CENTER_X,
-    WEST_PLATFORM_CENTER_Z,
-    WEST_PLATFORM_SIZE,
-    WEST_PLATFORM_HEIGHT,
-    9.4, // Steigung ~0,3 wie die anderen Rampen
-    WEST_RAMP_WIDTH,
-    'z',
-    true,
-    {
-      lateralOffset: westPlatformEastEdge - WEST_RAMP_WIDTH / 2 - WEST_PLATFORM_CENTER_X,
-      omitCurbSide: 1,
-    }
-  )
-
-  // --- Deko (reine Optik): Wandlampen an den Innenseiten, Rampen-Schilder ---
-  const inner = WALL_THICKNESS / 2
+  // --- Deko (reine Optik): Wandlampen an den Innenseiten ---
+  const inset = WALL_THICKNESS / 2
   const v = (x: number, z: number) => new THREE.Vector3(x, 0, z)
+  const lampSpan = ARENA_HALF - 4
   addWallLamps(group, [
-    { from: v(-26, -MAIN_HALF_D + inner), to: v(26, -MAIN_HALF_D + inner), count: 7, normal: v(0, 1) },
-    { from: v(-26, MAIN_HALF_D - inner), to: v(26, MAIN_HALF_D - inner), count: 7, normal: v(0, -1) },
-    { from: v(-MAIN_HALF_W + inner, -14), to: v(-MAIN_HALF_W + inner, 14), count: 3, normal: v(1, 0) },
-    { from: v(sideRoomMaxX - inner, -8), to: v(sideRoomMaxX - inner, 8), count: 3, normal: v(-1, 0) },
+    { from: v(-lampSpan, -ARENA_HALF + inset), to: v(lampSpan, -ARENA_HALF + inset), count: 7, normal: v(0, 1) },
+    { from: v(-lampSpan, ARENA_HALF - inset), to: v(lampSpan, ARENA_HALF - inset), count: 7, normal: v(0, -1) },
+    { from: v(-ARENA_HALF + inset, -lampSpan), to: v(-ARENA_HALF + inset, lampSpan), count: 7, normal: v(1, 0) },
+    { from: v(ARENA_HALF - inset, -lampSpan), to: v(ARENA_HALF - inset, lampSpan), count: 7, normal: v(-1, 0) },
   ])
-  // Rampe A: Plattform bei (15, 0), Schild auf Süd- und Nordseite
-  addLabel(group, 'A', new THREE.Vector3(15, 1.4, 3), v(0, 1))
-  addLabel(group, 'A', new THREE.Vector3(15, 1.4, -3), v(0, -1))
-  // Rampe B: West-Plattform, Schild auf der Westseite
-  addLabel(group, 'B', new THREE.Vector3(WEST_PLATFORM_CENTER_X - WEST_PLATFORM_SIZE / 2, 1.2, WEST_PLATFORM_CENTER_Z), v(-1, 0), 1.1)
+  // Schilder an den Rampen
+  addLabel(group, 'A', new THREE.Vector3(-CATWALK_EDGE + 1.5, 1.4, -CATWALK_EDGE + RAMP_LENGTH), v(0, 1))
+  addLabel(group, 'B', new THREE.Vector3(CATWALK_EDGE - 1.5, 1.4, CATWALK_EDGE - RAMP_LENGTH), v(0, -1))
 
   // Unsichtbare Mauern: volle Wände (6 m) blockieren für die Kollision nach oben unbegrenzt. Wer per Sprungpad
-  // über 6 m kommt, fliegt so nie über eine Wand und landet nicht auf Wandkronen. Nur die Kollisionsbox,
-  // Optik und Schüsse bleiben bei 6 m. Es gibt bewusst keine unsichtbare Decke.
+  // über 6 m kommt, fliegt so nie über eine Außenwand und landet nicht auf einer Wandkrone. Nur die Kollisionsbox,
+  // Optik und Schüsse bleiben bei 6 m. Es gibt bewusst keine unsichtbare Decke. Turmwände (5,5 m) und das Dach
+  // bleiben bewusst darunter, auf dem Dach steht man.
   for (const solid of solids) {
-    if (solid.kind !== 'wall' || solid.box.max.y < 5.9) continue
-    // Ausnahme: der 6-m-Block über dem Südost-Tunnel (Nordarm) ist per Sprungpad vom Steg aus erreichbar (Nutzerwunsch);
-    // ringsum stehen weiter volle Wände (auch der Sturz bei z 12), man kommt von dort nirgends hinaus
-    if (solid.box.min.y > 1 && solid.box.min.x > 30 && solid.box.min.z > 12.4) continue
-    solid.box.max.y = WALL_COLLISION_TOP
+    if (solid.kind === 'wall' && solid.box.max.y >= 5.9) solid.box.max.y = WALL_COLLISION_TOP
   }
 
   const spawnPoints = SPAWN_POINTS.map((p) => new THREE.Vector3(p.x, p.y, p.z))
@@ -792,7 +408,7 @@ export function buildArena(): ArenaResult {
     group,
     solids,
     spawnPoints,
-    ramps: [rampToMainPlatform, rampToWestPlatform, rampNorthWest, rampSouthEast],
-    shootables: [mainGround, sideGround, hallGround, seHallGround, ...shootableExtras, ...solids.map((s) => s.mesh)],
+    ramps: [rampNorthWest, rampSouthEast],
+    shootables: [ground, ...shootableExtras, ...solids.map((s) => s.mesh)],
   }
 }

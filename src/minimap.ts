@@ -8,6 +8,8 @@ import { TeamColor, type Team } from './team'
 // werden gezeigt, keine Gegner (sonst wäre es ein Radar durch Wände).
 
 const MARGIN = 1.5 // Meter Rand um die Arena
+const MAX_HEIGHT_RATIO_TOUCH = 0.52 // höchstens Höhe / Breite bei Standardbreite (Touch: darunter sitzen Tasten)
+const MAX_HEIGHT_RATIO_DESKTOP = 0.62
 const UPPER_FROM = 2 // ab dieser Höhe: obere Ebene (Stege, Brücken, Geländer)
 const MIN_FOOTPRINT = 0.5 // kleinere Teile (Stützen unter Stegen) bleiben weg
 const DOT_RADIUS = 3.2
@@ -85,7 +87,12 @@ export class Minimap {
     }
     if (!Number.isFinite(minX)) return
     this.bounds = { minX: minX - MARGIN, maxX: maxX + MARGIN, minZ: minZ - MARGIN, maxZ: maxZ + MARGIN }
-    this.root.style.aspectRatio = `${this.bounds.maxX - this.bounds.minX} / ${this.bounds.maxZ - this.bounds.minZ}`
+    const width = this.bounds.maxX - this.bounds.minX
+    const depth = this.bounds.maxZ - this.bounds.minZ
+    this.root.style.aspectRatio = `${width} / ${depth}`
+    // Die Karte soll nicht höher werden als für ein breites Spielfeld (Höhe = 0,52 x Breite auf Touch): ein quadratisches Feld
+    // wird schmaler statt höher, sonst überdeckt sie die Tasten und das HUD darunter
+    document.documentElement.style.setProperty('--minimap-k', String(Math.min(1, (window.matchMedia('(pointer: coarse)').matches ? MAX_HEIGHT_RATIO_TOUCH : MAX_HEIGHT_RATIO_DESKTOP) / (depth / width))))
     this.resize()
   }
 

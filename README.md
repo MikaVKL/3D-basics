@@ -1,9 +1,9 @@
-# Dusk Arena – Ego-Shooter-Prototyp
+# Nexus Arena – Ego-Shooter-Prototyp
 
 Ein browserbasierter 3D-Ego-Shooter-Prototyp im Stil von Krunker.io, gebaut mit
 [Three.js](https://threejs.org/) + [Vite](https://vitejs.dev/) + TypeScript.
 
-## Visueller Stil: "Dusk Arena + Neon"
+## Visueller Stil: "Dusk + Neon"
 
 Statt Texturbildern (JPG/PNG) nutzt das Projekt bewusst nur farbige Materialien,
 Licht und Schatten für die Optik:
@@ -58,6 +58,8 @@ zuverlässiger als reines Feature-Sniffing):
 - `Leertaste`: Springen
 - `Shift`: Sprinten, `Strg`/`C`: Ducken, beides zusammen: Rutschen
 - Bunny-Hop: bei der Landung sofort wieder springen (Leertaste darf kurz vorher gedrückt werden) hält den Schwung und macht schneller (bis 12 m/s)
+- `Q` / `E`: nach links / rechts lehnen (Umschalter: nochmal drücken richtet auf)
+- `G`: Taktik-Gadget (Rauch- oder Blendgranate), `F`: Bewegungs-Gadget (Enterhaken oder Sprungpad); beides wählt man vor dem Spiel in der Waffenauswahl
 - `ESC`: Maussteuerung freigeben (Menü)
 - `Tab` (halten): Punktetabelle
 - `M`: Ton an/aus
@@ -76,7 +78,7 @@ server/index.ts          Spielserver (Node.js + ws), läuft direkt als TypeScrip
 src/shared/              Code, den Client UND Server nutzen:
   protocol.ts              Nachrichtenformat (bei Änderungen PROTOCOL_VERSION erhöhen)
   gameRules.ts             Schaden/Schild/Respawn-Regeln
-  arenaLayout.ts           Arena-Maße + Spawn-Punkte
+  arenaLayout.ts           Arena-Maße + Spawn-Punkte (Karte "Nexus")
 src/network.ts           Verbindung zum Server (mit automatischem Neuverbinden)
 src/remotePlayers.ts     Andere Spieler: Hüllen + Interpolation
 src/killFeed.ts          Kill-Anzeige oben rechts

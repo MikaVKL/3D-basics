@@ -403,7 +403,7 @@ function startRound(now: number) {
 // HTTP-Statusseite (Health-Check des Hostings, Aufwecken)
 const httpServer = createServer((_request, response) => {
   response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
-  response.end(`Dusk Arena Server - ${clients.size}/${MAX_PLAYERS} Spieler\n`)
+  response.end(`Nexus Arena Server - ${clients.size}/${MAX_PLAYERS} Spieler\n`)
 })
 
 const wss = new WebSocketServer({
@@ -728,7 +728,7 @@ setInterval(() => {
 }, 1000 / TICK_RATE)
 
 httpServer.listen(PORT, () => {
-  console.log(`Dusk Arena Server läuft auf Port ${PORT}`)
+  console.log(`Nexus Arena Server läuft auf Port ${PORT}`)
   if (SIMULATED_LATENCY_MS || SIMULATED_JITTER_MS) {
     console.log(`Simulierter Ping: ${SIMULATED_LATENCY_MS}ms (hin + zurück) + bis ${SIMULATED_JITTER_MS}ms Jitter je Richtung`)
   }

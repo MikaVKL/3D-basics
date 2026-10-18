@@ -30,9 +30,13 @@ try {
       const pick = (list) => list[Math.floor(random() * list.length)]
       const result = []
       for (let r = 0; r < runs; r++) {
-        // Start auf dem Boden irgendwo im Hauptraum
-        const x = -18 + random() * 48
-        const z = -18 + random() * 36
+        // Start auf dem Boden an einer freien Stelle irgendwo in der Arena (Nexus)
+        let x, z
+        for (let i = 0; i < 60; i++) {
+          x = -26 + random() * 52
+          z = -26 + random() * 52
+          if (!__dusk.arena.solids.some(({ box }) => x + 0.6 > box.min.x && x - 0.6 < box.max.x && z + 0.6 > box.min.z && z - 0.6 < box.max.z && box.min.y < 1.8)) break
+        }
         P.spawn({ x, y: P.groundHeightAt(x, z) + 1.7, z, clone() { return this } })
         const trace = []
         let time = 0

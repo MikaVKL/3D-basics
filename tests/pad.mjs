@@ -48,8 +48,8 @@ try {
   const hud = await page.evaluate(() => ({ name: document.querySelector('#gadget-name-move').textContent, gadget: __dusk.gadgets.gadget }))
   check('Im Spiel: Sprungpad, Anzeige folgt', hud.gadget === 'jump' && hud.name === 'Sprungpad', JSON.stringify(hud))
 
-  // Wurf: Flug, dann steht ein Pad am Boden (Mitte des offenen Feldes bei x = -8)
-  await page.evaluate(() => window.__setup(-8, 8))
+  // Wurf: Flug, dann steht ein Pad am Boden (freie Bahn z = 10, Wurf nach Osten)
+  await page.evaluate(() => window.__setup(-20, 10, -Math.PI / 2))
   await page.evaluate(() => __dusk.throwSlot('move'))
   const afterThrow = await page.evaluate(() => ({ cd: __dusk.gadgets.cooldownRemaining, pads: __dusk.gadgets.pads.length }))
   check('Wurf: Abklingzeit 30 s, noch kein Pad (fliegt)', afterThrow.cd === 30 && afterThrow.pads === 0, JSON.stringify(afterThrow))
@@ -58,7 +58,7 @@ try {
     const p = __dusk.gadgets.pads[0]
     return p && { x: +p.position.x.toFixed(2), y: +p.position.y.toFixed(2), z: +p.position.z.toFixed(2), team: p.team, sounds: window.__sounds.slice() }
   })
-  check('Pad liegt flach auf dem Boden vor dem Werfer, Aufsetz-Ton', pad && pad.y === 0 && pad.z < 4 && pad.sounds.includes('@padPlace'), JSON.stringify(pad))
+  check('Pad liegt flach auf dem Boden vor dem Werfer, Aufsetz-Ton', pad && pad.y === 0 && Math.abs(pad.z - 10) < 1.5 && pad.x > -19 && pad.sounds.includes('@padPlace'), JSON.stringify(pad))
 
   // Hochschleudern: Spieler steht auf dem Pad (Landen auf dem Pad schleudert wieder hoch, wie ein Trampolin)
   const launch = await page.evaluate((pad) => {
@@ -100,16 +100,16 @@ try {
     const G = __dusk.gadgets
     const V = __dusk.camera.position.constructor
     // Unter dem Nordsteg (Steg-Boden ~2,5..2,8 m, z -21..-18) und auf einer Kiste (Oberkante ~1,4 m)
-    const crate = __dusk.arena.solids.find((s) => s.kind === 'cover' && s.box.max.y > 1 && s.box.max.y < 2)
+    const crate = __dusk.arena.solids.find((s) => s.kind === 'cover' && Math.abs((s.box.min.x + s.box.max.x) / 2 - 12) < 0.1 && Math.abs((s.box.min.z + s.box.max.z) / 2 + 5) < 0.1)
     return {
-      offen: G.padSpotOk(new V(-8, 0.25, 8)),
+      offen: G.padSpotOk(new V(-14, 0.25, 10)),
       unterSteg: G.padSpotOk(new V(0, 0.25, -19.5)),
-      amStegrand: G.padSpotOk(new V(49.5, 0.25, 17.68)),
+      amSims: G.padSpotOk(new V(9.9, 0.25, 5)),
       aufKiste: crate ? G.padSpotOk(new V((crate.box.min.x + crate.box.max.x) / 2, crate.box.max.y + 0.25, (crate.box.min.z + crate.box.max.z) / 2)) : null,
-      aufSteg: G.padSpotOk(new V(0, 3.05, -19.5)),
+      aufSteg: G.padSpotOk(new V(10, 3.05, -26)),
     }
   })
-  check('Platz fürs Pad: offener Boden, Steg oben und Kisten ja; unter dem Steg und knapp am Stegrand nein', spots.offen === true && spots.aufSteg === true && spots.aufKiste === true && spots.unterSteg === false && spots.amStegrand === false, JSON.stringify(spots))
+  check('Platz fürs Pad: offener Boden, Steg oben und Kisten ja; unter der Brücke und knapp neben dem Sims nein', spots.offen === true && spots.aufSteg === true && spots.aufKiste === true && spots.unterSteg === false && spots.amSims === false, JSON.stringify(spots))
 
   // Abgelehnter Wurf verbraucht die Abklingzeit nicht: dicht unter den Steg werfen
   const reject = await page.evaluate(() => {
@@ -130,10 +130,10 @@ try {
     const P = __dusk.player
     const V = __dusk.camera.position.constructor
     G.pads.length = 0
-    G.spawnPad(new V(0, 3.05, -19.5), P.team)
+    G.spawnPad(new V(10, 3.05, -26), P.team)
     G.pads[0].age = 1
     window.__launches = 0
-    window.__setup(0, -19.5, 0, 4.6)
+    window.__setup(10, -26, 0, 4.6)
     window.__run(1.2) // fällt auf den Steg und wird gleich hochgeschleudert
     let maxFeet = 0
     for (let t = 0; t < 1.4; t += 1 / 60) {
@@ -146,39 +146,16 @@ try {
   })
   check('Pad oben auf dem Steg: Steighöhe wie unten (~7,2 m Fußhöhe), keine Decke bei 4,8 m', upper.launches >= 1 && upper.maxFeet > 6.8 && upper.maxFeet < 8, JSON.stringify(upper))
 
-  // Block über dem Südost-Tunnel (Nordarm, Oberkante 6 m): ohne unsichtbare Barriere vom Steg aus erreichbar
-  const block = await page.evaluate(() => {
-    const G = __dusk.gadgets
-    const P = __dusk.player
-    const V = __dusk.camera.position.constructor
-    G.pads.length = 0
-    G.spawnPad(new V(34.5, 3.05, 19.2), P.team)
-    G.pads[0].age = 1
-    window.__launches = 0
-    window.__setup(34.5, 19.2, 0, 4.6) // blickt nach Norden (-z), auf den Block zu
-    P.setMoveInput(0, 1)
-    window.__run(1.0)
-    let maxFeet = 0
-    for (let t = 0; t < 2.5; t += 1 / 60) {
-      window.__frame(1 / 60)
-      maxFeet = Math.max(maxFeet, P.feetHeight)
-    }
-    P.setMoveInput(0, 0)
-    window.__run(1)
-    G.pads.length = 0
-    return { feet: +P.feetHeight.toFixed(2), maxFeet: +maxFeet.toFixed(2), x: +__dusk.camera.position.x.toFixed(1), z: +__dusk.camera.position.z.toFixed(1), launches: window.__launches }
-  })
-  check('Sprungpad auf dem Steg: man landet oben auf dem 6-m-Block über dem Südost-Tunnel', block.feet > 5.9 && block.feet < 6.1 && block.z < 17.7, JSON.stringify(block))
-  check('Volle Wände sind für die Kollision unbegrenzt hoch (unsichtbare Mauern)', upper.tallWalls >= 8, JSON.stringify(upper))
+  check('Volle Wände sind für die Kollision unbegrenzt hoch (unsichtbare Mauern)', upper.tallWalls >= 4, JSON.stringify(upper))
   // Von oben gegen die Außenwand sprinten: bleibt in der Halle, landet nicht auf der Wandkrone
   const wall = await page.evaluate(() => {
     const G = __dusk.gadgets
     const P = __dusk.player
     const V = __dusk.camera.position.constructor
     G.pads.length = 0
-    G.spawnPad(new V(0, 3.05, -19.5), P.team)
+    G.spawnPad(new V(10, 3.05, -26), P.team)
     G.pads[0].age = 1
-    window.__setup(0, -19.5, 0, 4.6) // blickt nach Norden (-z), direkt auf die Nordwand
+    window.__setup(10, -26, 0, 4.6) // blickt nach Norden (-z), direkt auf die Nordwand
     P.setSprinting(true)
     P.setMoveInput(0, 1)
     let minZ = 0, crown = 0, maxFeet = 0
@@ -192,7 +169,7 @@ try {
     G.pads.length = 0
     return { minZ: +minZ.toFixed(2), crown, maxFeet: +maxFeet.toFixed(2) }
   })
-  check('Hoch oben gegen die Nordwand gelaufen: nie hinter die Wand (z > -21), nie auf der Wandkrone', wall.minZ > -21 && wall.crown === 0 && wall.maxFeet > 6.8, JSON.stringify(wall))
+  check('Hoch oben gegen die Nordwand gelaufen: nie hinter die Wand (z > -27,6), nie auf der Wandkrone', wall.minZ > -27.6 && wall.crown === 0 && wall.maxFeet > 6.8, JSON.stringify(wall))
 
   // Fuzz: viele Starts an zufälligen Stellen, mit Anlauf zur Wand und Sprüngen - nie über die Karte hinaus, nie höher als 4,8 m, nie festgesteckt
   const fuzz = await page.evaluate(() => {
@@ -203,14 +180,14 @@ try {
     G.reset()
     let seed = 99
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296)
-    const bounds = { minX: -32, maxX: 52, minZ: -21, maxZ: 21 }
+    const bounds = { minX: -28, maxX: 28, minZ: -28, maxZ: 28 }
     let started = 0, maxFeet = 0, maxX = 0, maxZ = 0, stuck = 0, outside = 0, crown = 0, crownAt = null
     for (let run = 0; run < 60; run++) {
       // freie Bodenstelle suchen
       let x, z
       for (let i = 0; i < 40; i++) {
-        x = -30 + rnd() * 80
-        z = -19 + rnd() * 38
+        x = -26 + rnd() * 52
+        z = -26 + rnd() * 52
         if (!A.solids.some((q) => q.box.min.x - 0.6 < x && x < q.box.max.x + 0.6 && q.box.min.z - 0.6 < z && z < q.box.max.z + 0.6 && q.box.min.y < 1.8)) break
       }
       if (!G.padSpotOk(new V(x, 0.25, z))) continue
@@ -228,7 +205,7 @@ try {
         const p = __dusk.camera.position
         maxFeet = Math.max(maxFeet, P.feetHeight)
         maxX = Math.max(maxX, Math.abs(p.x)); maxZ = Math.max(maxZ, Math.abs(p.z))
-        if (P.isOnGround && P.feetHeight > 5.8 && P.feetHeight < 6.3) { crown++; crownAt ??= { x: +p.x.toFixed(2), z: +p.z.toFixed(2), feet: +P.feetHeight.toFixed(2), run } }
+        if (P.isOnGround && P.feetHeight > 5.8 && P.feetHeight < 6.3 && !(Math.abs(p.x) < 6.5 && Math.abs(p.z) < 6.5)) { crown++; crownAt ??= { x: +p.x.toFixed(2), z: +p.z.toFixed(2), feet: +P.feetHeight.toFixed(2), run } }
         if (p.x < bounds.minX || p.x > bounds.maxX || p.z < bounds.minZ || p.z > bounds.maxZ) outside++
       }
       if (window.__launches > 0) started++
@@ -238,7 +215,7 @@ try {
     }
     return { started, maxFeet: +maxFeet.toFixed(2), outside, stuck, crown, crownAt }
   })
-  check('Fuzz (60 Starts mit Anlauf/Sprüngen): gestartet, nie außerhalb der Karte, nie auf einer Wandkrone, am Ende am Boden', fuzz.started > 30 && fuzz.outside === 0 && fuzz.crown === 0 && fuzz.stuck === 0, JSON.stringify(fuzz))
+  check('Fuzz (60 Starts mit Anlauf/Sprüngen): gestartet, nie außerhalb der Karte, nie auf einer Wandkrone (das Turmdach zählt nicht), am Ende am Boden', fuzz.started > 15 && fuzz.outside === 0 && fuzz.crown === 0 && fuzz.stuck === 0, JSON.stringify(fuzz))
 
   // Online: B sieht das Pad von A an derselben Stelle; Start ohne Korrektur durch die Bewegungsprüfung (enforce)
   const A = await openGame(browser, { name: 'Anna', errors })
@@ -247,9 +224,9 @@ try {
   await play(B)
   await wait(3800)
   await A.evaluate(() => __dusk.gadgets.setGadget('jump'))
-  await teleport(A, -8, 1.7, 8)
+  await teleport(A, -20, 1.7, 10)
   await A.evaluate(() => {
-    __dusk.camera.rotation.set(0, 0, 0, 'YXZ')
+    __dusk.camera.rotation.set(0, -Math.PI / 2, 0, 'YXZ')
     __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     window.__corrections = 0
     window.__sounds = []
@@ -284,11 +261,11 @@ try {
     const G = __dusk.gadgets
     const P = __dusk.player
     const V = __dusk.camera.position.constructor
-    window.__setup(-8, 8)
+    window.__setup(-14, 10)
     G.pads.length = 0
-    G.spawnPad(new V(-8, 0.25, 8), P.team)
+    G.spawnPad(new V(-14, 0.25, 10), P.team)
     G.pads[0].age = 1
-    const check = createMovementCheck({ x: -8, y: 1.7, z: 8 }, 0, 0)
+    const check = createMovementCheck({ x: -14, y: 1.7, z: 10 }, 0, 0)
     let now = 0, bad = 0, states = 0, launches = 0
     window.__launches = 0
     const frames = 60 * 20

@@ -40,15 +40,15 @@ try {
 
   // Kein Ziel: steil in den Himmel -> kein Wurf, Abklingzeit bleibt 0, Hinweis
   const none = await page.evaluate(() => {
-    window.__setup(-8, -5, 0, 1.4)
+    window.__setup(-14, 10, 0, 1.4)
     __dusk.throwSlot('move')
     return { cd: __dusk.gadgets.cooldowns.move.remaining, pulling: __dusk.player.isGrappling, reason: __dusk.gadgets.rejectReason }
   })
   check('Kein Ziel in Reichweite: kein Zug, Abklingzeit 0, Hinweis', none.cd === 0 && !none.pulling && none.reason.includes('Ziel'), JSON.stringify(none))
 
-  // Gerader Zug nach Norden von (-25, -9)
+  // Gerader Zug nach Osten von (8, 10) auf die Säule bei (22, 10): 13,4 m freie Bahn
   const wall = await page.evaluate(() => {
-    window.__setup(-25, -9, 0, 0)
+    window.__setup(8, 10, -Math.PI / 2, 0)
     __dusk.throwSlot('move')
     const anchor = __dusk.gadgets.ropes[0].anchor.clone()
     const dist = __dusk.camera.position.distanceTo(anchor)
@@ -64,7 +64,7 @@ try {
   check('Zug dauert Entfernung / 15 m/s (± 0,3 s) und endet dicht am Haken (< 1,3 m)', Math.abs(wall.time - wall.dist / 15) < 0.3 && wall.left < 1.3, JSON.stringify(wall))
   const ropeShape = await page.evaluate(() => {
     __dusk.gadgets.reset()
-    window.__setup(25, -9, 0, Math.atan(0.95 / 8))
+    window.__setup(21.5, -16, 0, Math.atan(1.5 / 8.5))
     __dusk.throwSlot('move')
     window.__run(0.2)
     const rope = __dusk.gadgets.ropes[0]
@@ -79,7 +79,7 @@ try {
 
   // Abklingzeit: sofort nochmal geht nicht
   const again = await page.evaluate(() => {
-    window.__setup(-25, -9, 0, 0)
+    window.__setup(8, 10, -Math.PI / 2, 0)
     __dusk.throwSlot('move')
     return __dusk.player.isGrappling
   })
@@ -88,7 +88,7 @@ try {
   // Sprung bricht den Zug ab
   const jump = await page.evaluate(() => {
     __dusk.gadgets.reset()
-    window.__setup(-25, -9, 0, 0)
+    window.__setup(8, 10, -Math.PI / 2, 0)
     __dusk.throwSlot('move')
     window.__run(0.3)
     const during = __dusk.player.isGrappling
@@ -100,7 +100,7 @@ try {
   // Tod beendet den Zug, Spawn auch
   const dead = await page.evaluate(() => {
     __dusk.gadgets.reset()
-    window.__setup(-25, -9, 0, 0)
+    window.__setup(8, 10, -Math.PI / 2, 0)
     __dusk.throwSlot('move')
     window.__run(0.2)
     __dusk.player.takeDamage(999)
@@ -109,17 +109,17 @@ try {
   })
   check('Tod beendet den Zug', !dead)
 
-  // Nordsteg erklimmen (Boden 2,8 m, Vorderkante z = -17,5): von (25, -9) auf die Kante zielen
+  // Nordsteg erklimmen (Boden 2,8 m, Geländer bis 3,8 m, Kante z = -24,5): von (21,5, -16) auf das Geländer zielen
   const climb = await page.evaluate(() => {
     __dusk.gadgets.reset()
-    window.__setup(25, -9, 0, Math.atan(0.95 / 8))
+    window.__setup(21.5, -16, 0, Math.atan(1.5 / 8.5))
     __dusk.throwSlot('move')
     const pulling = __dusk.player.isGrappling
     window.__run(2.5)
     const P = __dusk.player
     return { pulling, feet: +P.feetHeight.toFixed(2), z: +__dusk.camera.position.z.toFixed(2), x: +__dusk.camera.position.x.toFixed(2), grounded: !P.isGrappling }
   })
-  check('Steg erklimmen: nach dem Zug steht man oben auf dem Steg (Fußhöhe 2,8 m, hinter der Kante)', climb.pulling && climb.feet > 2.7 && climb.feet < 3 && climb.z < -17.6, JSON.stringify(climb))
+  check('Steg erklimmen: nach dem Zug steht man oben auf dem Steg (Fußhöhe 2,8 m, hinter der Kante)', climb.pulling && climb.feet > 2.7 && climb.feet < 3 && climb.z < -24.6, JSON.stringify(climb))
 
   // Reichweite 18 m: Richtung suchen, in der die erste Fläche zwischen 19 und 22 m (zu weit) bzw. unter 16 m (ok) liegt
   const reach = await page.evaluate(() => {
@@ -128,7 +128,7 @@ try {
     const far = []
     const near = []
     for (let i = 0; i < 400 && (far.length < 1 || near.length < 1); i++) {
-      const x = -30 + (i * 37) % 70, z = -14 + (i * 11) % 26, yaw = (i * 2.399) % 6.28
+      const x = -26 + (i * 37) % 52, z = -26 + (i * 11) % 52, yaw = (i * 2.399) % 6.28
       window.__setup(x, z, yaw, 0)
       const dir = new V(); __dusk.camera.getWorldDirection(dir)
       G.raycaster.set(__dusk.camera.position, dir)
@@ -163,7 +163,7 @@ try {
     const res = {}
     for (const [name, dmg] of [['leicht', 12], ['gleich20', 20], ['schwer', 25]]) {
       G.reset()
-      window.__setup(-25, -9, 0, 0)
+      window.__setup(8, 10, -Math.PI / 2, 0)
       __dusk.throwSlot('move')
       window.__run(0.1)
       P.takeDamage(dmg)
@@ -171,13 +171,13 @@ try {
     }
     // Online-Weg: Server meldet neuen Stand (Schild 25 + Leben 100 -> 60 / 0 = 65 Verlust)
     G.reset()
-    window.__setup(-25, -9, 0, 0)
+    window.__setup(8, 10, -Math.PI / 2, 0)
     __dusk.throwSlot('move')
     window.__run(0.1)
     P.applyServerVitals(60, 0, false)
     res.serverSchwer = P.isGrappling
     G.reset()
-    window.__setup(-25, -9, 0, 0)
+    window.__setup(8, 10, -Math.PI / 2, 0)
     __dusk.throwSlot('move')
     window.__run(0.1)
     P.applyServerVitals(100, 15, false)
@@ -205,7 +205,7 @@ try {
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296)
     for (let i = 0; i < 200; i++) {
       __dusk.gadgets.reset()
-      window.__setup(-30 + rnd() * 70, -15 + rnd() * 28, rnd() * 6.28, (rnd() - 0.4) * 1.6)
+      window.__setup(-26 + rnd() * 52, -26 + rnd() * 52, rnd() * 6.28, (rnd() - 0.4) * 1.6)
       __dusk.throwSlot('move')
       if (!P.isGrappling) continue
       hooks++
@@ -214,11 +214,11 @@ try {
       longest = Math.max(longest, t)
       window.__run(2)
       const p = __dusk.camera.position
-      if (P.isGrappling || Math.abs(p.x) > 60 || Math.abs(p.z) > 40 || p.y > 40 || p.y < -1) bad++
+      if (P.isGrappling || Math.abs(p.x) > 30 || Math.abs(p.z) > 30 || p.y > 40 || p.y < -1) bad++
     }
     return { hooks, bad, longest: +longest.toFixed(2) }
   })
-  check('Fuzz 200 Würfe: nie außerhalb der Karte, nie länger als 1,9 s', fuzz.hooks > 60 && fuzz.bad === 0 && fuzz.longest < 1.9, JSON.stringify(fuzz))
+  check('Fuzz 200 Würfe: nie außerhalb der Karte, nie länger als 1,9 s', fuzz.hooks > 40 && fuzz.bad === 0 && fuzz.longest < 1.9, JSON.stringify(fuzz))
 
   // Server-Bewegungsprüfung: gezogene Strecken (steil nach oben und waagerecht) lösen keinen Fehlalarm aus
   const rules = await page.evaluate(async () => {

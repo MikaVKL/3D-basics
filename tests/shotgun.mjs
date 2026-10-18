@@ -9,7 +9,7 @@ const servers = await startServers()
 const browser = await launchBrowser()
 const errors = []
 try {
-  // --- Einzelspieler: Dummy bei (3, 0.8, -6) ---
+  // --- Einzelspieler: Dummy bei (-14, 0.8, -6) ---
   const page = await openGame(browser, { online: false, errors })
   await play(page, { primary: 'shotgun' })
   await wait(500)
@@ -42,7 +42,7 @@ try {
   })
   const dummyReset = () =>
     page.evaluate(() => {
-      const t = (window.__dummy ??= __dusk.arena.shootables.find((m) => m.userData.damageable && m.position.x === 3 && m.position.z === -6))
+      const t = (window.__dummy ??= __dusk.arena.shootables.find((m) => m.userData.damageable && m.position.x === -14 && m.position.z === -6))
       const d = t.userData.damageable
       d.vitals = { health: 100, shield: 25, shieldRegenCooldown: 0 }
       d.respawnRemaining = 0
@@ -51,9 +51,9 @@ try {
 
   // Nah: alle 8 Körner treffen, 8 Strahlen, 64 Schaden in EINER Meldung
   await dummyReset()
-  await teleport(page, 3, 1.7, -4.5)
+  await teleport(page, -14, 1.7, -4.5)
   await wait(200)
-  await shootAt(page, [3, 1.1, -6])
+  await shootAt(page, [-14, 1.1, -6])
   const near = await page.evaluate(() => ({ tracers: __dusk.weapon.tracers.length, dmg: window.__dmg.slice(), sounds: window.__sounds.slice(), ammo: __dusk.weapon.ammo }))
   check('Schuss: 8 Strahlen', near.tracers === 8, String(near.tracers))
   check('Nah (1,5 m): ein Treffer mit 64 Schaden', near.dmg.length === 1 && Math.abs(near.dmg[0] - 64) < 0.01, JSON.stringify(near.dmg))
@@ -64,15 +64,15 @@ try {
 
   // Fern (~12 m): Streuung + Abfall - deutlich weniger Schaden im Mittel
   await page.evaluate(() => (window.__dmg.length = 0))
-  // Freie Bahn (x = -8): Dummy dorthin, 12 m Abstand
-  await page.evaluate(() => window.__dummy.position.set(-8, 0.8, -6))
+  // Freie Bahn (x = -14): Dummy dorthin, 12 m Abstand
+  await page.evaluate(() => window.__dummy.position.set(-14, 0.8, -6))
   let total = 0
   const runs = 20
   for (let i = 0; i < runs; i++) {
     await dummyReset()
-    await teleport(page, -8, 1.7, 6)
+    await teleport(page, -14, 1.7, 6)
     await page.evaluate(() => (window.__dmg.length = 0))
-    await shootAt(page, [-8, 0.9, -6])
+    await shootAt(page, [-14, 0.9, -6])
     total += await page.evaluate(() => window.__dmg.reduce((a, b) => a + b, 0))
   }
   const average = total / runs

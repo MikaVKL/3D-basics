@@ -24,8 +24,8 @@ try {
     })
     const w = D.renderer.domElement.clientWidth
     const h = D.renderer.domElement.clientHeight
-    const cx = 10, cz = 0, halfW = 44
-    const halfH = Math.max(halfW / (w / h), 23.5)
+    const cx = 0, cz = 0, halfW = 44
+    const halfH = Math.max(halfW / (w / h), 31)
     const height = 250
     const cam = D.camera.clone()
     cam.fov = (2 * Math.atan(halfH / height) * 180) / Math.PI
@@ -51,18 +51,18 @@ try {
       d.innerHTML = html
       overlay.appendChild(d)
     }
-    for (let x = -30; x <= 50; x += 10) {
+    for (let x = -30; x <= 30; x += 10) {
       add('', x, 0, 'width:1px;height:' + (46 * h) / 2 / halfH + 'px;margin-top:' + (-23 * h) / 2 / halfH + 'px;background:rgba(255,255,255,.25)')
-      add('x ' + x, x, -22.6, 'transform:translateX(-50%);background:#0008;padding:0 3px')
+      add('x ' + x, x, -30.6, 'transform:translateX(-50%);background:#0008;padding:0 3px')
     }
-    for (let z = -20; z <= 20; z += 10) {
+    for (let z = -30; z <= 30; z += 10) {
       add('', 0, z, 'height:1px;width:' + (88 * h) / 2 / halfH + 'px;margin-left:' + (-44 * h) / 2 / halfH + 'px;background:rgba(255,255,255,.25)')
-      add('z ' + z, -33.5, z, 'transform:translateY(-50%);background:#0008;padding:0 3px')
+      add('z ' + z, -40, z, 'transform:translateY(-50%);background:#0008;padding:0 3px')
     }
     D.arena.spawnPoints.forEach((p, i) =>
       add('S' + i, p.x, p.z, 'transform:translate(-50%,-50%);background:#e8c200;color:#000;font-weight:bold;border-radius:50%;padding:3px 6px;border:2px solid #000')
     )
-    add('Norden ↑', 46, -21.5, 'font-size:14px;background:#0008;padding:2px 5px')
+    add('Norden ↑', 38, -29, 'font-size:14px;background:#0008;padding:2px 5px')
     document.body.appendChild(overlay)
   })
   await wait(600)

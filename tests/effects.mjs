@@ -39,12 +39,12 @@ try {
   await play(page)
   await wait(300)
   await spyEffects(page)
-  await teleport(page, 0, 1.7, 12)
+  await teleport(page, -14, 1.7, 2)
   await wait(200)
   await takeEffects(page)
-  await shootAt(page, [0, 1.7, 30]) // Richtung Süd-Wand
+  await shootAt(page, [-14, 1.7, 30]) // Richtung Süd-Wand
   check('Schuss an die Wand: Leuchten + Funken', (await takeEffects(page)) === 'impactSparks,muzzleFlash')
-  await shootAt(page, [0, 60, 12]) // senkrecht in den Himmel
+  await shootAt(page, [-14, 60, 2]) // senkrecht in den Himmel
   check('Schuss ins Leere: nur Leuchten', (await takeEffects(page)) === 'muzzleFlash')
   await wait(1200)
   check('Effekte räumen sich auf', (await page.evaluate(() => __dusk.effects.count)) === 0)
@@ -57,10 +57,10 @@ try {
   check('Obergrenze bei Dauerfeuer', capped === 60, `${capped} gleichzeitig`)
   await wait(1200)
 
-  await teleport(page, 3, 1.7, -2) // vor dem Dummy bei (3, 0.8, -6)
+  await teleport(page, -14, 1.7, -2) // vor dem Dummy bei (-14, 0.8, -6)
   await wait(200)
   await takeEffects(page)
-  for (let i = 0; i < 9; i++) await shootAt(page, [3, 0.8, -6])
+  for (let i = 0; i < 9; i++) await shootAt(page, [-14, 0.8, -6])
   check('Dummy-Kill: Todeseffekt', (await takeEffects(page)).includes('deathBurst'))
   await wait(1800)
   check('Todeseffekt verschwindet wieder', (await page.evaluate(() => __dusk.effects.count)) === 0)

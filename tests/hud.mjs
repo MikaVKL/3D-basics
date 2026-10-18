@@ -138,11 +138,11 @@ try {
   const cooled = await cross()
   check('danach wieder eng', Math.abs(cooled.gap - 4) < 0.1, `${cooled.gap} px`)
 
-  // Messer: Punkt; Ring leuchtet nur mit Gegner (Dummy bei 3, 0.8, -6) in Reichweite
+  // Messer: Punkt; Ring leuchtet nur mit Gegner (Dummy bei -14, 0.8, -6) in Reichweite
   const aimAtDummy = (z) =>
     page.evaluate((zz) => {
-      __dusk.player.spawn({ x: 3, y: 1.7, z: zz, clone() { return this } })
-      __dusk.camera.lookAt(3, 0.8, -6)
+      __dusk.player.spawn({ x: -14, y: 1.7, z: zz, clone() { return this } })
+      __dusk.camera.lookAt(-14, 0.8, -6)
       __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     }, z)
   await page.evaluate(() => {

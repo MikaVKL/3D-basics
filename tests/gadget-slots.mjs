@@ -24,10 +24,12 @@ try {
   check('Wahl wird je Platz gemerkt (Pad unter Bewegung)', stored[1] === 'jump', JSON.stringify(stored))
   await A.click('#loadout-play-button')
   await wait(3800)
-  await teleport(A, -8, 1.7, 8)
+  await teleport(A, -20, 1.7, 10) // freie Bahn z = 10, Wurf nach Osten (Pad braucht Platz darüber)
   await wait(400)
   await A.evaluate(() => {
     Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => __dusk.renderer.domElement })
+    __dusk.camera.rotation.set(0, -Math.PI / 2, 0, 'YXZ')
+    __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
   })
   const hud = await A.evaluate(() => ({
     tactic: [document.querySelector('#gadget-hud .gadget-key').textContent, document.querySelector('#gadget-name').textContent],

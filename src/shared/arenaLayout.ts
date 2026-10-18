@@ -1,16 +1,13 @@
-// Maße und Spawn-Punkte, die auch der Server braucht (Aufbau: arena.ts)
+// Maße und Spawn-Punkte der Karte "Nexus", die auch der Server braucht (Aufbau: arena.ts)
 
-export const MAIN_ROOM_WIDTH = 64 // X
-export const MAIN_ROOM_DEPTH = 42 // Z
-export const SIDE_ROOM_WIDTH = 20 // X
-export const SIDE_ROOM_DEPTH = 24 // Z (= Öffnung zum Hauptraum)
+// Quadratische Arena um (0, 0); die Außenwände stehen auf ±ARENA_HALF
+export const ARENA_HALF = 28
 
-// Hauptraum um x=0 zentriert, Flankenraum östlich
 export const ARENA_BOUNDS = {
-  minX: -MAIN_ROOM_WIDTH / 2,
-  maxX: MAIN_ROOM_WIDTH / 2 + SIDE_ROOM_WIDTH,
-  minZ: -MAIN_ROOM_DEPTH / 2,
-  maxZ: MAIN_ROOM_DEPTH / 2,
+  minX: -ARENA_HALF,
+  maxX: ARENA_HALF,
+  minZ: -ARENA_HALF,
+  maxZ: ARENA_HALF,
 }
 
 export interface SpawnPoint {
@@ -19,13 +16,14 @@ export interface SpawnPoint {
   z: number
 }
 
-// y = Augenhöhe
+// y = Augenhöhe. Punktsymmetrisch: je zwei Spawns pro Seite, zwischen Laufsteg-Rampen und Eck-Bunkern
 export const SPAWN_POINTS: SpawnPoint[] = [
-  { x: -29, y: 1.7, z: -11 }, // nicht im Blickfeld des Nordwest-Tunnels (z -20,5..-17,5)
-  { x: -28, y: 1.7, z: 18 },
-  { x: 0, y: 1.7, z: -18 },
-  { x: 0, y: 1.7, z: 18 },
-  { x: ARENA_BOUNDS.maxX - 5, y: 1.7, z: 8 },
-  { x: 49.5, y: 1.7, z: -19.2 }, // Nordost-Halle, unter dem Regal-Steg
-  { x: 49.5, y: 1.7, z: 19.2 }, // Südost-Halle (Spiegelbild), unter dem Regal-Steg
+  { x: -21.5, y: 1.7, z: -7 },
+  { x: -21.5, y: 1.7, z: 7 },
+  { x: 21.5, y: 1.7, z: -7 },
+  { x: 21.5, y: 1.7, z: 7 },
+  { x: -7, y: 1.7, z: -21.5 },
+  { x: 7, y: 1.7, z: -21.5 },
+  { x: -7, y: 1.7, z: 21.5 },
+  { x: 7, y: 1.7, z: 21.5 },
 ]

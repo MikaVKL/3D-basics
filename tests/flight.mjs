@@ -23,6 +23,9 @@ try {
     const G = __dusk.gadgets
     const V = __dusk.camera.position.constructor
     const out = {}
+    // Freie Bahn (die Karte ist dicht): nur Boden, kein Hindernis
+    const saved = G.world.slice()
+    G.world.length = 0
     for (const kind of ['smoke', 'flash', 'jump']) {
       G.setGadget(kind)
       const stats = G.stats
@@ -37,6 +40,7 @@ try {
         same: a.to.distanceTo(b.to) === 0 && a.points.length === b.points.length,
       }
     }
+    G.world.push(...saved)
     return out
   })
   const { smoke, flash, jump } = shapes
@@ -46,19 +50,19 @@ try {
   check('Jede Granate hat ihre eigene Bahn (Scheitel unterschiedlich)', new Set([smoke, flash, jump].map((s) => s.apex.toFixed(1))).size === 3, JSON.stringify([smoke.apex, flash.apex, jump.apex]))
   check('Gleicher Wurf = gleiche Bahn (bitgenau)', smoke.same && flash.same && jump.same)
 
-  // Wand: Wurf gegen die Nordwand prallt ab (z-Richtung kehrt sich um) und kommt weiter weg von der Wand zur Ruhe
+  // Wand: Wurf von Norden gegen die Turmwand (Nordseite z = -6) prallt ab (z-Richtung kehrt sich um)
   const bounce = await A.evaluate(() => {
     const G = __dusk.gadgets
     const V = __dusk.camera.position.constructor
     G.setGadget('flash')
     const stats = G.stats
-    const from = new V(-8, 1.55, -15)
-    const sim = G.simulateFlight(from, new V(0, stats.throwSpeed * stats.throwLift, -stats.throwSpeed), stats.maxFlightTime)
-    let minZ = 1e9
-    for (const p of sim.points) minZ = Math.min(minZ, p.z)
-    return { minZ, endZ: sim.to.z, flight: sim.flight }
+    const from = new V(4, 1.55, -10.5)
+    const sim = G.simulateFlight(from, new V(0, stats.throwSpeed * stats.throwLift, stats.throwSpeed), stats.maxFlightTime)
+    let maxZ = -1e9
+    for (const p of sim.points) maxZ = Math.max(maxZ, p.z)
+    return { maxZ, endZ: sim.to.z, flight: sim.flight }
   })
-  check('Wand: prallt ab und rollt zurück (Ende weiter von der Wand als der Aufprall)', bounce.endZ > bounce.minZ + 0.5, JSON.stringify(bounce))
+  check('Wand: prallt ab und rollt zurück (Ende weiter von der Wand als der Aufprall)', bounce.maxZ > -6.8 && bounce.endZ < bounce.maxZ - 0.5, JSON.stringify(bounce))
 
   // Online: B sieht dieselbe Bahn wie A
   await B.evaluate(() => {

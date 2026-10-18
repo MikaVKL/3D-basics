@@ -785,7 +785,7 @@ body {
   position: fixed;
   top: calc(var(--edge-top) + 38px);
   right: var(--edge-right);
-  width: var(--minimap-w);
+  width: calc(var(--minimap-w) * var(--minimap-k, 1));
   background: var(--panel);
   border: var(--panel-border);
   border-radius: var(--radius);
@@ -1882,7 +1882,7 @@ body {
 @media (pointer: coarse) {
   #kill-feed {
     top: calc(var(--edge-top) + 74px); /* unter "Erstes Team mit 20 Kills" */
-    right: calc(var(--edge-right) + var(--minimap-w) + 8px);
+    right: calc(var(--edge-right) + var(--minimap-w) * var(--minimap-k, 1) + 8px);
   }
 }
 

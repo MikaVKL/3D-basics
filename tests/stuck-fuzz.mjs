@@ -81,9 +81,8 @@ try {
         // Start: zufälliger Punkt, an dem man stehen kann, ohne zu stecken
         let ok = false
         for (let t = 0; t < 50 && !ok; t++) {
-          const x = -31.4 + rnd() * 82.8
-          const z = -20.4 + rnd() * 40.8
-          if (x > 32 && Math.abs(z) > 11.5) continue // außerhalb des Flankenraums
+          const x = -27 + rnd() * 54
+          const z = -27 + rnd() * 54
           const ground = P.groundHeightAt(x, z)
           P.spawn({ x, y: ground + 1.7, z, clone() { return this } })
           P.bodyY = ground

@@ -69,7 +69,7 @@ try {
   })
   check('Sniper zielt träge (0,3-0,5 s), Pistole schnell (< 0,15 s)', times.sniper >= 0.3 && times.sniper <= 0.5 && times.pistol < 0.15, JSON.stringify(times))
 
-  // Treffer auf den Dummy (3, 0.8, -6) aus 5 m: 70
+  // Treffer auf den Dummy (-14, 0.8, -6) aus 5 m: 70
   await page.evaluate(() => {
     window.__dmg = []
     __dusk.weapon.onEnemyHit = (kill, point, damage) => window.__dmg.push(damage)
@@ -82,9 +82,9 @@ try {
     __dusk.weapon.setAiming(true)
   })
   await wait(700)
-  await teleport(page, 3, 1.7, -3)
+  await teleport(page, -14, 1.7, -3)
   await wait(200)
-  await shootAt(page, [3, 1.0, -6])
+  await shootAt(page, [-14, 1.0, -6])
   const hit = await page.evaluate(() => ({ dmg: window.__dmg.slice(), sounds: window.__sounds.slice() }))
   check('Treffer aus 3 m: 70 Schaden, Knall-Ton', hit.dmg.join() === '70' && hit.sounds.includes('shotgunShot') === false && hit.sounds.includes('sniperShot'), JSON.stringify(hit))
   await wait(900)

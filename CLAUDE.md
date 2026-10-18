@@ -1,4 +1,4 @@
-# Dusk Arena – Hinweise für Claude
+# Nexus Arena – Hinweise für Claude (vorher "Dusk Arena"; Dateinamen, localStorage-Schlüssel `duskArena.*` und der Render-Dienst `dusk-arena-server` heißen noch so)
 
 Browserbasierter Low-Poly-Multiplayer-FPS im Krunker.io-Stil: Three.js + Vite +
 TypeScript (Client), Node.js + `ws` (Server). Architektur, Hosting und
@@ -81,7 +81,7 @@ Weiterarbeiten wissen muss.
   keine Rundenpause, und gibt es an die anderen weiter; die lassen den Bogen + die Wolke am
   selben Ort nachspielen. Weitere Gadgets später (Schildwand).
   **Sprungpad** (`jump`, 30 s, Pad steht 20 s): gleicher Wurf, am Boden entsteht ein flaches Neon-Pad in Teamfarbe (`GadgetSystem.spawnPad`); **unsichtbare Mauern**: volle Wände (6 m) haben in der Kollision `WALL_COLLISION_TOP` 100 m (arena.ts),
-  damit man per Pad nie über eine Wand kommt/auf einer Wandkrone landet; **Ausnahme** (Nutzerwunsch): der 6-m-Block über dem Südost-Tunnel (Nordarm, x 33..36, z 12,5..17,75) hat Kollision nur bis 6 m - per Pad vom Steg aus begehbar, ringsum Vollwände (auch der Sturz bei z 12);
+  damit man per Pad nie über eine Wand kommt/auf einer Wandkrone landet; **Ausnahme:** Turmwände (5,5 m) und das Dach (6 m) des Zentralturms liegen darunter bzw. sind Struktur - auf dem Dach steht man;
   nur das EIGENE Team schleudert es hoch (`padAt` in der Hauptschleife -> `Player.launchFromPad`: Startgeschwindigkeit so, dass die
   Steighöhe `PAD_RISE` 4,4 m über dem Pad, überall gleich, KEINE unsichtbare Decke (Nutzerwunsch); Landen auf dem Pad
   schleudert wieder hoch, 0,5 s Pause). Platz: jede ebene Fläche (Boden, Stege, Kisten) mit 4 m freiem Raum über der
@@ -127,9 +127,8 @@ Einmalig: `npm run test:setup` (installiert Playwright + ws in `tests/`,
 getrennt vom Hauptprojekt, damit das Hosting keine Browser-Pakete lädt).
 Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 
-- `npm run test:movement` – Kisten, Rampen, Durchgang, Fenster-Duck-Sprung,
-  obere Ebene (Rampe A -> Brücken -> Nord-/Südsteg, Geländer, Absprung,
-  unter dem Steg), Rutschen, Bunny-Hop (+5 %), Schwung, kein Nachgleiten
+- `npm run test:movement` – Kisten (1,4 m ja, 2,4 m nein), Rutschen, Bunny-Hop (+5 %), Schwung, kein Nachgleiten (auf der freien Bahn z = 10)
+- `tests/nexus.mjs` (in `npm test`) – Karte Nexus: 8 freie Spawns, beide Rampen auf den Ring, Ring und Brücke begehbar, Turmtüren, Dach nur mit Pad/Haken, Bunker-Dach per Haken, 150 Läufe mit Pad/Haken/Sprint nie hinaus
 - `npm run test:stuck -- [spieler] [sekunden] [seed] [duckanteil]` –
   Fuzz-Test gegen Steckenbleiben (deterministisch pro Seed). Nach jeder
   Änderung an Kollision oder Level-Geometrie laufen lassen, mehrere Seeds.
@@ -228,7 +227,7 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Boden, Weite; Farbabstand ΔE (Median >= 28, schwächstes Fünftel >= 20).
   Nach jeder Änderung an Farben, Licht, Materialien oder Deko laufen lassen.
 - `node tests/topdown.mjs [ordner]` – Draufsicht der Arena (Norden oben,
-  Meterraster, Spawns S0..S5) als `topdown.png` und `topdown-unten.png` (ohne
+  Meterraster, Spawns S0..S7) als `topdown.png` und `topdown-unten.png` (ohne
   obere Ebene). Für Abstimmungen über Kartenänderungen mitschicken.
 - `npm test` – alles Schnelle hintereinander.
 
@@ -253,17 +252,18 @@ Stolperfallen bei Headless-Tests:
 
 ## Getroffene Entscheidungen (nicht wieder "reparieren")
 
-- **Obere Ebene** auf 2,8 m (Höhe Plattform A): 3 m tiefe Laufstege an
-  Nord- und Südwand (Trennwand bis Ostwand), je eine Brücke von Plattform A,
-  Geländer 1 m mit Absprung-Lücke (Nord x 26..28, Süd x -16..-14), Unterkante
-  2,5 m (stehend passt man drunter, im Sprung stößt man an). Aufgänge: Rampe A
-  und Eck-Rampen Nordwest/Südost (3x3-Plattform in der Ecke, 10-m-Rampe am
-  Steg entlang, stegseitig Wand statt Bord). Südwest: über Rampe B und das Fenster (s.u.).
-  Die mittleren Spawns (0, ±18) liegen darunter. Wandlampen auf 5,2 m.
-  Nichts unter Steg/Brücke stellen (Kisten wurden deshalb versetzt).
-- Fenster-Deckungswand ist per **Duck-Sprung durchkletterbar** (gewollter
-  Trick-Weg, Öffnung 1,4 m); stehend passt man nicht durch.
-- Rampe B (2,8 m) liegt bündig an der Trennwand (kein Bord auf der Wandseite).
+- **Karte "Nexus"** (`src/arena.ts`, Maße/Spawns in `shared/arenaLayout.ts`; ersetzt auf Nutzerwunsch die alte Karte komplett, "für die Gadgets
+  gebaut"; die alte Karte steht nur noch in der Git-Historie): quadratisch 56 m, Außenwände 6 m (`kind: 'wall'` über 5,9 m bekommt die unsichtbare
+  Kollisionshöhe `WALL_COLLISION_TOP`, damit man per Pad nie hinausfliegt). Punktsymmetrisch (180° um die Mitte).
+  **Zentralturm** (12 x 12 m, Wände 5,5 m, hohl, vier 3-m-Türen, Mittelblock 2,4 m) mit **flachem Dach auf 6 m** (Struktur, nicht Wand: man steht darauf; Deckungskisten
+  1,2 m darauf): zu Fuß unerreichbar, nur per Enterhaken (Dachkante anvisieren) oder Sprungpad vom **Sims** (3 m breiter Ring um den Turm auf 2,8 m).
+  **Laufsteg-Ring** auf 2,8 m an allen vier Außenwänden (3 m breit, Geländer innen, Stützen alle 8-16 m), **vier Brücken** (2,5 m breit, auf den Achsen) vom Ring
+  zum Sims, **zwei Rampen** (Nordwest und Südost, 10 m, Seitenwände beidseitig) als Zugang ohne Fähigkeit. **Vier Eck-Bunker** (7,5 m, Mitte (±16, ±16), hohl, je
+  zwei Türen zur Mitte, Dach auf 4 m, Deckung innen). Dazu Kisten (1,4 und 2,4 m) in Paaren und vier 6-m-Neon-Säulen (Haken-Anker). 8 Spawns (je zwei
+  an jeder Seite zwischen Rampen und Bunkern, noch keine Bot-Messung der Einsehbarkeit). Pad-tauglich sind alle Flächen mit 4 m freiem Raum darüber (nicht
+  unter Ring, Brücken, Sims, Bunkerdach). Freie Gassen für Tests: Bahn z = 10 (x -18..21) und Bahn x = -14 (z 8..-12); Dummies stehen bei (-14, 0,8, -6) und (14, 0,8, 6).
+  Nach Änderungen an der Karte: `node tests/nexus.mjs`, `stuck-fuzz` (mehrere Seeds), `topdown.mjs`.
+  Bekannt: stuck-fuzz meldet bei 2000 Läufen vereinzelt (~3) "ohne Sprung hochgezogen" an den Rampen (Hochspringen auf die Rampenfläche, Engine-Verhalten ohne Folgen).
 - **Menü-Button (Touch)**: Zahnrad oben links (`#menu-button`, in
   `#touch-controls`), öffnet das Pausenmenü (Touch hat kein ESC); sitzt rechts neben dem Waffenfeld
   (oben links, fest 160 px breit). Am Rechner nicht sichtbar.
@@ -285,21 +285,6 @@ Stolperfallen bei Headless-Tests:
 - Handy hochkant: nur Hinweis "Gerät drehen" (Buttons + HUD passen nicht).
 - Kisten sandbraun statt orange (zu nah an Team Rot, messbar schlechter
   erkennbar). Farben in `src/palette.ts`.
-- Deckungskisten vor den mittleren Spawns (0, ±18). Bot-Test mit Sichtlinie:
-  Nord-Spawn 68 % -> 41 % früh getroffen; Süd-Spawn bleibt ~80 % (Schüsse
-  kommen schräg) - Lösung mit Nutzer abstimmen. Mit den Laufstegen
-  darüber (5 Bots x 420 s, 2 Läufe): Nord 38/17 %, Süd 63/38 % früh
-  getroffen (je nur 8 Spawns, Schüsse schräg aus West-Zone und Osten).
-  Daraufhin (Nutzerwahl) Süd-Spawn rundum gedeckt: Front 7 m, Seitenteile
-  bis zur Stegkante, raus seitlich unter dem Steg (Stütze dafür x -3 -> -7).
-  Danach mit Eck-Rampen (2 Läufe): Süd 0/0 % (nur 2/4 Spawns), Nord 60/60 %
-  (je 5 Spawns). Daraufhin Nord-Spawn genauso gedeckt (Ost-Seitenteil bis
-  an die Fensterwand, L-Deckung bei (-3, -16) entfiel): Nord 0/14 %
-  (5/7 Spawns), Süd 20/11 % (5/9), West-Spawns 0-25 %. Danach (Nutzer: "man ist
-  komplett eingesperrt") auf ein L reduziert: Front 6 m + nur das Seitenteil
-  auf der Schussseite (Nord: Ost bis zur Fensterwand, Süd: West), die andere
-  Seite ist offen. Nicht wieder zu einem U schließen. Tests laufen deshalb nicht
-  mehr auf der Linie x = 0 (Bahnen bei x = -8 bzw. 12).
 - Beitritt zur Online-Runde (auch automatisch, wenn der Server erst aufwacht
   oder neu startet) setzt einen an einen Spawn - mit kurzem Abblenden und
   Hinweis, sonst wirkt es wie ein zufälliger Teleport (Nutzer-Bugmeldung).
@@ -346,55 +331,11 @@ Stolperfallen bei Headless-Tests:
   (geduckt: Duck-)Tempo; darunter folgt man der Eingabe sofort.
   Leertaste halten hüpft per Tasten-Wiederholung automatisch weiter.
 
-- **Fenster/Rampe B (Südwest):** West-Plattform liegt jetzt auf 2,8 m (obere
-  Ebene), Rampe 9,4 m lang (Steigung ~0,3). Der Durchgang in der Trennwand
-  (Sockel 2,8 m, Kopffreiheit 2,2 m) führt auf eine 2,5 m breite Verbindung
-  (x -19,5..-17, z 11,5..17,5) mit Geländer im Osten, Nordende offen
-  (Absprung), die am Südsteg endet (Geländerlücke dort). Damit ist die
-  Südwest-Ecke kein "geht nicht" mehr; sie ist der dritte Aufgang.
-- **Tunnel unter den Stegen** (Nutzer: keine Sackgassen): Der Gang unter dem
-  Nordsteg ist am Westende durch die Trennwand geöffnet (z -20,5..-17,5, 2,5 m
-  hoch) und führt in die West-Zone. Deshalb steht **Spawn S0 bei (-29, -11)**
-  (nicht mehr (-28, -18)): aus dem Tunnel war er sonst auf 21 m einsehbar.
-  `test:movement` prüft, dass aus dem Tunnel kein West-Spawn einsehbar ist.
-  Einsehbarkeit je Spawn messen: Raster über die Arena, Raycast gegen
-  `arena.solids` (Augenhöhe, bis 40 m): S0 11 %, S1 12 %, S2 17 %, S3 25 %.
-  Der Gang zeigt nach Osten auf den Nord-Spawn S2 (schon immer so).
-  **Südost-Tunnel als L in die Ostzone:** Der Gang unter dem Südsteg geht am
-  Ostende durch die Hauptraum-Ostwand (z 17,5..20,5, 2,5 m hoch) nach Osten
-  (bis x 36), biegt außerhalb der Räume nach Norden ab (x 33..36) und mündet
-  durch die Flankenraum-Südwand (z 12) in die Ostzone. Gebaut aus Wandteilen
-  (`SE_TUNNEL_*` in `arena.ts`: Durchbruch + Sturz, Südwand, Ostwand, dünne
-  Westwand, Decke über beiden Armen, Bodenfläche `tunnelGround`). Die
-  Eck-Plattform bleibt massiv. (Ein erster Entwurf mit hohler Plattform und
-  Ausgang in den Hauptraum wurde auf Nutzerwunsch ersetzt.)
-  Aus dem langen Südgang (inkl. neuem Ostarm) ist S3 (0, 18) auf 19-33 m
-  einsehbar; bewusst nicht verändert (Linie gab es schon als Sackgasse). Wer
-  sie entschärfen will: Spawn S3/S2 verschieben (Einsehbarkeit messen) statt
-  Kisten in den Gang zu stellen.
-- **Nordost-Halle** (x 32..52, z -21..-12): Zugang über 8-m-Öffnung
-  (x 38..46) in der Flankenraum-Nordwand. Der Nordsteg läuft durch die
-  Hauptraum-Ostwand (Öffnung z -20,5..-17,5 ab 2,8 m, Sockel darunter) als
-  Regal-Steg bis zur Ostwand, Absprung-Lücke x 47..49. Die Öffnung hat
-  bewusst KEINEN Sturz: mit 2,2 m Kopffreiheit stieß man im Sprung mitten
-  in der Tür an (stuck-fuzz Seed 3). Spawn 5 (49,5 / -19,2) unter dem Steg.
-- **Südost-Halle** (x 36..52, z 12..21, Spiegelbild der Nordost-Halle, Nutzerwunsch "komplett
-  symmetrisch"): Öffnung x 38..46 in der Flankenraum-Südwand, Regal-Steg auf 2,8 m an der
-  Südwand als Verlängerung des Südstegs **über den Südost-Tunnel** (Steg-Boden = Tunneldecke
-  2,5..2,8; Tunnelmaße jetzt z 17,75..20,75 bündig mit dem Steg) und durch die Tunnel-Ostwand
-  (dort Sockel, darüber offen, ohne Sturz), Absprung-Lücke x 47..49, Spawn S6 (49,5 / 19,2)
-  unter dem Steg mit Kiste davor. Schmaler als die Nordost-Halle (16 statt 20 m), weil der
-  Tunnel (x 32..36) im Weg ist. Einsehbarkeit S6 31 % (S5 22 %, S3 25 %), bewusst nicht
-  weiter entschärft. Die West-Seite ist nicht gespiegelt (Fenster/Rampe B).
 - **Keine Requisiten** wie Autowracks, Fässer, Paletten (Nutzer: passen nicht
   zum Lasertag-Look; das Vorlagenfoto galt nur dem Aufbau der Arena). Es
   bleiben drei 6-m-Neon-Säulen (dunkler Kern `Palette.pillar`, drei
   leuchtende Ringe wie die Wandstreifen, Ringe nur Optik) und die Kisten.
   Neue Objekte nur in Neon/Low-Poly-Optik, nie realistisch.
-- Bot-Test mit 6 Spawns (2 Läufe): nirgends auffällig (früh getroffen 0-33 %,
-  je Spawn nur 1-9 Spawns; Ausreißer Spawn 4 mit 4x/50 %). Kills je Lauf
-  fielen von ~55 auf ~20, weil Pfeiler/Wracks (Wracks inzwischen entfernt) die geradeaus laufenden Bots
-  bremsen - Bots kennen keine Wege um Hindernisse, kein Spielfehler.
 - **Minimap** (rechts oben, `src/minimap.ts`): wird NICHT von Hand gezeichnet,
   sondern aus `arena.solids`/`arena.ramps` erzeugt - neue Kisten, Wände, Hallen
   erscheinen von selbst, Ausschnitt = alle Objekte + 1,5 m. `Solid.kind`
@@ -471,9 +412,6 @@ Stolperfallen bei Headless-Tests:
   movement-enforce mit enforce). Neue Bewegungsmechaniken (schneller als
   13 m/s, größere Sprünge) müssen die Konstanten dort mit anheben,
   sonst gibt es Rubber-Band. PROTOCOL_VERSION 22.
-- **4,2-m-Ausguck** (Rampe aus Brettern auf dem Regal-Steg) bewusst NICHT
-  gebaut: Wände 6 m, Lampen 5,2 m, Ramp-Logik nur für Rampen ab Boden
-  getestet - Nutzen gering gegen Risiko. Nur nach Absprache.
 
 - **Spielerfigur** (Lasertag-Look, abgestimmt): Weste mit Diagonalgurt vorn und
   hinten, Leuchtgürtel, Ringe an Armen/Beinen, Helm mit Visier und Antenne,
