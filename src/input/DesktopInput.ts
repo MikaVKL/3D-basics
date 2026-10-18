@@ -1,6 +1,7 @@
 import type { Player } from '../player'
 import type { LookControl } from '../lookControl'
 import type { Weapon } from '../weapon'
+import type { GadgetSlot } from '../shared/gadgets'
 
 // Maus + Tastatur über die rohe Pointer-Lock-API; Umschauen läuft wie bei
 // Touch über lookControl.rotate()
@@ -13,8 +14,8 @@ export class DesktopInput {
   private lookControl: LookControl
   private weapon: Weapon
   private onLockChange: (locked: boolean) => void
-  // Taste G: Gadget einsetzen (setzt main.ts)
-  onGadget?: () => void
+  // Taste G (Taktik) und F (Bewegung): Gadget einsetzen (setzt main.ts)
+  onGadget?: (slot: GadgetSlot) => void
 
   constructor(
     domElement: HTMLElement,
@@ -120,7 +121,8 @@ export class DesktopInput {
         break
       }
       case 'KeyG':
-        if (pressed) this.onGadget?.() // Wiederholung stört nicht: die Abklingzeit sperrt
+      case 'KeyF':
+        if (pressed) this.onGadget?.(code === 'KeyG' ? 'tactic' : 'move') // Wiederholung stört nicht: die Abklingzeit sperrt
         break
       case 'ControlLeft':
       case 'ControlRight':

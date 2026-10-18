@@ -27,7 +27,7 @@ import { Effects, CameraShake, SlideView } from './effects'
 import { WEAPONS, type WeaponId } from './shared/weapons'
 import { LoadoutScreen, GadgetPicker } from './loadoutScreen'
 import { GadgetSystem } from './gadgets'
-import { GADGETS, type GadgetId } from './shared/gadgets'
+import { GADGETS, GADGET_SLOT, GADGET_SLOTS, type GadgetId, type GadgetSlot } from './shared/gadgets'
 import { weaponIcon } from './weaponIcons'
 
 // --- Grundgerüst: Szene, Kamera, Renderer ---
@@ -159,9 +159,9 @@ function ropeStart(cam: THREE.Camera): THREE.Vector3 {
   const origin = new THREE.Vector3(0.25, -0.22, -0.5)
   return cam.localToWorld(origin)
 }
-function throwGadget() {
+function throwGadget(slot: GadgetSlot) {
   if (!isActive || !player.isAlive) return
-  const thrown = gadgets.tryThrow(camera, player.team)
+  const thrown = gadgets.tryThrow(camera, player.team, slot)
   if (!thrown && gadgets.rejectReason) showNotice(gadgets.rejectReason)
   if (thrown?.pull) {
     sound.play('hookShot', 0.7)
@@ -171,7 +171,7 @@ function throwGadget() {
     sound.play('throw', 0.6)
   }
   if (thrown) {
-    network.sendGadget(gadgets.gadget, thrown.from, thrown.to, thrown.flight, thrown.velocity)
+    network.sendGadget(thrown.kind, thrown.from, thrown.to, thrown.flight, thrown.velocity)
   }
 }
 const noticeBanner = document.querySelector<HTMLDivElement>('#notice-banner')!
@@ -395,7 +395,7 @@ window.addEventListener('keydown', (event) => {
 
 // Nur im Dev-Build: Zugriff für die Browser-Tests (tests/)
 if (import.meta.env.DEV) {
-  Object.assign(window, { __dusk: { getFps: () => fps, gadgets, throwGadget, player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake, slideView, renderer } })
+  Object.assign(window, { __dusk: { getFps: () => fps, gadgets, throwGadget: (slot?: GadgetSlot) => throwGadget(slot ?? GADGET_SLOT[gadgets.gadget]), throwSlot: throwGadget, player, network, remotePlayers, camera, weapon, arena, lookControl, hitFeedback, sound, effects, cameraShake, slideView, renderer } })
 }
 
 // --- Eingabe ---
@@ -467,7 +467,10 @@ const loadoutScreen = new LoadoutScreen(
   document.querySelector<HTMLDivElement>('#loadout-secondary')!
 )
 loadoutScreen.onChange = (loadout) => network.sendLoadout(loadout)
-const gadgetPicker = new GadgetPicker(document.querySelector<HTMLDivElement>('#loadout-gadget')!)
+const gadgetPickers: Record<GadgetSlot, GadgetPicker> = {
+  tactic: new GadgetPicker(document.querySelector<HTMLDivElement>('#loadout-gadget')!, 'tactic'),
+  move: new GadgetPicker(document.querySelector<HTMLDivElement>('#loadout-gadget-move')!, 'move'),
+}
 // Erster "Spielen"-Klick hat das Spiel gestartet: ab dann gibt es "Weiter" statt "Starten"
 let started = false
 
@@ -488,7 +491,8 @@ function showSettings(show: boolean) {
 function startLife() {
   resetTouchLean()
   gadgets.reset()
-  gadgets.setGadget(gadgetPicker.gadget)
+  // Reihenfolge: Bewegung zuerst, damit `gadgets.gadget` (Kurzform für Tests) das Taktik-Gadget (Taste G) bleibt
+  for (const slot of [...GADGET_SLOTS].reverse()) gadgets.setGadget(gadgetPickers[slot].gadget)
   applyGadgetUi()
   weapon.resetLoadout(loadoutScreen.loadout)
   player.weapon = weapon.current
@@ -646,6 +650,7 @@ if (isTouchDevice) {
       switchButton: document.querySelector<HTMLButtonElement>('#switch-button')!,
       aimButton: document.querySelector<HTMLButtonElement>('#aim-button')!,
       gadgetButton: document.querySelector<HTMLButtonElement>('#gadget-button')!,
+      gadgetMoveButton: document.querySelector<HTMLButtonElement>('#gadget-move-button')!,
       leanLeftButton: document.querySelector<HTMLButtonElement>('#lean-left-button')!,
       leanRightButton: document.querySelector<HTMLButtonElement>('#lean-right-button')!,
     },
@@ -891,11 +896,22 @@ function updateCrosshair() {
   crosshair.style.setProperty('--gap', `${gap.toFixed(1)}px`)
 }
 
-const gadgetHud = document.querySelector<HTMLDivElement>('#gadget-hud')!
-const gadgetStatus = document.querySelector<HTMLSpanElement>('#gadget-status')!
-const gadgetBarFill = document.querySelector<HTMLDivElement>('#gadget-bar-fill')!
-const gadgetButtonEl = document.querySelector<HTMLButtonElement>('#gadget-button')!
-const gadgetNameEl = document.querySelector<HTMLSpanElement>('#gadget-name')!
+const gadgetHuds: Record<GadgetSlot, { root: HTMLDivElement; name: HTMLSpanElement; status: HTMLSpanElement; fill: HTMLDivElement; button: HTMLButtonElement }> = {
+  tactic: {
+    root: document.querySelector<HTMLDivElement>('#gadget-hud')!,
+    name: document.querySelector<HTMLSpanElement>('#gadget-name')!,
+    status: document.querySelector<HTMLSpanElement>('#gadget-status')!,
+    fill: document.querySelector<HTMLDivElement>('#gadget-bar-fill')!,
+    button: document.querySelector<HTMLButtonElement>('#gadget-button')!,
+  },
+  move: {
+    root: document.querySelector<HTMLDivElement>('#gadget-hud-move')!,
+    name: document.querySelector<HTMLSpanElement>('#gadget-name-move')!,
+    status: document.querySelector<HTMLSpanElement>('#gadget-status-move')!,
+    fill: document.querySelector<HTMLDivElement>('#gadget-bar-fill-move')!,
+    button: document.querySelector<HTMLButtonElement>('#gadget-move-button')!,
+  },
+}
 const flashOverlay = document.querySelector<HTMLDivElement>('#flash-overlay')!
 const smokeOverlay = document.querySelector<HTMLDivElement>('#smoke-overlay')!
 const GADGET_ICONS: Record<GadgetId, string> = {
@@ -904,21 +920,28 @@ const GADGET_ICONS: Record<GadgetId, string> = {
   grapple: '<circle cx="6" cy="18" r="2.4" fill="currentColor"/><path d="M7.5 16.5L17 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 4h7v7z" fill="currentColor"/>',
   flash: '<path d="M12 2l2.2 6.3L21 6.5l-4.2 5.5L22 14l-6.4 1.3L17 22l-5-4.2L7 22l1.4-6.7L2 14l5.2-2L3 6.5l6.8 1.8z" fill="currentColor"/>',
 }
-// Name, Taste-Symbol und Beschriftung folgen dem gewählten Gadget
+// Name, Taste-Symbol und Beschriftung folgen dem gewählten Gadget je Platz
 function applyGadgetUi() {
-  const label = GADGETS[gadgets.gadget].label
-  gadgetNameEl.textContent = label
-  gadgetButtonEl.setAttribute('aria-label', `${label} werfen`)
-  gadgetButtonEl.querySelector('svg')!.innerHTML = GADGET_ICONS[gadgets.gadget]
+  for (const slot of GADGET_SLOTS) {
+    const ui = gadgetHuds[slot]
+    const label = GADGETS[gadgets.selected[slot]].label
+    ui.name.textContent = label
+    ui.button.setAttribute('aria-label', `${label} einsetzen`)
+    ui.button.querySelector('svg')!.innerHTML = GADGET_ICONS[gadgets.selected[slot]]
+  }
 }
 
 function updateGadgetHud() {
-  const ready = gadgets.ready
-  gadgetHud.classList.toggle('ready', ready)
-  gadgetButtonEl.classList.toggle('cooling', !ready)
-  gadgetButtonEl.dataset.time = ready ? '' : String(Math.ceil(gadgets.cooldownRemaining))
-  gadgetStatus.textContent = ready ? 'bereit' : `${Math.ceil(gadgets.cooldownRemaining)} s`
-  gadgetBarFill.style.width = `${(1 - gadgets.cooldownRemaining / Math.max(1, gadgets.cooldownTotal || gadgets.stats.cooldown)) * 100}%`
+  for (const slot of GADGET_SLOTS) {
+    const ui = gadgetHuds[slot]
+    const { remaining, total } = gadgets.cooldowns[slot]
+    const ready = remaining <= 0
+    ui.root.classList.toggle('ready', ready)
+    ui.button.classList.toggle('cooling', !ready)
+    ui.button.dataset.time = ready ? '' : String(Math.ceil(remaining))
+    ui.status.textContent = ready ? 'bereit' : `${Math.ceil(remaining)} s`
+    ui.fill.style.width = `${(1 - remaining / Math.max(1, total || GADGETS[gadgets.selected[slot]].cooldown)) * 100}%`
+  }
 }
 
 function updateAmmoHud() {

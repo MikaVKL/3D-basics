@@ -61,10 +61,11 @@ Weiterarbeiten wissen muss.
 - `src/effects.ts` – kurzlebige Effekte (Mündung, Funken, Zerfall), Kamera-Ruck
   und `SlideView` (Rutschen: Neigung + FOV, nur fürs Rendern)
 - `src/weaponIcons.ts` – Waffen-Umrisse (SVG) für Kill-Feed und Waffenfeld
-- `src/gadgets.ts` + `src/shared/gadgets.ts` – Gadgets (Taste G, Touch-Button): Rauchgranate und
-  Blendgranate (Auswahl im Waffenauswahl-Fenster als drei Aufklapplisten Primary/Secondary/Gadget, `Dropdown` in
-  `loadoutScreen.ts`, Nutzerwunsch: ein Haupt-Gadget je Leben, nicht alle; `GadgetPicker`, gemerkt unter `duskArena.gadget`,
-  gilt ab dem nächsten Spawn; eine gemeinsame Abklingzeit, Rauch 25 s / Blend 30 s). Blendgranate:
+- **Zwei Gadget-Plätze** (Nutzerwunsch, weil die Karte Bewegung voraussetzt): **Taktik** (Taste G; Rauch- oder Blendgranate) und **Bewegung** (Taste F; Enterhaken oder Sprungpad), je eigene Wahl (`duskArena.gadget.tactic`/`.move`, altes `duskArena.gadget` wird für den passenden Platz übernommen), Abklingzeit (`GadgetSystem.cooldowns`), HUD-Zeile (`#gadget-hud`, `#gadget-hud-move`) und Touch-Button (`#gadget-button`, `#gadget-move-button` darüber). Vorgabe Rauch + Haken (Bewegung ist nie leer). `GADGET_SLOT`/`gadgetsOfSlot` in shared; `tryThrow(camera, team, slot)`; Server merkt `gadgetReadyAt` je Platz. Test-Kurzformen: `gadgets.gadget`/`cooldownRemaining`/`ready` folgen dem zuletzt per `setGadget` gewählten, `__dusk.throwGadget()` wirft dessen Platz, `__dusk.throwSlot('move')` den Platz ausdrücklich (Respawn setzt `gadget` zurück auf Taktik). `tests/gadget-slots.mjs`.
+- `src/gadgets.ts` + `src/shared/gadgets.ts` – Gadgets (Taste G Taktik / F Bewegung, Touch-Buttons): Rauchgranate und
+  Blendgranate (Auswahl im Waffenauswahl-Fenster als vier Aufklapplisten Primary/Secondary/Taktik/Bewegung, `Dropdown` in
+  `loadoutScreen.ts`, Nutzerwunsch: ein Gadget je Platz, nicht alle; `GadgetPicker(root, slot)`,
+  gilt ab dem nächsten Spawn; Abklingzeit je Platz, Rauch 25 s / Blend 30 s). Blendgranate:
   gleicher Wurf wie Rauch (prallt an Wänden ab), liegt nach der Landung 1 s und piept 4x (schneller werdend, blinkt; `armFuse`, `fuse` in shared; Nutzerwunsch: um Ecken werfen, Gegner können reagieren), dann Knall; jeder Client rechnet für SICH selbst
   (`blindDuration()`/`blindStrength()` in shared: Abstand ≤ 22 m, volle Wirkung bis 15° neben dem Knall, dann quadratisch
   abfallend bis 0 bei 70° (= Bildrand: außerhalb des Bildes fast nichts), max. 3 s, Schleier-Deckkraft 0,2+Faktor, freie

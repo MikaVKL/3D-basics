@@ -278,7 +278,12 @@ body {
 }
 
 /* Gadget-Anzeige im Waffenfeld: Taste, Name, Status, Abklingbalken */
-#gadget-hud {
+#gadget-hud-move {
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.gadget-hud {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -290,22 +295,26 @@ body {
   color: #aab4c4;
 }
 
-#gadget-hud .gadget-key {
+#gadget-hud .gadget-key,
+#gadget-hud-move .gadget-key {
   padding: 0 4px;
   border: 1px solid rgba(138, 151, 171, 0.6);
   border-radius: 3px;
   font-weight: 700;
 }
 
-#gadget-hud.ready {
+#gadget-hud.ready,
+#gadget-hud-move.ready {
   color: var(--c-text);
 }
 
-#gadget-hud.ready #gadget-status {
+#gadget-hud.ready #gadget-status,
+#gadget-hud-move.ready #gadget-status-move {
   color: var(--c-neon);
 }
 
-#gadget-bar {
+#gadget-hud .gadget-bar,
+#gadget-hud-move .gadget-bar {
   grid-column: 1 / -1;
   height: 3px;
   background: rgba(138, 151, 171, 0.25);
@@ -313,13 +322,15 @@ body {
   overflow: hidden;
 }
 
-#gadget-bar-fill {
+#gadget-hud .gadget-bar-fill,
+#gadget-hud-move .gadget-bar-fill {
   height: 100%;
   width: 100%;
   background: var(--c-neon);
 }
 
-#gadget-hud:not(.ready) #gadget-bar-fill {
+#gadget-hud:not(.ready) .gadget-bar-fill,
+#gadget-hud-move:not(.ready) .gadget-bar-fill {
   background: #8a97ab;
 }
 
@@ -343,7 +354,8 @@ body {
   }
 
   /* zu wenig Platz oben links: die Abklingzeit steht auf dem Button */
-  #gadget-hud {
+  #gadget-hud,
+  #gadget-hud-move {
     display: none;
   }
 }
@@ -514,7 +526,7 @@ body {
 /* Touch: rechts liegt die Button-Spalte - symmetrisch freihalten */
 @media (pointer: coarse) {
   #notice-banner {
-    max-width: calc(100vw - 200px);
+    max-width: calc(100vw - 300px);
   }
 }
 
@@ -1782,8 +1794,9 @@ body {
   background: rgba(51, 230, 204, 0.35);
 }
 
-/* Gadget (Rauchgranate) */
-#gadget-button {
+/* Gadgets: Taktik (G) und Bewegung (F) */
+#gadget-button,
+#gadget-move-button {
   position: fixed;
   padding: 0;
   right: calc(28px + 62px * var(--btn)); /* links neben dem Ducken-Button, rechts neben Nachladen */
@@ -1798,16 +1811,23 @@ body {
   touch-action: none;
 }
 
-#gadget-button:active {
+#gadget-move-button {
+  bottom: calc(28px + 154px * var(--btn)); /* über dem Taktik-Button */
+}
+
+#gadget-button:active,
+#gadget-move-button:active {
   background: rgba(154, 167, 186, 0.4);
 }
 
-#gadget-button.cooling svg {
+#gadget-button.cooling svg,
+#gadget-move-button.cooling svg {
   opacity: 0.3;
 }
 
 /* Restzeit der Abklingzeit auf dem Button (Touch zeigt die Leiste im Waffenfeld nicht) */
-#gadget-button::after {
+#gadget-button::after,
+#gadget-move-button::after {
   content: attr(data-time);
   position: absolute;
   inset: 0;

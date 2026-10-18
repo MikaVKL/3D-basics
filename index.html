@@ -28,12 +28,18 @@
         </div>
       </div>
       <div id="reload-bar"><div id="reload-bar-fill"></div></div>
-      <!-- Gadget: Taste G, Abklingzeit als Balken -->
-      <div id="gadget-hud" class="ready">
+      <!-- Gadgets: Taktik (Taste G) und Bewegung (Taste F), Abklingzeit als Balken -->
+      <div id="gadget-hud" class="gadget-hud ready">
         <span class="gadget-key">G</span>
         <span id="gadget-name">Rauchgranate</span>
         <span id="gadget-status">bereit</span>
-        <div id="gadget-bar"><div id="gadget-bar-fill"></div></div>
+        <div class="gadget-bar"><div id="gadget-bar-fill" class="gadget-bar-fill"></div></div>
+      </div>
+      <div id="gadget-hud-move" class="gadget-hud ready">
+        <span class="gadget-key">F</span>
+        <span id="gadget-name-move">Enterhaken</span>
+        <span id="gadget-status-move">bereit</span>
+        <div class="gadget-bar"><div id="gadget-bar-fill-move" class="gadget-bar-fill"></div></div>
       </div>
     </div>
 
@@ -113,6 +119,7 @@
       <button id="switch-button" aria-label="Waffe wechseln">⇄</button>
       <button id="lean-left-button" aria-label="Nach links lehnen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="9" cy="5" r="3" fill="currentColor"/><path d="M9 9 L13 21" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" fill="none"/></svg></button>
       <button id="lean-right-button" aria-label="Nach rechts lehnen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="15" cy="5" r="3" fill="currentColor"/><path d="M15 9 L11 21" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" fill="none"/></svg></button>
+      <button id="gadget-move-button" aria-label="Enterhaken einsetzen"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"></svg></button>
       <button id="gadget-button" aria-label="Rauchgranate werfen"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="9" cy="14" r="5" fill="currentColor"/><circle cx="15" cy="10" r="4.5" fill="currentColor" opacity="0.7"/><circle cx="16" cy="16" r="3.5" fill="currentColor" opacity="0.5"/></svg></button>
     </div>
 
@@ -151,8 +158,12 @@
               <div id="loadout-secondary"></div>
             </div>
             <div class="loadout-column">
-              <h3>Gadget (Taste G)</h3>
+              <h3>Taktik (Taste G)</h3>
               <div id="loadout-gadget"></div>
+            </div>
+            <div class="loadout-column">
+              <h3>Bewegung (Taste F)</h3>
+              <div id="loadout-gadget-move"></div>
             </div>
           </div>
           <p class="loadout-note">Das Messer ist immer dabei. Neue Wahl gilt ab dem nächsten Spawn.</p>

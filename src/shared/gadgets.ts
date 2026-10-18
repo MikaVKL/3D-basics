@@ -83,6 +83,17 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
   },
 }
 
+// Zwei Plätze (Nutzerwunsch: die Karte setzt Bewegung voraus): Taktik (Taste G) und Bewegung (Taste F), je eigene Abklingzeit
+export type GadgetSlot = 'tactic' | 'move'
+export const GADGET_SLOTS: GadgetSlot[] = ['tactic', 'move']
+export const GADGET_SLOT: Record<GadgetId, GadgetSlot> = { smoke: 'tactic', flash: 'tactic', jump: 'move', grapple: 'move' }
+export const SLOT_LABEL: Record<GadgetSlot, string> = { tactic: 'Taktik', move: 'Bewegung' }
+export const SLOT_KEY: Record<GadgetSlot, string> = { tactic: 'G', move: 'F' }
+export const SLOT_DEFAULT: Record<GadgetSlot, GadgetId> = { tactic: 'smoke', move: 'grapple' }
+export function gadgetsOfSlot(slot: GadgetSlot): GadgetId[] {
+  return GADGET_IDS.filter((id) => GADGET_SLOT[id] === slot)
+}
+
 export const DEFAULT_GADGET: GadgetId = 'smoke'
 
 export function isGadgetId(value: unknown): value is GadgetId {

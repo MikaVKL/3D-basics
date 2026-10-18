@@ -43,7 +43,7 @@ try {
   // Aufklapplisten: zu, bis man klickt; je Slot eine; Wahl klappt zu; Klick daneben klappt zu
   const openCount = () => page.evaluate(() => document.querySelectorAll('.dropdown-list:not(.hidden)').length)
   const summary = (sel) => page.evaluate((s) => document.querySelector(`${s} .dropdown-trigger strong`).textContent, sel)
-  check('Drei Aufklapplisten (Primary, Secondary, Gadget), alle zu; Knopf zeigt die Wahl', (await page.locator('.dropdown').count()) === 3 && (await openCount()) === 0 && (await summary('#loadout-primary')) === 'Sturmgewehr' && (await summary('#loadout-secondary')) === 'Pistole', `${await summary('#loadout-primary')} / ${await summary('#loadout-secondary')}`)
+  check('Vier Aufklapplisten (Primary, Secondary, Taktik, Bewegung), alle zu; Knopf zeigt die Wahl', (await page.locator('.dropdown').count()) === 4 && (await openCount()) === 0 && (await summary('#loadout-primary')) === 'Sturmgewehr' && (await summary('#loadout-secondary')) === 'Pistole', `${await summary('#loadout-primary')} / ${await summary('#loadout-secondary')}`)
   await page.click('#loadout-primary .dropdown-trigger')
   check('Klick öffnet die Liste mit den 3 Primary-Waffen', (await openCount()) === 1 && (await page.locator('#loadout-primary .dropdown-list .weapon-card:visible').count()) === 3)
   await page.click('#loadout-secondary .dropdown-trigger')

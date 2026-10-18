@@ -37,9 +37,9 @@ try {
     selected: document.querySelector('#loadout-gadget .gadget-card.selected')?.dataset.gadget,
     weaponSelected: document.querySelectorAll('.weapon-card.selected').length,
   }))
-  check('Gadget-Auswahl: Rauch-, Blendgranate, Sprungpad, Enterhaken, Standard Rauch; Waffenkarten unberührt', cards.ids === 'smoke,flash,jump,grapple' && cards.selected === 'smoke' && cards.weaponSelected === 2, JSON.stringify(cards))
+  check('Gadget-Auswahl: Taktik: Rauch, Blendgranate, Standard Rauch; Waffenkarten unberührt', cards.ids === 'smoke,flash' && cards.selected === 'smoke' && cards.weaponSelected === 2, JSON.stringify(cards))
   await pickOption(page, '.gadget-card[data-gadget="flash"]')
-  check('Blendgranate gewählt und im Browser gemerkt', (await page.evaluate(() => localStorage.getItem('duskArena.gadget'))) === 'flash')
+  check('Blendgranate gewählt und im Browser gemerkt', (await page.evaluate(() => localStorage.getItem('duskArena.gadget.tactic'))) === 'flash')
   await page.click('#loadout-play-button')
   await wait(500)
   await page.setViewportSize({ width: 480, height: 270 })
@@ -57,7 +57,7 @@ try {
     name: document.querySelector('#gadget-name').textContent,
     label: document.querySelector('#gadget-button').getAttribute('aria-label'),
   }))
-  check('Im Spiel: Blendgranate, Anzeige und Button-Beschriftung folgen', ui.gadget === 'flash' && ui.name === 'Blendgranate' && ui.label === 'Blendgranate werfen', JSON.stringify(ui))
+  check('Im Spiel: Blendgranate, Anzeige und Button-Beschriftung folgen', ui.gadget === 'flash' && ui.name === 'Blendgranate' && ui.label === 'Blendgranate einsetzen', JSON.stringify(ui))
 
   // Rechenregel: nach Blickwinkel (Dauer und Stärke) und Abstand
   const rule = await page.evaluate(async () => {

@@ -15,6 +15,7 @@ try {
   await pickOption(page, '.gadget-card[data-gadget="grapple"]')
   await page.click('#loadout-play-button')
   await wait(500)
+  await page.evaluate(() => __dusk.gadgets.setGadget('grapple'))
   await page.evaluate(() => {
     Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => __dusk.renderer.domElement })
     window.__sounds = []
@@ -40,18 +41,18 @@ try {
   // Kein Ziel: steil in den Himmel -> kein Wurf, Abklingzeit bleibt 0, Hinweis
   const none = await page.evaluate(() => {
     window.__setup(-8, -5, 0, 1.4)
-    __dusk.throwGadget()
-    return { cd: __dusk.gadgets.cooldownRemaining, pulling: __dusk.player.isGrappling, reason: __dusk.gadgets.rejectReason }
+    __dusk.throwSlot('move')
+    return { cd: __dusk.gadgets.cooldowns.move.remaining, pulling: __dusk.player.isGrappling, reason: __dusk.gadgets.rejectReason }
   })
   check('Kein Ziel in Reichweite: kein Zug, Abklingzeit 0, Hinweis', none.cd === 0 && !none.pulling && none.reason.includes('Ziel'), JSON.stringify(none))
 
   // Gerader Zug nach Norden von (-25, -9)
   const wall = await page.evaluate(() => {
     window.__setup(-25, -9, 0, 0)
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     const anchor = __dusk.gadgets.ropes[0].anchor.clone()
     const dist = __dusk.camera.position.distanceTo(anchor)
-    const start = { cd: __dusk.gadgets.cooldownRemaining, pulling: __dusk.player.isGrappling, ropes: __dusk.gadgets.ropes.length, dist: +dist.toFixed(1) }
+    const start = { cd: __dusk.gadgets.cooldowns.move.remaining, pulling: __dusk.player.isGrappling, ropes: __dusk.gadgets.ropes.length, dist: +dist.toFixed(1) }
     let t = 0
     while (__dusk.player.isGrappling && t < 3) { window.__frame(1 / 60); t += 1 / 60 }
     const p = __dusk.camera.position
@@ -64,7 +65,7 @@ try {
   const ropeShape = await page.evaluate(() => {
     __dusk.gadgets.reset()
     window.__setup(25, -9, 0, Math.atan(0.95 / 8))
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     window.__run(0.2)
     const rope = __dusk.gadgets.ropes[0]
     const start = rope.origin()
@@ -79,7 +80,7 @@ try {
   // Abklingzeit: sofort nochmal geht nicht
   const again = await page.evaluate(() => {
     window.__setup(-25, -9, 0, 0)
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     return __dusk.player.isGrappling
   })
   check('Abklingzeit: zweiter Wurf direkt danach zieht nicht', !again)
@@ -88,7 +89,7 @@ try {
   const jump = await page.evaluate(() => {
     __dusk.gadgets.reset()
     window.__setup(-25, -9, 0, 0)
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     window.__run(0.3)
     const during = __dusk.player.isGrappling
     __dusk.player.jump()
@@ -100,7 +101,7 @@ try {
   const dead = await page.evaluate(() => {
     __dusk.gadgets.reset()
     window.__setup(-25, -9, 0, 0)
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     window.__run(0.2)
     __dusk.player.takeDamage(999)
     window.__run(0.2)
@@ -112,7 +113,7 @@ try {
   const climb = await page.evaluate(() => {
     __dusk.gadgets.reset()
     window.__setup(25, -9, 0, Math.atan(0.95 / 8))
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     const pulling = __dusk.player.isGrappling
     window.__run(2.5)
     const P = __dusk.player
@@ -140,8 +141,8 @@ try {
     const tryAt = (c) => {
       G.reset()
       window.__setup(c.x, c.z, c.yaw, 0)
-      __dusk.throwGadget()
-      return { pulling: __dusk.player.isGrappling, cd: G.cooldownRemaining }
+      __dusk.throwSlot('move')
+      return { pulling: __dusk.player.isGrappling, cd: G.cooldowns.move.remaining }
     }
     return { far: far[0] && { ...far[0], ...tryAt(far[0]) }, near: near[0] && { ...near[0], ...tryAt(near[0]) } }
   })
@@ -163,7 +164,7 @@ try {
     for (const [name, dmg] of [['leicht', 12], ['gleich20', 20], ['schwer', 25]]) {
       G.reset()
       window.__setup(-25, -9, 0, 0)
-      __dusk.throwGadget()
+      __dusk.throwSlot('move')
       window.__run(0.1)
       P.takeDamage(dmg)
       res[name] = P.isGrappling
@@ -171,13 +172,13 @@ try {
     // Online-Weg: Server meldet neuen Stand (Schild 25 + Leben 100 -> 60 / 0 = 65 Verlust)
     G.reset()
     window.__setup(-25, -9, 0, 0)
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     window.__run(0.1)
     P.applyServerVitals(60, 0, false)
     res.serverSchwer = P.isGrappling
     G.reset()
     window.__setup(-25, -9, 0, 0)
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     window.__run(0.1)
     P.applyServerVitals(100, 15, false)
     res.serverLeicht = P.isGrappling
@@ -189,7 +190,7 @@ try {
   const ceil = await page.evaluate(() => {
     __dusk.gadgets.reset()
     window.__setup(0, -19, 0, 1.4, 1.7)
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     const pulling = __dusk.player.isGrappling
     window.__run(2)
     return { pulling, grappling: __dusk.player.isGrappling, feet: +__dusk.player.feetHeight.toFixed(2) }
@@ -205,7 +206,7 @@ try {
     for (let i = 0; i < 200; i++) {
       __dusk.gadgets.reset()
       window.__setup(-30 + rnd() * 70, -15 + rnd() * 28, rnd() * 6.28, (rnd() - 0.4) * 1.6)
-      __dusk.throwGadget()
+      __dusk.throwSlot('move')
       if (!P.isGrappling) continue
       hooks++
       let t = 0
@@ -228,7 +229,7 @@ try {
       __dusk.gadgets.reset()
       window.__setup(x, z, 0, pitch)
       const check = createMovementCheck({ x, y: 1.7, z }, 0, 0)
-      __dusk.throwGadget()
+      __dusk.throwSlot('move')
       let now = 0
       for (let f = 0; f < 60 * 4; f++) {
         window.__frame(1 / 60)

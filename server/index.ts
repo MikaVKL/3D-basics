@@ -30,7 +30,7 @@ import {
   type Vitals,
 } from '../src/shared/gameRules.ts'
 import { WEAPONS, DEFAULT_LOADOUT, isWeaponId, isLoadout, loadoutSlots, damageFactor, type Loadout } from '../src/shared/weapons.ts'
-import { GADGETS, isGadgetId, grappleCooldown } from '../src/shared/gadgets.ts'
+import { GADGETS, GADGET_SLOT, isGadgetId, grappleCooldown, type GadgetSlot } from '../src/shared/gadgets.ts'
 import type { Team } from '../src/team.ts'
 
 // Läuft direkt als TypeScript (Node-Type-Stripping, kein Build-Schritt)
@@ -72,7 +72,7 @@ interface Client {
   protectedUntil: number // Spawn-Schutz bis zu diesem performance.now()-Zeitpunkt
   hitBudget: RateBudget
   shotBudget: RateBudget
-  gadgetReadyAt: number // performance.now(), ab dann ist der nächste Wurf erlaubt
+  gadgetReadyAt: Record<GadgetSlot, number> // performance.now(), ab dann ist der nächste Wurf je Platz (Taktik/Bewegung) erlaubt
   movement: MovementCheck // Basis der Bewegungsprüfung (Spawn-Punkt des Servers)
   movementViolations: number
   lastCorrectionAt: number
@@ -349,7 +349,7 @@ function respawn(client: Client, now: number) {
   if (client.state) client.state = { ...client.state, position: { ...SPAWN_POINTS[spawnIndex] } }
   client.life += 1
   client.loadout = client.pendingLoadout
-  client.gadgetReadyAt = 0 // jedes Leben beginnt mit bereitem Gadget
+  client.gadgetReadyAt = { tactic: 0, move: 0 } // jedes Leben beginnt mit bereiten Gadgets
   client.movement = createMovementCheck(SPAWN_POINTS[spawnIndex], client.life, now)
   broadcast({ t: 'respawn', id: client.id, spawnIndex, life: client.life, team: client.team })
 }
@@ -463,7 +463,7 @@ wss.on('connection', (socket) => {
         protectedUntil: performance.now() + SPAWN_PROTECTION * 1000,
         hitBudget: { tokens: RATE_BURST, updatedAt: performance.now() },
         shotBudget: { tokens: RATE_BURST, updatedAt: performance.now() },
-        gadgetReadyAt: 0,
+        gadgetReadyAt: { tactic: 0, move: 0 },
         movement: createMovementCheck(SPAWN_POINTS[spawnIndex], 0, performance.now()),
         movementViolations: 0,
         lastCorrectionAt: 0,
@@ -659,14 +659,15 @@ function handleGadget(thrower: Client, rawKind: unknown, rawFrom: unknown, rawTo
   const stats = GADGETS[rawKind]
   const now = performance.now()
   if (nextRoundAt !== null) return
-  if (now < thrower.gadgetReadyAt - GADGET_COOLDOWN_TOLERANCE * 1000) return
+  const slot = GADGET_SLOT[rawKind]
+  if (now < thrower.gadgetReadyAt[slot] - GADGET_COOLDOWN_TOLERANCE * 1000) return
   const p = thrower.state.position
   if (Math.hypot(from.x - p.x, from.y - p.y, from.z - p.z) > GADGET_ORIGIN_TOLERANCE) return
   if (Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) > stats.maxThrowDistance) return
   if (rawFlight < 0 || rawFlight > stats.maxFlightTime) return
   // Haken: Abklingzeit nach Zugstrecke, wie beim Client
   const cooldown = rawKind === 'grapple' ? grappleCooldown(Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z)) : stats.cooldown
-  thrower.gadgetReadyAt = now + cooldown * 1000
+  thrower.gadgetReadyAt[slot] = now + cooldown * 1000
   thrower.lastActivityAt = now
   // Startgeschwindigkeit nur weitergeben, wenn sie zur Wurfstärke passt (sonst zeigen die anderen einen einfachen Bogen)
   const velocity = sanitizeVec3(rawVelocity)

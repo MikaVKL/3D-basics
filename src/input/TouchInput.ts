@@ -1,6 +1,7 @@
 import type { Player } from '../player'
 import type { LookControl } from '../lookControl'
 import type { Weapon } from '../weapon'
+import type { GadgetSlot } from '../shared/gadgets'
 
 // Touch: links schwebender Joystick, rechts Wischen zum Umschauen, Buttons.
 // Ducken wird gehalten wie am Rechner (Wunsch: nur so lange rutschen, wie
@@ -25,6 +26,7 @@ interface TouchElements {
   switchButton: HTMLElement
   aimButton: HTMLElement
   gadgetButton: HTMLElement
+  gadgetMoveButton: HTMLElement
   leanLeftButton: HTMLElement
   leanRightButton: HTMLElement
 }
@@ -41,8 +43,8 @@ export class TouchInput {
   private lastShootPos = { x: 0, y: 0 }
   private jumpRepeat: ReturnType<typeof setInterval> | null = null
 
-  // Gadget-Button (setzt main.ts)
-  onGadget?: () => void
+  // Gadget-Buttons: Taktik und Bewegung (setzt main.ts)
+  onGadget?: (slot: GadgetSlot) => void
   private leanToggle: -1 | 0 | 1 = 0
   private elements: TouchElements
   private player: Player
@@ -114,11 +116,13 @@ export class TouchInput {
       }, { passive: false })
     }
 
-    elements.gadgetButton.addEventListener('touchstart', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      this.onGadget?.()
-    })
+    for (const [button, slot] of [[elements.gadgetButton, 'tactic'], [elements.gadgetMoveButton, 'move']] as const) {
+      button.addEventListener('touchstart', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.onGadget?.(slot)
+      })
+    }
 
     switchButton.addEventListener('touchstart', (e) => {
       e.preventDefault()

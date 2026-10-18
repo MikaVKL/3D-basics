@@ -26,7 +26,7 @@ try {
   await A.evaluate(() => {
     __dusk.camera.rotation.set(Math.atan(0.95 / 8), 0, 0, 'YXZ')
     __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
   })
   await wait(250)
   const own = await A.evaluate(() => ({ pulling: __dusk.player.isGrappling, ropes: __dusk.gadgets.ropes.length, anchor: __dusk.gadgets.ropes[0]?.anchor.toArray().map((v) => +v.toFixed(1)) }))

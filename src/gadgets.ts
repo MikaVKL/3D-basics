@@ -3,7 +3,7 @@
 // meldet nur Start, Landepunkt und Flugzeit; alle zeigen denselben Bogen und dieselbe Wolke.
 
 import * as THREE from 'three'
-import { GADGETS, DEFAULT_GADGET, PAD_HEADROOM, GRAPPLE_REACH, GRAPPLE_SPEED, grappleCooldown, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
+import { GADGETS, DEFAULT_GADGET, GADGET_SLOT, GADGET_SLOTS, SLOT_DEFAULT, type GadgetSlot, PAD_HEADROOM, GRAPPLE_REACH, GRAPPLE_SPEED, grappleCooldown, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
 const BOUNCE = 0.45 // Anteil der Geschwindigkeit, der beim Aufprall an einer Wand erhalten bleibt
@@ -79,6 +79,7 @@ export interface ThrowResult {
   to: THREE.Vector3
   flight: number
   velocity: THREE.Vector3
+  kind: GadgetId
   // Enterhaken: Zielposition der Körpermitte und Schwung am Ende (über die Kante)
   pull?: { target: THREE.Vector3; push: THREE.Vector2 }
 }
@@ -93,9 +94,14 @@ interface Rope {
 }
 
 export class GadgetSystem {
+  // Gewählt je Platz; `gadget` = zuletzt gewähltes (Vorgabe für spawnFlight und die Kurzformen unten)
   gadget: GadgetId = DEFAULT_GADGET
-  cooldownRemaining = 0
-  cooldownTotal = 0 // Dauer der laufenden Abklingzeit (für die Anzeige; beim Haken je nach Strecke)
+  readonly selected: Record<GadgetSlot, GadgetId> = { ...SLOT_DEFAULT }
+  // Abklingzeit je Platz; total = Dauer der laufenden (für die Anzeige; beim Haken je nach Strecke)
+  readonly cooldowns: Record<GadgetSlot, { remaining: number; total: number }> = {
+    tactic: { remaining: 0, total: 0 },
+    move: { remaining: 0, total: 0 },
+  }
   // Geblendet: Restzeit und Gesamtdauer (für das Ausblenden)
   blindRemaining = 0
   private blindTotal = 0
@@ -143,14 +149,34 @@ export class GadgetSystem {
     return GADGETS[this.gadget]
   }
 
+  // Kurzformen für das zuletzt gewählte Gadget (Tests); das Spiel fragt je Platz (cooldowns, readyFor)
+  get cooldownRemaining(): number {
+    return this.cooldowns[GADGET_SLOT[this.gadget]].remaining
+  }
+
+  get cooldownTotal(): number {
+    return this.cooldowns[GADGET_SLOT[this.gadget]].total
+  }
+
   get ready(): boolean {
-    return this.cooldownRemaining <= 0
+    return this.readyFor(GADGET_SLOT[this.gadget])
+  }
+
+  readyFor(slot: GadgetSlot): boolean {
+    return this.cooldowns[slot].remaining <= 0
+  }
+
+  private startCooldown(slot: GadgetSlot, seconds: number) {
+    this.cooldowns[slot].total = seconds
+    this.cooldowns[slot].remaining = seconds
   }
 
   // Neues Leben: Granate wieder bereit
   reset() {
-    this.cooldownRemaining = 0
-    this.cooldownTotal = 0
+    for (const slot of GADGET_SLOTS) {
+      this.cooldowns[slot].remaining = 0
+      this.cooldowns[slot].total = 0
+    }
     this.blindRemaining = 0
     this.blindTotal = 0
     this.blindStrengthNow = 0
@@ -164,6 +190,7 @@ export class GadgetSystem {
   // Auswahl gilt ab dem nächsten Leben (startLife); die Abklingzeit bleibt
   setGadget(id: GadgetId) {
     this.gadget = id
+    this.selected[GADGET_SLOT[id]] = id
   }
 
   // 0..1: erst voll weiß, dann weiches Ausblenden
@@ -229,33 +256,34 @@ export class GadgetSystem {
   }
 
   // Werfen aus der Kamera: Flugbahn gegen die Arena rechnen, Flug und Wolke starten
-  tryThrow(camera: THREE.Camera, team: Team): ThrowResult | null {
-    if (!this.ready) return null
+  tryThrow(camera: THREE.Camera, team: Team, slot: GadgetSlot = GADGET_SLOT[this.gadget]): ThrowResult | null {
+    if (!this.readyFor(slot)) return null
+    const kind = this.selected[slot]
+    const stats = GADGETS[kind]
     const direction = new THREE.Vector3()
     camera.getWorldDirection(direction)
-    if (this.gadget === 'grapple') return this.tryGrapple(camera, direction)
+    if (kind === 'grapple') return this.tryGrapple(camera, direction, slot)
     const from = camera.getWorldPosition(new THREE.Vector3()).addScaledVector(direction, 0.4)
     from.y -= 0.15
-    const velocity = direction.clone().multiplyScalar(this.stats.throwSpeed)
-    velocity.y += this.stats.throwSpeed * this.stats.throwLift
+    const velocity = direction.clone().multiplyScalar(stats.throwSpeed)
+    velocity.y += stats.throwSpeed * stats.throwLift
 
-    const { points, to: position, flight } = this.simulateFlight(from, velocity, this.stats.maxFlightTime)
+    const { points, to: position, flight } = this.simulateFlight(from, velocity, stats.maxFlightTime)
     if (flight < MIN_THROW_TIME) return null
     this.rejectReason = ''
-    if (this.gadget === 'jump' && !this.padSpotOk(position)) {
+    if (kind === 'jump' && !this.padSpotOk(position)) {
       this.rejectReason = 'Hier passt kein Sprungpad (zu wenig Platz darüber)'
       return null
     }
-    this.cooldownTotal = this.stats.cooldown
-    this.cooldownRemaining = this.stats.cooldown
-    this.spawnFlight(from, position.clone(), flight, team, this.gadget, points)
-    return { from, to: position.clone(), flight, velocity }
+    this.startCooldown(slot, stats.cooldown)
+    this.spawnFlight(from, position.clone(), flight, team, kind, points)
+    return { from, to: position.clone(), flight, velocity, kind }
   }
 
   // Haken: trifft sofort die erste Fläche im Fadenkreuz. Zielposition (Körpermitte) liegt davor:
   // an Wänden gut einen Meter über dem Treffpunkt (Füße), damit man auch Geländer überwindet (man kommt über die Kante) mit Stoß in die Wand hinein,
   // auf Böden darüber, an Decken darunter.
-  private tryGrapple(camera: THREE.Camera, direction: THREE.Vector3): ThrowResult | null {
+  private tryGrapple(camera: THREE.Camera, direction: THREE.Vector3, slot: GadgetSlot): ThrowResult | null {
     const from = camera.getWorldPosition(new THREE.Vector3())
     this.raycaster.set(from, direction)
     this.raycaster.far = GRAPPLE_REACH
@@ -277,9 +305,8 @@ export class GadgetSystem {
       target.y += 2.3
       push.set(-normal.x * 1.5, -normal.z * 1.5)
     }
-    this.cooldownTotal = grappleCooldown(from.distanceTo(hit.point))
-    this.cooldownRemaining = this.cooldownTotal
-    return { from, to: hit.point.clone(), flight: from.distanceTo(hit.point) / GRAPPLE_SPEED, velocity: new THREE.Vector3(), pull: { target, push } }
+    this.startCooldown(slot, grappleCooldown(from.distanceTo(hit.point)))
+    return { from, to: hit.point.clone(), flight: from.distanceTo(hit.point) / GRAPPLE_SPEED, velocity: new THREE.Vector3(), pull: { target, push }, kind: 'grapple' }
   }
 
   // Seil vom Werfer zum Haken (auch für die Züge anderer); beim Werfer so lange der Zug läuft
@@ -514,7 +541,7 @@ export class GadgetSystem {
   }
 
   update(deltaSeconds: number) {
-    this.cooldownRemaining = Math.max(0, this.cooldownRemaining - deltaSeconds)
+    for (const slot of GADGET_SLOTS) this.cooldowns[slot].remaining = Math.max(0, this.cooldowns[slot].remaining - deltaSeconds)
 
     for (let i = this.flights.length - 1; i >= 0; i--) {
       const flight = this.flights[i]

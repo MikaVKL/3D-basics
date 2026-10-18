@@ -14,10 +14,11 @@ try {
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.click('#start-button')
   await pickOption(page, '.gadget-card[data-gadget="jump"]')
-  const ids = await page.evaluate(() => [...document.querySelectorAll('#loadout-gadget .gadget-card')].map((c) => c.dataset.gadget).join())
-  check('Gadget-Auswahl hat das Sprungpad (smoke, flash, jump, grapple)', ids === 'smoke,flash,jump,grapple', ids)
+  const ids = await page.evaluate(() => [...document.querySelectorAll('#loadout-gadget-move .gadget-card')].map((c) => c.dataset.gadget).join())
+  check('Bewegungs-Auswahl: Sprungpad und Enterhaken', ids === 'jump,grapple', ids)
   await page.click('#loadout-play-button')
   await wait(500)
+  await page.evaluate(() => __dusk.gadgets.setGadget('jump')) // Kurzformen (throwGadget, cooldownRemaining) folgen dem zuletzt gesetzten
   await page.setViewportSize({ width: 480, height: 270 })
   await page.evaluate(() => {
     Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => __dusk.renderer.domElement })
@@ -44,12 +45,12 @@ try {
     }
     window.__run = (seconds) => { for (let t = 0; t < seconds; t += 1 / 60) window.__frame(1 / 60) }
   })
-  const hud = await page.evaluate(() => ({ name: document.querySelector('#gadget-name').textContent, gadget: __dusk.gadgets.gadget }))
+  const hud = await page.evaluate(() => ({ name: document.querySelector('#gadget-name-move').textContent, gadget: __dusk.gadgets.gadget }))
   check('Im Spiel: Sprungpad, Anzeige folgt', hud.gadget === 'jump' && hud.name === 'Sprungpad', JSON.stringify(hud))
 
   // Wurf: Flug, dann steht ein Pad am Boden (Mitte des offenen Feldes bei x = -8)
   await page.evaluate(() => window.__setup(-8, 8))
-  await page.evaluate(() => __dusk.throwGadget())
+  await page.evaluate(() => __dusk.throwSlot('move'))
   const afterThrow = await page.evaluate(() => ({ cd: __dusk.gadgets.cooldownRemaining, pads: __dusk.gadgets.pads.length }))
   check('Wurf: Abklingzeit 30 s, noch kein Pad (fliegt)', afterThrow.cd === 30 && afterThrow.pads === 0, JSON.stringify(afterThrow))
   await page.evaluate(() => window.__run(3.5))
@@ -118,7 +119,7 @@ try {
     __dusk.camera.rotation.set(-1.2, 0, 0, 'YXZ') // steil nach unten: landet direkt unter dem Steg
     __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     const before = G.pads.length
-    __dusk.throwGadget()
+    __dusk.throwSlot('move')
     return { cooldown: G.cooldownRemaining, reason: G.rejectReason, pads: G.pads.length - before }
   })
   check('Wurf unter den Steg: abgelehnt mit Hinweis, Abklingzeit bleibt 0', reject.cooldown === 0 && reject.reason.includes('Sprungpad'), JSON.stringify(reject))
@@ -258,7 +259,7 @@ try {
     __dusk.player.moveTo = (p) => { window.__corrections++; old(p) }
   })
   await wait(300)
-  await A.evaluate(() => __dusk.throwGadget())
+  await A.evaluate(() => __dusk.throwSlot('move'))
   await wait(3800)
   const seenByB = await B.evaluate(() => __dusk.gadgets.pads.map((p) => ({ x: +p.position.x.toFixed(2), z: +p.position.z.toFixed(2), team: p.team })))
   const ownA = await A.evaluate(() => __dusk.gadgets.pads.map((p) => ({ x: +p.position.x.toFixed(2), z: +p.position.z.toFixed(2) })))

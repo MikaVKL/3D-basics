@@ -11,7 +11,7 @@ import {
   type WeaponId,
 } from './shared/weapons'
 import { weaponIcon } from './weaponIcons'
-import { GADGETS, GADGET_IDS, DEFAULT_GADGET, isGadgetId, type GadgetId } from './shared/gadgets'
+import { GADGETS, GADGET_SLOT, SLOT_DEFAULT, gadgetsOfSlot, isGadgetId, type GadgetId, type GadgetSlot } from './shared/gadgets'
 
 const STORAGE_KEY = 'duskArena.loadout'
 
@@ -187,7 +187,8 @@ export class LoadoutScreen {
   }
 }
 
-const GADGET_KEY = 'duskArena.gadget'
+const GADGET_KEY = 'duskArena.gadget' // alt: ein Gadget; gilt noch für den passenden Platz
+const SLOT_KEYS: Record<GadgetSlot, string> = { tactic: 'duskArena.gadget.tactic', move: 'duskArena.gadget.move' }
 const GADGET_DESCRIPTIONS: Record<GadgetId, string> = {
   smoke: 'Sichtschutz für 8 s',
   flash: 'Blendet, wer hinsieht',
@@ -195,27 +196,31 @@ const GADGET_DESCRIPTIONS: Record<GadgetId, string> = {
   grapple: 'Zieht dich an die Wand',
 }
 
-export function loadStoredGadget(): GadgetId {
+export function loadStoredGadget(slot: GadgetSlot): GadgetId {
   try {
-    const stored = localStorage.getItem(GADGET_KEY)
-    if (isGadgetId(stored)) return stored
+    const stored = localStorage.getItem(SLOT_KEYS[slot])
+    if (isGadgetId(stored) && GADGET_SLOT[stored] === slot) return stored
+    const legacy = localStorage.getItem(GADGET_KEY)
+    if (isGadgetId(legacy) && GADGET_SLOT[legacy] === slot) return legacy
   } catch {
     // gesperrt: Standard
   }
-  return DEFAULT_GADGET
+  return SLOT_DEFAULT[slot]
 }
 
-// Gadget-Wahl (Taste G): eine kleine Karte je Gadget, im Browser gemerkt
+// Gadget-Wahl eines Platzes (Taktik: Taste G, Bewegung: Taste F): eine kleine Karte je Gadget, im Browser gemerkt
 export class GadgetPicker {
   gadget: GadgetId
   onChange?: (gadget: GadgetId) => void
+  private readonly slot: GadgetSlot
   private readonly cards = new Map<GadgetId, HTMLButtonElement>()
   private readonly dropdown: Dropdown
 
-  constructor(root: HTMLElement) {
-    this.gadget = loadStoredGadget()
+  constructor(root: HTMLElement, slot: GadgetSlot) {
+    this.slot = slot
+    this.gadget = loadStoredGadget(slot)
     this.dropdown = new Dropdown(root)
-    for (const id of GADGET_IDS) {
+    for (const id of gadgetsOfSlot(slot)) {
       const card = document.createElement('button')
       card.type = 'button'
       card.className = 'gadget-card'
@@ -237,7 +242,7 @@ export class GadgetPicker {
     if (this.gadget === id) return
     this.gadget = id
     try {
-      localStorage.setItem(GADGET_KEY, id)
+      localStorage.setItem(SLOT_KEYS[this.slot], id)
     } catch {
       // privater Modus: gilt nur für diese Sitzung
     }
