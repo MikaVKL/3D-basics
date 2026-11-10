@@ -536,7 +536,7 @@ async function refreshTeamCounts() {
   teamNote.textContent = !network.hasServer
     ? 'Offline-Training: Die Teamwahl gilt nur in einer Online-Runde.'
     : counts
-      ? 'Sind die Teams ungleich groß, kommst du ins kleinere. So bleibt es fair.'
+      ? 'Ein Team darf höchstens 2 Spieler mehr haben (1 gegen 3 geht). Darüber kommst du ins kleinere.'
       : 'Server nicht erreichbar oder schläft noch - die Zahlen erscheinen gleich.'
 }
 function pollTeamCounts(on: boolean) {

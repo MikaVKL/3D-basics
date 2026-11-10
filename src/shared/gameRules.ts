@@ -45,3 +45,6 @@ export function regenerateShield(vitals: Vitals, deltaSeconds: number) {
     vitals.shield = Math.min(MAX_SHIELD, vitals.shield + SHIELD_REGEN_RATE * deltaSeconds)
   }
 }
+
+// Größter erlaubter Unterschied der Teamstärken (Wunschteam beim Beitritt, Team-Ausgleich); 1 gegen 3 geht, 0 gegen 3 nicht
+export const MAX_TEAM_GAP = 2

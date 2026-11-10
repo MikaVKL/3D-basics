@@ -28,6 +28,7 @@ import {
   applyDamage,
   regenerateShield,
   type Vitals,
+  MAX_TEAM_GAP,
 } from '../src/shared/gameRules.ts'
 import { WEAPONS, DEFAULT_LOADOUT, isWeaponId, isLoadout, loadoutSlots, damageFactor, type Loadout } from '../src/shared/weapons.ts'
 import { GADGETS, GADGET_SLOT, isGadgetId, grappleCooldown, type GadgetSlot } from '../src/shared/gadgets.ts'
@@ -299,11 +300,11 @@ function isActivity(before: PlayerNetworkState | null, after: PlayerNetworkState
 
 function pickTeam(preferred?: unknown): Team {
   const { red, blue } = teamSizes()
-  // Wunsch gilt nur, wenn das Team nicht größer ist als das andere (sonst >1 Unterschied)
+  // Wunsch gilt nur, wenn der Unterschied danach höchstens MAX_TEAM_GAP beträgt
   if (isTeam(preferred)) {
     const mine = preferred === 'red' ? red : blue
     const other = preferred === 'red' ? blue : red
-    if (mine <= other) return preferred
+    if (mine + 1 - other <= MAX_TEAM_GAP) return preferred
   }
   if (red !== blue) return red < blue ? 'red' : 'blue'
   return Math.random() < 0.5 ? 'red' : 'blue'
@@ -361,12 +362,12 @@ function teamSizes(): Scores {
   return sizes
 }
 
-// Ab 2 Spielern Unterschied wechselt der zuletzt Beigetretene des größeren Teams
+// Ab MAX_TEAM_GAP + 1 Spielern Unterschied wechselt der zuletzt Beigetretene des größeren Teams
 function balanceTeams(now: number): boolean {
   let changed = false
   for (;;) {
     const sizes = teamSizes()
-    if (Math.abs(sizes.red - sizes.blue) < 2) return changed
+    if (Math.abs(sizes.red - sizes.blue) <= MAX_TEAM_GAP) return changed
     const bigger: Team = sizes.red > sizes.blue ? 'red' : 'blue'
     const newest = [...clients.values()].filter((c) => c.team === bigger).at(-1)!
     newest.team = bigger === 'red' ? 'blue' : 'red'
