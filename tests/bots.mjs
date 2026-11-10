@@ -152,7 +152,7 @@ function installBot() {
       }
       if (Math.random() < 0.3) P.jump()
       if (Math.random() < 0.15) W.switchTo(pick(['pistol', 'rifle', 'knife']))
-      if (Math.random() < 0.05) W.switchToPrevious()
+      if (Math.random() < 0.05) W.cycle(1)
       if (Math.random() < 0.05) W.reload()
     }
     if (best) {
