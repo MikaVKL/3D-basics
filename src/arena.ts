@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { Palette } from './palette'
 import { createCrateTexture, createPanelTexture, worldBox, CRATE_TILE, PANEL_TILE } from './surfaceTextures'
 import { addWallLamps, addLabel } from './decorations'
@@ -134,6 +135,54 @@ function addEdgeOutline(mesh: THREE.Mesh, color: number = Palette.accentNeon) {
     new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.85 })
   )
   mesh.add(line)
+}
+
+// Draw Calls senken: alle festen Meshes mit gleichem Material werden zu EINEM Mesh verschmolzen, alle Kantenlinien zu
+// einem LineSegments. Die Einzelteile bleiben (Kollision, Schüsse, Minimap, Gadget-Welt arbeiten mit ihnen), werden aber
+// nicht mehr gezeichnet: `material.visible = false` überspringt den Zeichenaufruf, Raycasts und `object.visible` bleiben
+// unberührt. Nur für Teile, die sich nie bewegen.
+function bakeStaticParts(group: THREE.Group, skip: Set<THREE.Object3D>) {
+  group.updateMatrixWorld(true)
+  const meshBuckets = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>()
+  const lineBuckets = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>()
+  const originals: THREE.Material[] = []
+
+  group.traverse((object) => {
+    if (skip.has(object) || !(object instanceof THREE.Mesh)) return
+    const material = object.material as THREE.Material
+    const geometry = object.geometry.clone().applyMatrix4(object.matrixWorld)
+    const attributes = Object.keys(geometry.attributes).sort().join(',')
+    const key = `${material.uuid}|${attributes}|${geometry.index ? 'i' : 'n'}`
+    const bucket = meshBuckets.get(key) ?? { material, geometries: [] }
+    bucket.geometries.push(geometry)
+    meshBuckets.set(key, bucket)
+    originals.push(material)
+
+    for (const child of object.children) {
+      if (!(child instanceof THREE.LineSegments)) continue
+      const lineMaterial = child.material as THREE.LineBasicMaterial
+      const lineKey = `${lineMaterial.color.getHex()}|${lineMaterial.opacity}`
+      const lineBucket = lineBuckets.get(lineKey) ?? { material: lineMaterial, geometries: [] }
+      lineBucket.geometries.push(child.geometry.clone().applyMatrix4(child.matrixWorld))
+      lineBuckets.set(lineKey, lineBucket)
+      originals.push(lineMaterial)
+    }
+  })
+
+  for (const { material, geometries } of meshBuckets.values()) {
+    const merged = mergeGeometries(geometries)
+    if (!merged) continue
+    group.add(new THREE.Mesh(merged, material.clone()))
+    geometries.forEach((g) => g.dispose())
+  }
+  for (const { material, geometries } of lineBuckets.values()) {
+    const merged = mergeGeometries(geometries)
+    if (!merged) continue
+    group.add(new THREE.LineSegments(merged, material.clone()))
+    geometries.forEach((g) => g.dispose())
+  }
+  // Erst jetzt ausblenden: Klone teilen sich sonst den Zustand nicht, aber die Reihenfolge hält es eindeutig
+  for (const material of new Set(originals)) material.visible = false
 }
 
 export function buildArena(): ArenaResult {
@@ -401,6 +450,8 @@ export function buildArena(): ArenaResult {
   for (const solid of solids) {
     if (solid.kind === 'wall' && solid.box.max.y >= 5.9) solid.box.max.y = WALL_COLLISION_TOP
   }
+
+  bakeStaticParts(group, new Set([ground, grid]))
 
   const spawnPoints = SPAWN_POINTS.map((p) => new THREE.Vector3(p.x, p.y, p.z))
 

@@ -12,20 +12,14 @@ was gerade läuft und was als Nächstes dran ist. Nach dem Abarbeiten bitte die 
 
 ## Nächste Schritte (in dieser Reihenfolge, mit Nutzer abgestimmt bzw. vorgeschlagen)
 
-1. **Statische Teile der Arena zusammenfassen** (Draw Calls senken). Messung Nexus (1280x720, Dev-Build, `renderer.info.render`): 186-309 Draw Calls
-   (alte Karte ~130), aber nur ~3-4 k Dreiecke. Ursache: jeder Quader ist ein eigenes Mesh plus eine eigene Kantenlinie (322 Teile in `arena.group`).
-   Plan: Wände/Kisten/Stege je Material zu je einem Mesh verschmelzen, alle Kantenlinien zu einem `LineSegments`; Kollision (`arena.solids`),
-   Treffer-Erkennung (`arena.shootables`), Minimap und Gadget-Welt (`worldMeshes`) müssen weiter mit den Einzelteilen arbeiten (also unsichtbare
-   Einzel-Meshes für Raycasts behalten oder Raycasts auf die Boxen umstellen). Ziel: unter 60 Draw Calls, Budget danach höchstens 150 Draw Calls / 100 k Dreiecke.
-   Messung per Playwright wie `renderer.info` aus `window.__dusk.renderer` (Skript-Idee: vier Blickpunkte Spawn/Mitte/Ring/Dach).
-2. **Details erhöhen, ohne Performance zu opfern**: erst Wünsche vom Nutzer holen (Leuchtmarkierungen, Technikdeko, Wandvariation, Himmel/Ferne);
-   billig = Texturen/Emissive, günstig = Instanzen (InstancedMesh), teuer = echte Lichter/Schatten/viele Einzelobjekte/Transparenz. Pakete mit Messung und Commit.
+1. **Details erhöhen, ohne Performance zu opfern**: erst Wünsche vom Nutzer holen (Leuchtmarkierungen, Technikdeko, Wandvariation, Himmel/Ferne);
+   billig = Texturen/Emissive, günstig = Instanzen (InstancedMesh), teuer = echte Lichter/Schatten/viele Einzelobjekte/Transparenz. Pakete mit Messung (`node tests/drawcalls.mjs`, Arena jetzt 29 Draw Calls) und Commit.
    Optional Einstellung "Details" (aus/an) für schwache Geräte. Keine realistischen Requisiten (Lasertag-Look).
-3. **Zufällige Karte beim Serverstart**: erst sinnvoll mit einer zweiten Karte. Vorschläge für weitere Szenerien: Skyline (Türme/Dächer, Haken-Karte), Schlucht
+2. **Zufällige Karte beim Serverstart**: erst sinnvoll mit einer zweiten Karte. Vorschläge für weitere Szenerien: Skyline (Türme/Dächer, Haken-Karte), Schlucht
    (Lücke, nur per Pad/Haken), Labyrinth (Rauch/Blend), Ring, Reaktor. Dafür Karten als Daten (ID, Grenzen, Spawns, Bauvorschrift), Server würfelt und meldet
    die ID in `welcome`, Client baut nach ID (Arena neu aufbaubar). `PROTOCOL_VERSION` dabei erhöhen.
-4. **Bot-Messung der Spawns auf Nexus** (`npm run test:bots`): wie oft früh getroffen; Deckung vor Spawns (L-Form, nie zu einem U schließen).
-5. Weiter hinten / zurückgestellt: Raum-Codes (ganz am Ende), Waffe inspizieren, Loadout-Skins.
+3. **Bot-Messung der Spawns auf Nexus** (`npm run test:bots`): wie oft früh getroffen; Deckung vor Spawns (L-Form, nie zu einem U schließen).
+4. Weiter hinten / zurückgestellt: Raum-Codes (ganz am Ende), Waffe inspizieren, Loadout-Skins.
 
 ## Offene Fragen an den Nutzer (noch unbeantwortet)
 
