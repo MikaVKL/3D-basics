@@ -12,6 +12,7 @@ try {
   const page = await openGame(browser, { online: false, errors })
   await page.setViewportSize({ width: 480, height: 270 })
   await page.click('#start-button')
+  await page.click('#team-next-button')
   await pickOption(page, '.gadget-card[data-gadget="grapple"]')
   await page.click('#loadout-play-button')
   await wait(500)

@@ -14,6 +14,7 @@ try {
   // Menü: Gadget-Karten, Wahl wird gemerkt
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.click('#start-button')
+  await page.click('#team-next-button')
   // Auswahlfenster passt auch auf kleine Bildschirme (Laptop, Handy quer) ganz hinein
   for (const [w, h] of [[1280, 720], [1366, 640], [1024, 576], [844, 390], [667, 375]]) {
     await page.setViewportSize({ width: w, height: h })

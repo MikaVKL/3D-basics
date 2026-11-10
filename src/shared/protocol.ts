@@ -75,7 +75,8 @@ export interface RoundStat {
 
 export type ClientMessage =
   // loadout: gewählte Waffen für dieses Leben (fehlt/ungültig = Standard)
-  | { t: 'hello'; version: number; name: string; loadout?: Loadout }
+  // team = Wunsch; der Server erfüllt ihn nur, wenn die Teams dadurch nicht mehr als 1 Spieler auseinanderliegen
+  | { t: 'hello'; version: number; name: string; loadout?: Loadout; team?: Team }
   // Neue Wahl: gilt ab dem nächsten Spawn
   | { t: 'loadout'; loadout: Loadout }
   | { t: 'setName'; name: string }

@@ -31,7 +31,7 @@ import {
 } from '../src/shared/gameRules.ts'
 import { WEAPONS, DEFAULT_LOADOUT, isWeaponId, isLoadout, loadoutSlots, damageFactor, type Loadout } from '../src/shared/weapons.ts'
 import { GADGETS, GADGET_SLOT, isGadgetId, grappleCooldown, type GadgetSlot } from '../src/shared/gadgets.ts'
-import type { Team } from '../src/team.ts'
+import { isTeam, type Team } from '../src/team.ts'
 
 // Läuft direkt als TypeScript (Node-Type-Stripping, kein Build-Schritt)
 
@@ -297,12 +297,13 @@ function isActivity(before: PlayerNetworkState | null, after: PlayerNetworkState
   )
 }
 
-function pickTeam(): Team {
-  let red = 0
-  let blue = 0
-  for (const client of clients.values()) {
-    if (client.team === 'red') red++
-    else blue++
+function pickTeam(preferred?: unknown): Team {
+  const { red, blue } = teamSizes()
+  // Wunsch gilt nur, wenn das Team nicht größer ist als das andere (sonst >1 Unterschied)
+  if (isTeam(preferred)) {
+    const mine = preferred === 'red' ? red : blue
+    const other = preferred === 'red' ? blue : red
+    if (mine <= other) return preferred
   }
   if (red !== blue) return red < blue ? 'red' : 'blue'
   return Math.random() < 0.5 ? 'red' : 'blue'
@@ -401,7 +402,13 @@ function startRound(now: number) {
 }
 
 // HTTP-Statusseite (Health-Check des Hostings, Aufwecken)
-const httpServer = createServer((_request, response) => {
+const httpServer = createServer((request, response) => {
+  // Teamstärken fürs Startmenü (vor dem Beitritt); nur Zahlen, daher offen für jede Herkunft
+  if (request.url?.split('?')[0] === '/teams') {
+    response.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' })
+    response.end(JSON.stringify({ ...teamSizes(), max: MAX_PLAYERS }))
+    return
+  }
   response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
   response.end(`Nexus Arena Server - ${clients.size}/${MAX_PLAYERS} Spieler\n`)
 })
@@ -441,7 +448,7 @@ wss.on('connection', (socket) => {
       const loadout = isLoadout(message.loadout)
         ? { primary: message.loadout.primary, secondary: message.loadout.secondary }
         : { ...DEFAULT_LOADOUT }
-      const team = pickTeam()
+      const team = pickTeam(message.team)
       const spawnIndex = pickSpawnIndex(team)
       const id = nextPlayerId++
       client = {

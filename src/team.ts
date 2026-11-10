@@ -1,5 +1,11 @@
 export type Team = 'red' | 'blue'
 
+export const TEAMS: Team[] = ['red', 'blue']
+
+export function isTeam(value: unknown): value is Team {
+  return value === 'red' || value === 'blue'
+}
+
 export const TeamColor: Record<Team, number> = {
   red: 0xff4d5a,
   blue: 0x4da6ff,

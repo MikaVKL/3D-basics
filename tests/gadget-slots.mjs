@@ -12,6 +12,7 @@ try {
   const A = await openGame(browser, { name: 'Anna', errors })
   await A.setViewportSize({ width: 1280, height: 720 })
   await A.click('#start-button')
+  await A.click('#team-next-button')
   const columns = await A.evaluate(() => [...document.querySelectorAll('.loadout-column h3')].map((h) => h.textContent))
   check('Auswahl hat vier Listen: Primary, Secondary, Taktik (G), Bewegung (F)', columns.join('|') === 'Primary|Secondary|Taktik (Taste G)|Bewegung (Taste F)', columns.join('|'))
   const defaults = await A.evaluate(() => ({

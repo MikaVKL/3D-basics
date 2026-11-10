@@ -13,6 +13,7 @@ try {
   const page = await openGame(browser, { online: false, errors })
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.click('#start-button')
+  await page.click('#team-next-button')
   await pickOption(page, '.gadget-card[data-gadget="jump"]')
   const ids = await page.evaluate(() => [...document.querySelectorAll('#loadout-gadget-move .gadget-card')].map((c) => c.dataset.gadget).join())
   check('Bewegungs-Auswahl: Sprungpad und Enterhaken', ids === 'jump,grapple', ids)

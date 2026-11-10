@@ -264,6 +264,7 @@ Stolperfallen bei Headless-Tests:
   unter Ring, Brücken, Sims, Bunkerdach). Freie Gassen für Tests: Bahn z = 10 (x -18..21) und Bahn x = -14 (z 8..-12); Dummies stehen bei (-14, 0,8, -6) und (14, 0,8, 6).
   Nach Änderungen an der Karte: `node tests/nexus.mjs`, `stuck-fuzz` (mehrere Seeds), `topdown.mjs`.
   Bekannt: stuck-fuzz meldet bei 2000 Läufen vereinzelt (~3) "ohne Sprung hochgezogen" an den Rampen (Hochspringen auf die Rampenfläche, Engine-Verhalten ohne Folgen).
+- **Teamauswahl** (erster Schritt nach "Starten", `#menu-team`, `src/main.ts`): Karten Rot / Blau / Automatisch mit Spielerzahl je Team (Server-Endpunkt `GET /teams` -> `{red, blue, max}`, alle 3 s neu geholt, `NetworkClient.fetchTeamCounts`). Wunsch geht in `hello.team` (optional, kein Protokollbruch); `pickTeam(preferred)` erfüllt ihn nur, wenn das Team nicht größer ist als das andere (sonst kleineres Team, Ausgleich bleibt fair). Gemerkt in `duskArena.team`. Teams stehen in `src/team.ts` (`TEAMS`, `TeamColor`); eine dritte Farbe/andere Farben bräuchten neue `Team`-Werte, Server-Zähler (`teamSizes`/`Scores`), Kontrast-Test und Figur/Waffe. Team-Wechsel mitten im Spiel gibt es nicht. `tests/team-select.mjs`; `play(page, { team })` wählt in Tests.
 - **Menü-Button (Touch)**: Zahnrad oben links (`#menu-button`, in
   `#touch-controls`), öffnet das Pausenmenü (Touch hat kein ESC); sitzt rechts neben dem Waffenfeld
   (oben links, fest 160 px breit). Am Rechner nicht sichtbar.

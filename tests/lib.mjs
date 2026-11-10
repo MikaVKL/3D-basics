@@ -134,6 +134,8 @@ export async function play(page, loadout, { touch = false } = {}) {
   if (needsResize) await page.setViewportSize({ width: 1280, height: 720 })
   if (await page.locator('#start-button').isVisible()) {
     await click('#start-button')
+    if (loadout?.team) await click(`.team-card[data-team="${loadout.team}"]`)
+    await click('#team-next-button')
     for (const id of [loadout?.primary, loadout?.secondary]) {
       if (id) await pickOption(page, `.weapon-card[data-weapon="${id}"]`, { touch })
     }

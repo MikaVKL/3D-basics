@@ -35,6 +35,8 @@ export interface NetworkHandlers {
   getLocalState: () => PlayerNetworkState
   getName: () => string
   getLoadout: () => Loadout
+  // Gewünschtes Team (null = automatisch)
+  getTeamChoice: () => Team | null
   onWelcome: (team: Team, spawnIndex: number, scores: Scores, killsToWin: number) => void
   // Snapshot ohne den eigenen Eintrag
   onSnapshot: (players: SnapshotEntry[]) => void
@@ -125,6 +127,20 @@ export class NetworkClient {
     return this.url !== null
   }
 
+  // Spielerzahl je Team für das Startmenü (ohne Beitritt); null = Server nicht erreichbar/kein Server
+  async fetchTeamCounts(): Promise<{ red: number; blue: number; max: number } | null> {
+    if (!this.url) return null
+    try {
+      const response = await fetch(this.url.replace(/^ws/, 'http') + '/teams', { cache: 'no-store' })
+      const data = await response.json()
+      return typeof data.red === 'number' && typeof data.blue === 'number'
+        ? { red: data.red, blue: data.blue, max: Number(data.max) || 0 }
+        : null
+    } catch {
+      return null
+    }
+  }
+
   join() {
     if (!this.url || this.wantOnline) return
     this.wantOnline = true
@@ -153,7 +169,7 @@ export class NetworkClient {
     this.socket = socket
 
     socket.addEventListener('open', () => {
-      this.send({ t: 'hello', version: PROTOCOL_VERSION, name: this.handlers.getName(), loadout: this.handlers.getLoadout() })
+      this.send({ t: 'hello', version: PROTOCOL_VERSION, name: this.handlers.getName(), loadout: this.handlers.getLoadout(), team: this.handlers.getTeamChoice() ?? undefined })
     })
 
     socket.addEventListener('message', (event) => {

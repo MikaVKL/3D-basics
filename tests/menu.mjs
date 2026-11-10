@@ -30,7 +30,9 @@ try {
 
   // Waffenauswahl
   await page.click('#start-button')
-  check('Starten öffnet die Waffenauswahl', (await vis(page, '#menu-loadout')) && !(await vis(page, '#menu-main')))
+  check('Starten öffnet die Teamauswahl', (await vis(page, '#menu-team')) && !(await vis(page, '#menu-main')))
+  await page.click('#team-next-button')
+  check('Weiter öffnet die Waffenauswahl', (await vis(page, '#menu-loadout')) && !(await vis(page, '#menu-main')))
   const cards = await page.evaluate(() => ({
     primary: [...document.querySelectorAll('#loadout-primary .weapon-card')].map((c) => c.dataset.weapon),
     secondary: [...document.querySelectorAll('#loadout-secondary .weapon-card')].map((c) => c.dataset.weapon),
@@ -59,8 +61,11 @@ try {
   check('Erneut anklicken lässt die Wahl stehen', (await page.locator('.weapon-card.selected').count()) === 2)
 
   await page.click('#loadout-back-button')
-  check('Zurück führt zum Hauptmenü, Spiel nicht gestartet', (await vis(page, '#menu-main')) && !(await overlayHidden(page)) === true)
+  check('Zurück führt zur Teamauswahl, Spiel nicht gestartet', (await vis(page, '#menu-team')) && !(await overlayHidden(page)) === true)
+  await page.click('#team-back-button')
+  check('Zurück führt zum Hauptmenü', await vis(page, '#menu-main'))
   await page.click('#start-button')
+  await page.click('#team-next-button')
   const kept = await page.evaluate(() => [...document.querySelectorAll('.weapon-card.selected')].map((c) => c.dataset.weapon).join())
   check('Wahl bleibt beim Zurück/Weiter erhalten', kept === 'sniper,smg', kept)
 
@@ -95,6 +100,7 @@ try {
   await page.reload()
   await page.waitForFunction(() => 'undefined' !== typeof window.__dusk)
   await page.click('#start-button')
+  await page.click('#team-next-button')
   const fallback = await page.evaluate(() => [...document.querySelectorAll('.weapon-card.selected')].map((c) => c.dataset.weapon).join())
   check('Kaputter Speicher: Standardwaffen', fallback === 'rifle,pistol', fallback)
 

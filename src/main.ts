@@ -15,7 +15,7 @@ import { Scoreboard } from './scoreboard'
 import { NetworkClient } from './network'
 import { MAX_PLAYERS } from './shared/protocol'
 import { RemotePlayers } from './remotePlayers'
-import { TeamColor, TeamLabel, type Team } from './team'
+import { TEAMS, TeamColor, TeamLabel, isTeam, type Team } from './team'
 import { renderRoundStats } from './roundStats'
 import { Minimap } from './minimap'
 import { DEFAULT_SETTINGS, SETTING_RANGES, clampSetting, loadSettings, saveSettings, type NumericSettingKey } from './settings'
@@ -224,6 +224,7 @@ const network: NetworkClient = new NetworkClient({
   getLocalState: () => player.getNetworkState(),
   getName: () => nameInput.value,
   getLoadout: () => loadoutScreen.loadout,
+  getTeamChoice: () => teamChoice,
   onWelcome: (team, spawnIndex, scores, killsToWin) => {
     scoreGoal.textContent = `Erstes Team mit ${killsToWin} Kills gewinnt`
     setLocalTeam(team)
@@ -474,7 +475,82 @@ const gadgetPickers: Record<GadgetSlot, GadgetPicker> = {
 // Erster "Spielen"-Klick hat das Spiel gestartet: ab dann gibt es "Weiter" statt "Starten"
 let started = false
 
-function showScreen(screen: 'main' | 'settings' | 'loadout') {
+// Teamauswahl (erster Schritt nach "Starten"): Karten je Team mit Spielerzahl vom Server + "Automatisch"
+const TEAM_KEY = 'duskArena.team'
+let teamChoice: Team | null = null
+try {
+  const stored = localStorage.getItem(TEAM_KEY)
+  if (isTeam(stored)) teamChoice = stored
+} catch {
+  // gesperrt: Standard automatisch
+}
+const menuTeam = document.querySelector<HTMLDivElement>('#menu-team')!
+const teamCards = document.querySelector<HTMLDivElement>('#team-cards')!
+const teamNote = document.querySelector<HTMLParagraphElement>('#team-note')!
+const teamCardButtons = new Map<Team | 'auto', HTMLButtonElement>()
+const teamCountLabels = new Map<Team | 'auto', HTMLElement>()
+for (const option of [...TEAMS, 'auto'] as const) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'team-card'
+  button.dataset.team = option
+  if (option !== 'auto') button.style.setProperty('--team-color', '#' + TeamColor[option].toString(16).padStart(6, '0'))
+  const name = document.createElement('span')
+  name.className = 'team-card-name'
+  name.textContent = option === 'auto' ? 'Automatisch' : TeamLabel[option]
+  const count = document.createElement('span')
+  count.className = 'team-card-count'
+  count.textContent = option === 'auto' ? 'kleineres Team' : '–'
+  button.append(name, count)
+  button.addEventListener('click', (event) => {
+    event.stopPropagation()
+    teamChoice = option === 'auto' ? null : option
+    try {
+      if (teamChoice) localStorage.setItem(TEAM_KEY, teamChoice)
+      else localStorage.removeItem(TEAM_KEY)
+    } catch {
+      // nur für diese Sitzung
+    }
+    renderTeamChoice()
+  })
+  teamCards.append(button)
+  teamCardButtons.set(option, button)
+  teamCountLabels.set(option, count)
+}
+
+function renderTeamChoice() {
+  for (const [option, button] of teamCardButtons) {
+    const selected = (option === 'auto' ? null : option) === teamChoice
+    button.classList.toggle('selected', selected)
+    button.setAttribute('aria-pressed', String(selected))
+  }
+}
+
+let teamPoll: ReturnType<typeof setInterval> | null = null
+async function refreshTeamCounts() {
+  const counts = await network.fetchTeamCounts()
+  for (const team of TEAMS) {
+    const n = counts?.[team]
+    teamCountLabels.get(team)!.textContent = n === undefined ? '–' : n === 1 ? '1 Spieler' : `${n} Spieler`
+  }
+  teamNote.textContent = !network.hasServer
+    ? 'Offline-Training: Die Teamwahl gilt nur in einer Online-Runde.'
+    : counts
+      ? 'Sind die Teams ungleich groß, kommst du ins kleinere. So bleibt es fair.'
+      : 'Server nicht erreichbar oder schläft noch - die Zahlen erscheinen gleich.'
+}
+function pollTeamCounts(on: boolean) {
+  if (teamPoll) clearInterval(teamPoll)
+  teamPoll = null
+  if (!on) return
+  void refreshTeamCounts()
+  teamPoll = setInterval(refreshTeamCounts, 3000)
+}
+renderTeamChoice()
+
+function showScreen(screen: 'main' | 'settings' | 'loadout' | 'team') {
+  menuTeam.classList.toggle('hidden', screen !== 'team')
+  pollTeamCounts(screen === 'team')
   menuMain.classList.toggle('hidden', screen !== 'main')
   menuSettings.classList.toggle('hidden', screen !== 'settings')
   menuLoadout.classList.toggle('hidden', screen !== 'loadout')
@@ -505,15 +581,23 @@ function activateFromOverlay() {
 
 startButton.addEventListener('click', (event) => {
   event.stopPropagation()
-  showScreen('loadout')
+  showScreen('team')
 })
 loadoutOpenButton.addEventListener('click', (event) => {
   event.stopPropagation()
   showScreen('loadout')
 })
-document.querySelector('#loadout-back-button')!.addEventListener('click', (event) => {
+document.querySelector('#team-back-button')!.addEventListener('click', (event) => {
   event.stopPropagation()
   showScreen('main')
+})
+document.querySelector('#team-next-button')!.addEventListener('click', (event) => {
+  event.stopPropagation()
+  showScreen('loadout')
+})
+document.querySelector('#loadout-back-button')!.addEventListener('click', (event) => {
+  event.stopPropagation()
+  showScreen(started ? 'main' : 'team')
 })
 document.querySelector('#loadout-play-button')!.addEventListener('click', (event) => {
   event.stopPropagation()
