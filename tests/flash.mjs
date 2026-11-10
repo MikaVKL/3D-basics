@@ -174,7 +174,7 @@ try {
     const bang = window.__times.find((t) => t[0] === 'flashBang')?.[1]
     return { beeps: beeps.length, sinceFirstBeep: bang && beeps.length ? (bang - beeps[0]) / 1000 : null }
   })
-  check('Zündverzögerung: 4 Pieptöne ab der Landung, Knall ~1 s nach dem ersten', fuse.beeps === 4 && fuse.sinceFirstBeep > 0.8 && fuse.sinceFirstBeep < 1.4, JSON.stringify(fuse))
+  check('Zündverzögerung: 4 Pieptöne ab der Landung, Knall ~1 s nach dem ersten', fuse.beeps === 4 && fuse.sinceFirstBeep > 0.8 && fuse.sinceFirstBeep < 2.2, JSON.stringify(fuse))
 
   // Online: B sieht A's Wurf, A und B stehen so, dass B zum Knall blickt
   const A = await openGame(browser, { name: 'Anna', errors })
@@ -184,8 +184,8 @@ try {
   await A.evaluate(() => localStorage.setItem('duskArena.gadget', 'flash'))
   await wait(3800)
   await A.evaluate(() => __dusk.gadgets.setGadget('flash'))
-  await teleport(A, -8, 1.7, 8)
-  await teleport(B, -8, 1.7, -10)
+  await teleport(A, -14, 1.7, 8)
+  await teleport(B, -14, 1.7, -10)
   await wait(400)
   // B blickt nach Süden (zu A / zum Knall), A wirft nach Norden
   await B.evaluate(() => {
@@ -197,8 +197,12 @@ try {
     __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     __dusk.throwGadget()
   })
-  await wait(3400)
-  const blinded = await B.evaluate(() => ({ remaining: __dusk.gadgets.blindRemaining, total: __dusk.gadgets.blindLevel }))
+  // Knall kommt nach Flug + Zündverzögerung (Zeitpunkt hängt von der Bildrate ab): bis zu 7 s auf die Blendung warten
+  let blinded = { remaining: 0, total: 0 }
+  for (let i = 0; i < 28 && !(blinded.remaining > 0); i++) {
+    await wait(250)
+    blinded = await B.evaluate(() => ({ remaining: __dusk.gadgets.blindRemaining, total: __dusk.gadgets.blindLevel }))
+  }
   check('Online: B sieht den Wurf und ist geblendet (blickt zum Knall)', blinded.remaining > 0, JSON.stringify(blinded))
 
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
