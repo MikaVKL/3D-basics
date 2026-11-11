@@ -28,6 +28,7 @@ try {
       __dusk.camera.rotation.set(pitch, yaw, 0, 'YXZ')
       __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion)
     }
+    window.__aim = (yaw) => { __dusk.camera.rotation.set(0, yaw, 0, 'YXZ'); __dusk.lookControl.euler.setFromQuaternion(__dusk.camera.quaternion) }
     window.__run = (seconds) => { for (let t = 0; t < seconds; t += 1 / 60) __dusk.player.update(1 / 60) }
     window.__walk = (x, z, feet, yaw, seconds, sprint = false) => {
       window.__setup(x, z, yaw, 0, feet)
@@ -60,10 +61,53 @@ try {
   check('Spawn: man steht auf dem Hallenboden (12 m)', Math.abs(stand - 12) < 0.05, String(stand))
 
   // Rampe Halle A -> Dach A (Boden 12 -> Dach 18)
-  const up = await page.evaluate((E) => __walk(-28.5, 6.5, 12, E, 2.3), E)
+  const up = await page.evaluate((E) => __walk(-27, 6.2, 12, E, 2.05), E)
   check('Rampe führt aus der Halle A aufs Dach (18 m)', Math.abs(up.feet - 18) < 0.1 && up.x > -16, JSON.stringify(up))
-  const upB = await page.evaluate((W) => __walk(28.5, -6.5, 12, W, 2.3), W)
+  const upB = await page.evaluate((W) => __walk(27, -6.2, 12, W, 2.05), W)
   check('Gespiegelt: Rampe aus Halle B aufs Dach B', Math.abs(upB.feet - 18) < 0.1 && upB.x < 16, JSON.stringify(upB))
+
+  // Rampenfuß: die Rampe hinunter, am Fuß nach rechts (Norden) abbiegen - muss mit Platz zum Drehen gehen
+  const turn = await page.evaluate((W) => {
+    __setup(-24, 6.2, W, 0, 13.16) // auf der Rampe, Blick nach Westen
+    __dusk.player.setMoveInput(0, 1)
+    __run(1.0) // hinunter und ein Stück in die Halle
+    const foot = { x: __dusk.camera.position.x, feet: __dusk.player.feetHeight }
+    __aim(0) // nach rechts (Norden)
+    __run(0.7)
+    __dusk.player.setMoveInput(0, 0)
+    const p = __dusk.camera.position
+    return { footX: +foot.x.toFixed(2), footFeet: +foot.feet.toFixed(2), x: +p.x.toFixed(2), z: +p.z.toFixed(2), feet: +__dusk.player.feetHeight.toFixed(2) }
+  }, W)
+  check('Rampenfuß: hinunter und nach rechts abbiegen geht ohne Hängen (vorher 1 m Platz)', turn.footFeet < 12.1 && turn.z < 3.5 && Math.abs(turn.feet - 12) < 0.05, JSON.stringify(turn))
+
+  // Flankengang A -> C mit Knick (zu Fuß, Nordseite), gespiegelt C -> B (Südseite)
+  const flank = await page.evaluate((E) => {
+    __setup(-20, -6.35, E, 0, 12)
+    __dusk.player.setMoveInput(0, 1)
+    __run(1.9) // bis zur Ostwand des Mittelstücks
+    const a = { x: __dusk.camera.position.x, z: __dusk.camera.position.z }
+    __aim(Math.PI) // nach Süden
+    __run(0.5)
+    __aim(E) // wieder nach Osten, durch die Tür in die Halle C
+    __run(2.5)
+    __dusk.player.setMoveInput(0, 0)
+    const p = __dusk.camera.position
+    return { stop: +a.x.toFixed(2), x: +p.x.toFixed(2), z: +p.z.toFixed(2), feet: +__dusk.player.feetHeight.toFixed(2) }
+  }, E)
+  check('Flankengang: Knick zwingt zum Abbiegen (Wand bei x -8,5), dann Halle C (12 m)', flank.stop < -8.4 && flank.x > -4 && Math.abs(flank.feet - 12) < 0.05, JSON.stringify(flank))
+  const noSight = await page.evaluate(() => {
+    // Strahl von der Flankentür in A nach Osten (Höhe 13,5 m): trifft vor der Halle C immer eine Wand
+    const hits = []
+    for (let z = -7.7; z <= -5.0; z += 0.1) {
+      let first = Infinity
+      for (const { box } of __dusk.arena.solids) {
+        if (box.min.y <= 13.5 && box.max.y >= 13.5 && z > box.min.z && z < box.max.z && box.max.x > -13.9) first = Math.min(first, Math.max(box.min.x, -13.9))
+      }
+      hits.push(first)
+    }
+    return Math.max(...hits)
+  })
+  check('Flankengang: kein Durchblick von Halle A nach Halle C (Strahl endet vor x -6)', noSight < -6, String(noSight))
 
   // Skybridge A -> C -> B (auf 12 m, drinnen)
   const bridge = await page.evaluate((E) => __walk(-20, 0, 12, E, 4.2), E)
