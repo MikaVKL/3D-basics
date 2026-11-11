@@ -189,17 +189,20 @@ export class LoadoutScreen {
 
 const GADGET_KEY = 'duskArena.gadget' // alt: ein Gadget; gilt noch für den passenden Platz
 const SLOT_KEYS: Record<GadgetSlot, string> = { tactic: 'duskArena.gadget.tactic', move: 'duskArena.gadget.move' }
+// Prototyp-Gadgets (Schwinghaken) nur auf der Testkarte
+const PROTOTYPES = new URLSearchParams(location.search).get('map') === 'skyline'
 const GADGET_DESCRIPTIONS: Record<GadgetId, string> = {
   smoke: 'Sichtschutz für 8 s',
   flash: 'Blendet, wer hinsieht',
   jump: 'Katapult fürs Team, 20 s',
   grapple: 'Zieht dich an die Wand',
+  swing: 'Schwingen, Schwung bleibt (Test)',
 }
 
 export function loadStoredGadget(slot: GadgetSlot): GadgetId {
   try {
     const stored = localStorage.getItem(SLOT_KEYS[slot])
-    if (isGadgetId(stored) && GADGET_SLOT[stored] === slot) return stored
+    if (isGadgetId(stored) && GADGET_SLOT[stored] === slot && gadgetsOfSlot(slot, PROTOTYPES).includes(stored)) return stored
     const legacy = localStorage.getItem(GADGET_KEY)
     if (isGadgetId(legacy) && GADGET_SLOT[legacy] === slot) return legacy
   } catch {
@@ -220,7 +223,7 @@ export class GadgetPicker {
     this.slot = slot
     this.gadget = loadStoredGadget(slot)
     this.dropdown = new Dropdown(root)
-    for (const id of gadgetsOfSlot(slot)) {
+    for (const id of gadgetsOfSlot(slot, PROTOTYPES)) {
       const card = document.createElement('button')
       card.type = 'button'
       card.className = 'gadget-card'

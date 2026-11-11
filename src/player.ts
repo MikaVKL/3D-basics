@@ -5,7 +5,16 @@ import type { Damageable } from './damageable'
 import type { Team } from './team'
 import type { PlayerNetworkState } from './shared/protocol'
 import { WEAPONS, DEFAULT_WEAPON, type WeaponId } from './shared/weapons'
-import { GRAPPLE_SPEED, GRAPPLE_MAX_TIME, GRAPPLE_INTERRUPT_DAMAGE } from './shared/gadgets'
+import {
+  GRAPPLE_SPEED,
+  GRAPPLE_MAX_TIME,
+  GRAPPLE_INTERRUPT_DAMAGE,
+  SWING_MIN_LENGTH,
+  SWING_REEL_SPEED,
+  SWING_STEER,
+  SWING_MAX_SPEED,
+  SWING_MAX_RISE,
+} from './shared/gadgets'
 import {
   MAX_HEALTH,
   MAX_SHIELD,
@@ -112,6 +121,8 @@ export class Player implements Damageable {
   private groundTime = Infinity // seit der letzten Landung
   private jumpBuffer = 0
   private padCooldown = 0
+  // Schwinghaken (Prototyp): Seil am Anker, Länge = Abstand beim Einhaken; airborne = schon einmal in der Luft (Landung löst es)
+  private swing: { anchor: THREE.Vector3; length: number; airborne: boolean } | null = null
   private grapple: { target: THREE.Vector3; push: THREE.Vector2; time: number; stuck: number; lastDistance: number } | null = null
   onSlide?: () => void
   // Boden ohne Bauteil: 0 (Normalfall), -Infinity auf Karten mit Abgrund (Skyline)
@@ -183,6 +194,7 @@ export class Player implements Damageable {
     this.velocity.set(0, 0, 0)
     this.horizontalVelocity.set(0, 0)
     this.grapple = null
+    this.swing = null
     this.sliding = false
     this.bodyY = position.y - this.eyeHeight
   }
@@ -190,6 +202,7 @@ export class Player implements Damageable {
   spawn(position: THREE.Vector3) {
     this.spawnPoint.copy(position)
     this.grapple = null
+    this.swing = null
     this.camera.position.copy(position)
     this.resetLean()
     this.velocity.set(0, 0, 0)
@@ -291,6 +304,7 @@ export class Player implements Damageable {
   private die() {
     this.respawnRemaining = RESPAWN_DELAY
     this.grapple = null
+    this.swing = null
     this.velocity.set(0, 0, 0)
     this.horizontalVelocity.set(0, 0)
     this.sliding = false
@@ -369,6 +383,28 @@ export class Player implements Damageable {
     return true
   }
 
+  // Schwinghaken einhaken: Seillänge = aktueller Abstand der Körpermitte zum Anker
+  startSwing(anchor: THREE.Vector3): boolean {
+    if (!this.isAlive) return false
+    const centre = new THREE.Vector3(this.camera.position.x, this.bodyY + 1, this.camera.position.z)
+    this.grapple = null
+    this.sliding = false
+    this.swing = { anchor: anchor.clone(), length: Math.max(SWING_MIN_LENGTH, centre.distanceTo(anchor)), airborne: !this.onGround }
+    return true
+  }
+
+  releaseSwing() {
+    this.swing = null
+  }
+
+  get swingAnchor(): THREE.Vector3 | null {
+    return this.swing ? this.swing.anchor : null
+  }
+
+  get isSwinging(): boolean {
+    return this.swing !== null
+  }
+
   get isGrappling(): boolean {
     return this.grapple !== null
   }
@@ -377,6 +413,7 @@ export class Player implements Damageable {
     const grapple = this.grapple
     if (!grapple) return
     this.grapple = null
+    this.swing = null
     // Schwung behalten, aber begrenzt; angekommen = noch ein Stoß über die Kante
     const speed = this.horizontalVelocity.length()
     if (speed > GRAPPLE_KEEP_SPEED) this.horizontalVelocity.multiplyScalar(GRAPPLE_KEEP_SPEED / speed)
@@ -416,6 +453,11 @@ export class Player implements Damageable {
     if (this.grapple) {
       // Sprung beendet den Zug (Schwung bleibt)
       this.endGrapple(false)
+      return
+    }
+    if (this.swing && !this.onGround) {
+      // Sprung in der Luft: Seil loslassen (Schwung bleibt)
+      this.swing = null
       return
     }
     if (!this.onGround) {
@@ -509,8 +551,12 @@ export class Player implements Damageable {
     if (!pulled) this.velocity.y -= GRAVITY * deltaSeconds
 
     if (!pulled) {
-      if (this.sliding) this.updateSlide(deltaSeconds)
-      if (!this.sliding) this.updateMomentum(deltaSeconds)
+      if (this.swing && !this.onGround) {
+        this.steerSwing(deltaSeconds)
+      } else {
+        if (this.sliding) this.updateSlide(deltaSeconds)
+        if (!this.sliding) this.updateMomentum(deltaSeconds)
+      }
     }
     this.moveHorizontally(deltaSeconds)
 
@@ -533,6 +579,8 @@ export class Player implements Damageable {
     } else {
       this.onGround = false
     }
+
+    if (this.swing) this.applySwingRope(deltaSeconds)
 
     // Landung unter einem Bauteil (z.B. Fenster-Sockel) mit noch laufender
     // Duck-Animation: Kopf nicht in den Sturz ragen lassen
@@ -660,6 +708,54 @@ export class Player implements Damageable {
     } else if (desiredSpeed > 0) {
       this.steer(desired, Math.max(speed, desiredSpeed), AIR_CONTROL * deltaSeconds)
     }
+  }
+
+  // In der Luft am Seil: nur leichtes Lenken, der Schwung bleibt erhalten (keine Reibung)
+  private steerSwing(deltaSeconds: number) {
+    const desired = this.desiredVelocity()
+    const length = Math.hypot(desired.x, desired.z)
+    if (length === 0) return
+    const scale = (SWING_STEER * deltaSeconds) / length
+    this.horizontalVelocity.x += desired.x * scale
+    this.horizontalVelocity.y += desired.z * scale
+  }
+
+  // Seil als Pendel-Zwang: die Körpermitte bleibt höchstens `length` vom Anker entfernt, die Geschwindigkeit nach außen
+  // entfällt (das Seil zieht nur, es schiebt nicht). Ducken holt das Seil ein. Landung löst das Seil.
+  private applySwingRope(deltaSeconds: number) {
+    const swing = this.swing!
+    if (!this.onGround) swing.airborne = true
+    else if (swing.airborne) {
+      this.swing = null
+      return
+    }
+    if (this.wantsToCrouch) swing.length = Math.max(SWING_MIN_LENGTH, swing.length - SWING_REEL_SPEED * deltaSeconds)
+
+    const centre = new THREE.Vector3(this.camera.position.x, this.bodyY + 1, this.camera.position.z)
+    const offset = centre.sub(swing.anchor)
+    const distance = offset.length()
+    if (distance >= swing.length - 0.05 && distance > 1e-6) {
+      const normal = offset.clone().divideScalar(distance)
+      if (distance > swing.length) {
+        const pull = normal.clone().multiplyScalar(swing.length - distance)
+        this.tryMove(new THREE.Vector3(pull.x, 0, pull.z))
+        this.bodyY += pull.y
+        const ground = this.groundHeightAt(this.camera.position.x, this.camera.position.z, this.bodyY + MAX_RAMP_STEP)
+        if (this.bodyY < ground) this.bodyY = ground
+        const ceiling = this.ceilingAbove(this.camera.position.x, this.camera.position.z, this.bodyY + STEP_CLEARANCE)
+        if (this.bodyY + this.eyeHeight + 0.3 > ceiling) this.bodyY = ceiling - this.eyeHeight - 0.3
+        this.camera.position.y = this.bodyY + this.eyeHeight
+      }
+      const outward = this.horizontalVelocity.x * normal.x + this.velocity.y * normal.y + this.horizontalVelocity.y * normal.z
+      if (outward > 0) {
+        this.horizontalVelocity.x -= outward * normal.x
+        this.horizontalVelocity.y -= outward * normal.z
+        this.velocity.y -= outward * normal.y
+      }
+    }
+    const horizontal = this.horizontalVelocity.length()
+    if (horizontal > SWING_MAX_SPEED) this.horizontalVelocity.multiplyScalar(SWING_MAX_SPEED / horizontal)
+    if (this.velocity.y > SWING_MAX_RISE) this.velocity.y = SWING_MAX_RISE
   }
 
   private steer(desired: THREE.Vector2, speed: number, amount: number) {

@@ -1,7 +1,18 @@
 // Gadgets (Fähigkeiten neben den Waffen): Werte für Client und Server
 
-export type GadgetId = 'smoke' | 'flash' | 'jump' | 'grapple'
-export const GADGET_IDS: GadgetId[] = ['smoke', 'flash', 'jump', 'grapple']
+export type GadgetId = 'smoke' | 'flash' | 'jump' | 'grapple' | 'swing'
+export const GADGET_IDS: GadgetId[] = ['smoke', 'flash', 'jump', 'grapple', 'swing']
+// Noch im Test: nur auf der Testkarte (?map=skyline, offline) wählbar; der Server lehnt sie ab
+export const PROTOTYPE_GADGETS: GadgetId[] = ['swing']
+
+// Schwinghaken (Prototyp): Seil am Ankerpunkt, du pendelst und nimmst den Schwung mit; keine Abklingzeit.
+// Grenzen statt Abklingzeit: Reichweite, Seil löst sich bei Landung/Sprung, Tempo gedeckelt (unter der Bewegungsprüfung)
+export const SWING_REACH = 24 // m
+export const SWING_MIN_LENGTH = 3 // m, kürzer wird das Seil nicht
+export const SWING_REEL_SPEED = 5 // m/s Einholen (Ducken halten)
+export const SWING_STEER = 6 // m/s² Lenken in der Luft
+export const SWING_MAX_SPEED = 14 // m/s waagerecht (die Seilkorrektur addiert etwas: gemessen ~14,6; Bewegungsprüfung erlaubt 16,25)
+export const SWING_MAX_RISE = 9 // m/s nach oben
 
 // Enterhaken (Titanfall-Art): der Haken trifft sofort den Punkt im Fadenkreuz, dann zieht es dich geradlinig hin
 export const GRAPPLE_REACH = 18 // m
@@ -81,17 +92,28 @@ export const GADGETS: Record<GadgetId, GadgetStats> = {
     radius: 0,
     duration: 0,
   },
+  // Schwinghaken: ohne Abklingzeit (cooldown 0), kein Wurf
+  swing: {
+    label: 'Schwinghaken',
+    cooldown: 0,
+    throwSpeed: 0,
+    throwLift: 0,
+    maxThrowDistance: SWING_REACH + 2,
+    maxFlightTime: 0,
+    radius: 0,
+    duration: 0,
+  },
 }
 
 // Zwei Plätze (Nutzerwunsch: die Karte setzt Bewegung voraus): Taktik (Taste G) und Bewegung (Taste F), je eigene Abklingzeit
 export type GadgetSlot = 'tactic' | 'move'
 export const GADGET_SLOTS: GadgetSlot[] = ['tactic', 'move']
-export const GADGET_SLOT: Record<GadgetId, GadgetSlot> = { smoke: 'tactic', flash: 'tactic', jump: 'move', grapple: 'move' }
+export const GADGET_SLOT: Record<GadgetId, GadgetSlot> = { smoke: 'tactic', flash: 'tactic', jump: 'move', grapple: 'move', swing: 'move' }
 export const SLOT_LABEL: Record<GadgetSlot, string> = { tactic: 'Taktik', move: 'Bewegung' }
 export const SLOT_KEY: Record<GadgetSlot, string> = { tactic: 'G', move: 'F' }
 export const SLOT_DEFAULT: Record<GadgetSlot, GadgetId> = { tactic: 'smoke', move: 'grapple' }
-export function gadgetsOfSlot(slot: GadgetSlot): GadgetId[] {
-  return GADGET_IDS.filter((id) => GADGET_SLOT[id] === slot)
+export function gadgetsOfSlot(slot: GadgetSlot, prototypes = false): GadgetId[] {
+  return GADGET_IDS.filter((id) => GADGET_SLOT[id] === slot && (prototypes || !PROTOTYPE_GADGETS.includes(id)))
 }
 
 export const DEFAULT_GADGET: GadgetId = 'smoke'

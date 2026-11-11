@@ -3,7 +3,7 @@
 // meldet nur Start, Landepunkt und Flugzeit; alle zeigen denselben Bogen und dieselbe Wolke.
 
 import * as THREE from 'three'
-import { GADGETS, DEFAULT_GADGET, GADGET_SLOT, GADGET_SLOTS, SLOT_DEFAULT, type GadgetSlot, PAD_HEADROOM, GRAPPLE_REACH, GRAPPLE_SPEED, grappleCooldown, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
+import { GADGETS, DEFAULT_GADGET, GADGET_SLOT, GADGET_SLOTS, SLOT_DEFAULT, type GadgetSlot, PAD_HEADROOM, SWING_REACH, GRAPPLE_REACH, GRAPPLE_SPEED, grappleCooldown, blindDuration, blindStrength, type GadgetId } from './shared/gadgets'
 import { TeamColor, type Team } from './team'
 
 const BOUNCE = 0.45 // Anteil der Geschwindigkeit, der beim Aufprall an einer Wand erhalten bleibt
@@ -278,6 +278,21 @@ export class GadgetSystem {
     this.startCooldown(slot, stats.cooldown)
     this.spawnFlight(from, position.clone(), flight, team, kind, points)
     return { from, to: position.clone(), flight, velocity, kind }
+  }
+
+  // Schwinghaken (Prototyp): Ankerpunkt = erste Fläche im Fadenkreuz in Reichweite; keine Abklingzeit
+  trySwing(camera: THREE.Camera): THREE.Vector3 | null {
+    const direction = new THREE.Vector3()
+    camera.getWorldDirection(direction)
+    this.raycaster.set(camera.getWorldPosition(new THREE.Vector3()), direction)
+    this.raycaster.far = SWING_REACH
+    const hit = this.raycaster.intersectObjects(this.world, false)[0]
+    if (!hit) {
+      this.rejectReason = 'Kein Ziel in Reichweite'
+      return null
+    }
+    this.rejectReason = ''
+    return hit.point.clone()
   }
 
   // Haken: trifft sofort die erste Fläche im Fadenkreuz. Zielposition (Körpermitte) liegt davor:
@@ -568,7 +583,7 @@ export class GadgetSystem {
     for (let i = this.ropes.length - 1; i >= 0; i--) {
       const rope = this.ropes[i]
       rope.age += deltaSeconds
-      if (rope.age >= 0.12 && (rope.alive ? !rope.alive() : rope.age >= rope.ttl) || rope.age > 3) {
+      if (rope.age >= 0.12 && (rope.alive ? !rope.alive() : rope.age >= rope.ttl) || rope.age > (rope.alive ? 600 : 3)) {
         this.scene.remove(rope.mesh)
         ;(rope.mesh.material as THREE.Material).dispose()
         this.ropes.splice(i, 1)

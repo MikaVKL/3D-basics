@@ -168,8 +168,28 @@ function ropeStart(cam: THREE.Camera): THREE.Vector3 {
   const origin = new THREE.Vector3(0.25, -0.22, -0.5)
   return cam.localToWorld(origin)
 }
+// Schwinghaken (Prototyp, nur Testkarte): F hängt ein, nochmal F löst das Seil; keine Abklingzeit
+function toggleSwing() {
+  if (player.isSwinging) {
+    player.releaseSwing()
+    return
+  }
+  const anchor = gadgets.trySwing(camera)
+  if (!anchor) {
+    showNotice(gadgets.rejectReason)
+    return
+  }
+  sound.play('hookShot', 0.7)
+  player.startSwing(anchor)
+  gadgets.spawnRope(anchor, player.team, () => ropeStart(camera), 0, () => player.isSwinging)
+}
+
 function throwGadget(slot: GadgetSlot) {
   if (!isActive || !player.isAlive) return
+  if (gadgets.selected[slot] === 'swing') {
+    toggleSwing()
+    return
+  }
   const thrown = gadgets.tryThrow(camera, player.team, slot)
   if (!thrown && gadgets.rejectReason) showNotice(gadgets.rejectReason)
   if (thrown?.pull) {
@@ -1031,6 +1051,7 @@ const GADGET_ICONS: Record<GadgetId, string> = {
   smoke: '<circle cx="9" cy="14" r="5" fill="currentColor"/><circle cx="15" cy="10" r="4.5" fill="currentColor" opacity="0.7"/><circle cx="16" cy="16" r="3.5" fill="currentColor" opacity="0.5"/>',
   jump: '<path d="M12 3l7 8h-4.2v5H9.2v-5H5z" fill="currentColor"/><rect x="6" y="19" width="12" height="2.4" rx="1.2" fill="currentColor"/>',
   grapple: '<circle cx="6" cy="18" r="2.4" fill="currentColor"/><path d="M7.5 16.5L17 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 4h7v7z" fill="currentColor"/>',
+  swing: '<circle cx="5" cy="5" r="2.2" fill="currentColor"/><path d="M6.5 6.5C9 14 14 18 20 17" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="19" cy="17" r="2.6" fill="currentColor"/>',
   flash: '<path d="M12 2l2.2 6.3L21 6.5l-4.2 5.5L22 14l-6.4 1.3L17 22l-5-4.2L7 22l1.4-6.7L2 14l5.2-2L3 6.5l6.8 1.8z" fill="currentColor"/>',
 }
 // Name, Taste-Symbol und Beschriftung folgen dem gewählten Gadget je Platz

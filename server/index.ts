@@ -31,7 +31,7 @@ import {
   MAX_TEAM_GAP,
 } from '../src/shared/gameRules.ts'
 import { WEAPONS, DEFAULT_LOADOUT, isWeaponId, isLoadout, loadoutSlots, damageFactor, type Loadout } from '../src/shared/weapons.ts'
-import { GADGETS, GADGET_SLOT, isGadgetId, grappleCooldown, type GadgetSlot } from '../src/shared/gadgets.ts'
+import { GADGETS, GADGET_SLOT, PROTOTYPE_GADGETS, isGadgetId, grappleCooldown, type GadgetSlot } from '../src/shared/gadgets.ts'
 import { isTeam, type Team } from '../src/team.ts'
 
 // Läuft direkt als TypeScript (Node-Type-Stripping, kein Build-Schritt)
@@ -660,7 +660,7 @@ const GADGET_ORIGIN_TOLERANCE = 3 // m um die Spielerposition
 // Wurf prüfen (Abklingzeit, Weite, Flugzeit) und an die anderen weitergeben; die Wolke selbst
 // ist reine Optik, Schüsse gehen durch
 function handleGadget(thrower: Client, rawKind: unknown, rawFrom: unknown, rawTo: unknown, rawFlight: unknown, rawVelocity?: unknown) {
-  if (!isGadgetId(rawKind)) return
+  if (!isGadgetId(rawKind) || PROTOTYPE_GADGETS.includes(rawKind)) return
   const from = sanitizeVec3(rawFrom)
   const to = sanitizeVec3(rawTo)
   if (!from || !to || !isFiniteNumber(rawFlight) || !thrower.state || !isAlive(thrower)) return
