@@ -87,12 +87,12 @@ export function buildSkylineArena(): ArenaResult {
   box(-30, -14, BELOW, FLOOR, -9, 9) // Körper bis in den Nebel, Oberseite = Hallenboden
   // Hallenwände (0,8 m); Ostwand mit Tür (3 m breit) zur Skybridge
   box(-30, -29.2, FLOOR, HALL_TOP, -9, 9)
-  box(-30, -14, FLOOR, HALL_TOP, -9, -8.2)
+  box(-30, -18, FLOOR, HALL_TOP, -9, -8.2) // Nordwand mit Tür (x -18 .. -15) auf die Außenterrasse
+  box(-15, -14, FLOOR, HALL_TOP, -9, -8.2)
+  box(-18, -15, 15, HALL_TOP, -9, -8.2)
   box(-30, -14, FLOOR, HALL_TOP, 8.2, 9)
-  box(-14.8, -14, FLOOR, HALL_TOP, -9, -7.8)
-  box(-14.8, -14, FLOOR, HALL_TOP, -4.9, -1.5) // Pfeiler zwischen Flankentür und Skybridge-Tür
+  box(-14.8, -14, FLOOR, HALL_TOP, -9, -1.5)
   box(-14.8, -14, FLOOR, HALL_TOP, 1.5, 9)
-  box(-14.8, -14, 15, HALL_TOP, -7.8, -4.9) // Sturz über der Flankentür
   box(-14.8, -14, 15, HALL_TOP, -1.5, 1.5) // Sturz über der Skybridge-Tür
   // Dachplatte mit Loch über der Rampe (Kopffreiheit)
   box(-30, -21.2, HALL_TOP, ROOF, -9, 9)
@@ -109,19 +109,15 @@ export function buildSkylineArena(): ArenaResult {
   box(-14, -6, FLOOR, 15, -1.9, -1.5)
   box(-14, -6, FLOOR, 15, 1.5, 1.9)
   box(-14, -6, 15, 15.3, -1.9, 1.9)
-  // Flankengang A -> C (Nordseite) mit Z-Knick: kein Durchblick, man schleicht um die Ecke. Gespiegelt: Südseite C -> B.
-  // (Auf der Seite der Rampe geht keine zweite Tür, deshalb je Lücke ein Flankengang.)
-  box(-14, -11.5, FLOOR - 1, FLOOR, -8.2, -4.5) // Boden
-  box(-11.9, -8.1, FLOOR - 1, FLOOR, -8.2, -1.5)
-  box(-8.5, -6, FLOOR - 1, FLOOR, -5.3, -1.5)
-  box(-14, -11.5, 15, 15.3, -8.2, -4.5) // Decke
-  box(-11.9, -8.1, 15, 15.3, -8.2, -1.5)
-  box(-8.5, -6, 15, 15.3, -5.3, -1.5)
-  box(-14, -8.1, FLOOR, 15, -8.2, -7.8) // Nordwand
-  box(-8.5, -8.1, FLOOR, 15, -8.2, -4.9) // Ostwand des Mittelstücks
-  box(-8.5, -6, FLOOR, 15, -5.3, -4.9) // Nordwand des letzten Stücks
-  box(-14, -11.5, FLOOR, 15, -4.9, -4.5) // Südwand des ersten Stücks
-  box(-11.9, -11.5, FLOOR, 15, -4.9, -1.5) // Westwand des Mittelstücks
+  // Außenterrasse (offen, Reling): aus der Nordwand von Halle A hinaus, an der Außenseite entlang, durch die Nordwand
+  // der Mitte wieder hinein. Gespiegelt: Südseite C -> B (auf der Rampenseite der Halle ist die Wand frei).
+  box(-18.2, -1.5, FLOOR - 1, FLOOR, -11.5, -9) // Boden, 2,5 m breit
+  box(-6, -1.5, FLOOR - 1, FLOOR, -9, -8) // Stück vor der Tür der Mitte
+  box(-18.2, -1.5, FLOOR, FLOOR + 1.1, -11.7, -11.5) // Reling Außenkante (1,1 m, man kann drüberspringen)
+  box(-14, -6, FLOOR, FLOOR + 1.1, -9.2, -9) // Reling zur Lücke hin
+  box(-18.4, -18.2, FLOOR, FLOOR + 1.1, -11.7, -9) // Reling Westende
+  box(-6.2, -6, FLOOR, FLOOR + 1.1, -9, -8)
+  box(-1.7, -1.5, FLOOR, FLOOR + 1.1, -11.7, -8) // Reling Ostende
   // Säulen und Deckung in der Halle
   for (const [x, z] of [[-23, -4], [-23, 4], [-19, -4], [-19, 4]]) box(x - 0.6, x + 0.6, FLOOR, HALL_TOP, z - 0.6, z + 0.6)
   box(-22.5, -19.5, FLOOR, FLOOR + 1.2, -0.3, 0.9, { cover: true })
@@ -144,12 +140,12 @@ export function buildSkylineArena(): ArenaResult {
 
   // --- Mitte (Dach C, Halle, Atrium) ---
   box(-6, 6, BELOW, FLOOR, -8, 8, { sym: false })
-  box(-6, -5.2, FLOOR, ROOF_C - 0.3, -8, -4.9) // Westwand mit zwei Türen (Flankengang, Skybridge); gespiegelt: Ostwand
-  box(-6, -5.2, FLOOR, ROOF_C - 0.3, -1.9, -1.5)
+  box(-6, -5.2, FLOOR, ROOF_C - 0.3, -8, -1.5) // Westwand mit Tür; gespiegelt: Ostwand
   box(-6, -5.2, FLOOR, ROOF_C - 0.3, 1.5, 8)
-  box(-6, -5.2, 15, ROOF_C - 0.3, -4.9, -1.9)
   box(-6, -5.2, 15, ROOF_C - 0.3, -1.5, 1.5)
-  box(-6, 6, FLOOR, ROOF_C - 0.3, -8, -7.2) // Nordwand, gespiegelt: Südwand
+  box(-6, -4.8, FLOOR, ROOF_C - 0.3, -8, -7.2) // Nordwand mit Tür (x -4,8 .. -1,8) zur Terrasse, gespiegelt: Südwand
+  box(-1.8, 6, FLOOR, ROOF_C - 0.3, -8, -7.2)
+  box(-4.8, -1.8, 15, ROOF_C - 0.3, -8, -7.2)
   box(-6, 6, ROOF_C - 0.3, ROOF_C, -8, -3) // Dachplatte mit Atrium-Loch 6 x 6 m
   box(-6, -3, ROOF_C - 0.3, ROOF_C, -3, 3)
   for (const [x, z] of [[-3.9, -5.6], [3.9, -5.6]]) box(x - 0.6, x + 0.6, FLOOR, ROOF_C - 0.3, z - 0.6, z + 0.6, { sym: false })

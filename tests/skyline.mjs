@@ -105,34 +105,45 @@ try {
   }, E)
   check('Rampe B (gespiegelt): ebenso', !(slipB.x > 15.7 && slipB.z < -4.5), JSON.stringify(slipB))
 
-  // Flankengang A -> C mit Knick (zu Fuß, Nordseite), gespiegelt C -> B (Südseite)
-  const flank = await page.evaluate((E) => {
-    __setup(-20, -6.35, E, 0, 12)
+  // Außenterrasse A -> C (offen, Nordseite): durch die Nordtür hinaus, an der Außenseite entlang, durch die Nordtür der Mitte hinein
+  const terrace = await page.evaluate((E) => {
+    __setup(-16.5, -5, 0, 0, 12) // in Halle A, Blick nach Norden zur Tür
     __dusk.player.setMoveInput(0, 1)
-    __run(1.9) // bis zur Ostwand des Mittelstücks
-    const a = { x: __dusk.camera.position.x, z: __dusk.camera.position.z }
-    __aim(Math.PI) // nach Süden
-    __run(0.5)
-    __aim(E) // wieder nach Osten, durch die Tür in die Halle C
-    __run(2.5)
+    __run(1.0)
+    const out = { x: __dusk.camera.position.x, z: __dusk.camera.position.z, feet: __dusk.player.feetHeight }
+    __aim(E) // an der Außenseite nach Osten
+    __run(2.2) // ~13 m bis vor die Tür der Mitte
+    const mid = { x: __dusk.camera.position.x, z: __dusk.camera.position.z, feet: __dusk.player.feetHeight }
+    __aim(Math.PI) // nach Süden durch die Tür der Mitte
+    __run(0.9)
     __dusk.player.setMoveInput(0, 0)
     const p = __dusk.camera.position
-    return { stop: +a.x.toFixed(2), x: +p.x.toFixed(2), z: +p.z.toFixed(2), feet: +__dusk.player.feetHeight.toFixed(2) }
+    return { out: [+out.x.toFixed(1), +out.z.toFixed(1), out.feet], mid: [+mid.x.toFixed(1), +mid.z.toFixed(1), mid.feet], end: [+p.x.toFixed(1), +p.z.toFixed(1), +__dusk.player.feetHeight.toFixed(2)] }
   }, E)
-  check('Flankengang: Knick zwingt zum Abbiegen (Wand bei x -8,5), dann Halle C (12 m)', flank.stop < -8.4 && flank.x > -4 && Math.abs(flank.feet - 12) < 0.05, JSON.stringify(flank))
-  const noSight = await page.evaluate(() => {
-    // Strahl von der Flankentür in A nach Osten (Höhe 13,5 m): trifft vor der Halle C immer eine Wand
-    const hits = []
-    for (let z = -7.7; z <= -5.0; z += 0.1) {
-      let first = Infinity
-      for (const { box } of __dusk.arena.solids) {
-        if (box.min.y <= 13.5 && box.max.y >= 13.5 && z > box.min.z && z < box.max.z && box.max.x > -13.9) first = Math.min(first, Math.max(box.min.x, -13.9))
-      }
-      hits.push(first)
-    }
-    return Math.max(...hits)
+  check('Terrasse: aus Halle A hinaus (z < -9,5), draußen entlang (12 m), in Halle C hinein (z > -7)', terrace.out[1] < -9.5 && terrace.mid[0] > -4.5 && terrace.mid[2] === 12 && terrace.end[1] > -7 && terrace.end[2] === 12, JSON.stringify(terrace))
+  const rail = await page.evaluate(() => {
+    __setup(-10, -10.2, 0, 0, 12)
+    __dusk.player.setMoveInput(0, 1)
+    __run(0.6) // nach Norden gegen die Reling
+    const north = { z: __dusk.camera.position.z, feet: __dusk.player.feetHeight }
+    __aim(Math.PI)
+    __run(0.8) // nach Süden zur Lücke hin
+    __dusk.player.setMoveInput(0, 0)
+    return { north: +north.z.toFixed(2), south: +__dusk.camera.position.z.toFixed(2), feet: +__dusk.player.feetHeight.toFixed(2) }
   })
-  check('Flankengang: kein Durchblick von Halle A nach Halle C (Strahl endet vor x -6)', noSight < -6, String(noSight))
+  check('Reling hält: man fällt auf der Terrasse nicht von selbst hinunter', rail.north > -11.5 && rail.south < -8.9 && rail.feet === 12, JSON.stringify(rail))
+  const terraceB = await page.evaluate(() => {
+    __setup(16.5, 5, Math.PI, 0, 12)
+    __dusk.player.setMoveInput(0, 1)
+    __run(1.0)
+    const out = __dusk.camera.position.z
+    __aim(Math.PI / 2) // nach Westen an der Außenseite
+    __run(2.2)
+    const x = __dusk.camera.position.x
+    __dusk.player.setMoveInput(0, 0)
+    return { out: +out.toFixed(1), x: +x.toFixed(1), feet: +__dusk.player.feetHeight.toFixed(2) }
+  })
+  check('Gespiegelt: Terrasse C -> B auf der Südseite', terraceB.out > 9.5 && terraceB.x < 4.5 && terraceB.feet === 12, JSON.stringify(terraceB))
 
   // Skybridge A -> C -> B (auf 12 m, drinnen)
   const bridge = await page.evaluate((E) => __walk(-20, 0, 12, E, 4.2), E)
