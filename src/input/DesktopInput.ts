@@ -103,6 +103,7 @@ export class DesktopInput {
         break
       case 'Space':
         // Nur beim Drücken (sonst zweiter Sprung beim Loslassen)
+        this.player.setJumpHeld(pressed)
         if (pressed) this.player.jump()
         break
       case 'KeyR':

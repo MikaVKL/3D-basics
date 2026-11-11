@@ -85,7 +85,7 @@ const RAMP_LENGTH = 10 // Steigung ~0,28 wie bisher
 
 // Keil für die Rampen-Optik, steigt entlang +X von 0 auf height. Vertices pro
 // Fläche dupliziert, damit jede Fläche eine flache Normale bekommt (Low-Poly-Look).
-function createWedgeGeometry(length: number, width: number, height: number): THREE.BufferGeometry {
+export function createWedgeGeometry(length: number, width: number, height: number): THREE.BufferGeometry {
   const halfWidth = width / 2
 
   const low0 = [0, 0, -halfWidth]
@@ -128,7 +128,7 @@ function createWedgeGeometry(length: number, width: number, height: number): THR
 }
 
 // Leuchtende Kanten, damit Formen im Dämmerlicht erkennbar bleiben
-function addEdgeOutline(mesh: THREE.Mesh, color: number = Palette.accentNeon) {
+export function addEdgeOutline(mesh: THREE.Mesh, color: number = Palette.accentNeon) {
   const edges = new THREE.EdgesGeometry(mesh.geometry)
   const line = new THREE.LineSegments(
     edges,
@@ -141,7 +141,7 @@ function addEdgeOutline(mesh: THREE.Mesh, color: number = Palette.accentNeon) {
 // einem LineSegments. Die Einzelteile bleiben (Kollision, Schüsse, Minimap, Gadget-Welt arbeiten mit ihnen), werden aber
 // nicht mehr gezeichnet: `material.visible = false` überspringt den Zeichenaufruf, Raycasts und `object.visible` bleiben
 // unberührt. Nur für Teile, die sich nie bewegen.
-function bakeStaticParts(group: THREE.Group, skip: Set<THREE.Object3D>) {
+export function bakeStaticParts(group: THREE.Group, skip: Set<THREE.Object3D>) {
   group.updateMatrixWorld(true)
   const meshBuckets = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>()
   const lineBuckets = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>()

@@ -114,6 +114,11 @@ export class Player implements Damageable {
   private padCooldown = 0
   private grapple: { target: THREE.Vector3; push: THREE.Vector2; time: number; stuck: number; lastDistance: number } | null = null
   onSlide?: () => void
+  // Boden ohne Bauteil: 0 (Normalfall), -Infinity auf Karten mit Abgrund (Skyline)
+  groundLevel = 0
+  // Flugmodus (nur Testkarte): frei fliegen ohne Kollision, Leertaste hoch, Ducken runter
+  flying = false
+  private jumpHeld = false
   private onGround = true
   onJump?: () => void
   // fallSpeed in m/s beim Aufsetzen
@@ -291,6 +296,25 @@ export class Player implements Damageable {
     this.sliding = false
   }
 
+  setJumpHeld(held: boolean) {
+    this.jumpHeld = held
+  }
+
+  // Flugmodus: Blickrichtung x Eingabe, Leertaste hoch, Ducken runter, Sprinten = doppelt so schnell
+  private updateFly(deltaSeconds: number) {
+    const forward = new THREE.Vector3()
+    this.camera.getWorldDirection(forward)
+    const right = new THREE.Vector3().crossVectors(forward, this.camera.up).normalize()
+    const move = new THREE.Vector3().addScaledVector(forward, this.moveInputZ).addScaledVector(right, this.moveInputX)
+    move.y += (this.jumpHeld ? 1 : 0) - (this.wantsToCrouch ? 1 : 0)
+    if (move.lengthSq() > 1) move.normalize()
+    this.camera.position.addScaledVector(move, (this.isSprinting ? 32 : 16) * deltaSeconds)
+    this.velocity.set(0, 0, 0)
+    this.horizontalVelocity.set(0, 0)
+    this.onGround = false
+    this.bodyY = this.camera.position.y - this.eyeHeight
+  }
+
   setMoveInput(x: number, z: number) {
     this.moveInputX = THREE.MathUtils.clamp(x, -1, 1)
     this.moveInputZ = THREE.MathUtils.clamp(z, -1, 1)
@@ -421,6 +445,11 @@ export class Player implements Damageable {
       if (this.respawnRemaining === 0 && !this.networkControlled) {
         this.spawn(this.spawnPoint)
       }
+      return
+    }
+
+    if (this.flying) {
+      this.updateFly(deltaSeconds)
       return
     }
 
@@ -740,7 +769,7 @@ export class Player implements Damageable {
   // Flächen bis eine kleine Stufe über referenceY (Füße) zählen, sonst würde
   // man auf Stürze oder Wände gezogen.
   private groundHeightAt(x: number, z: number, referenceY: number = Infinity): number {
-    let height = 0
+    let height = this.groundLevel
     for (const solid of this.solids) {
       const box = solid.box
       if (

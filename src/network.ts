@@ -23,6 +23,8 @@ export type ConnectionStatus = 'offline' | 'idle' | 'connecting' | 'online' | 'f
 // ?server=... > VITE_SERVER_URL > im Dev derselbe Rechner (hostname statt
 // localhost, damit Tablets im WLAN ihn finden). null = nur Singleplayer.
 function resolveServerUrl(): string | null {
+  // Testkarten (?map=...) laufen nur offline: der Server kennt sie nicht
+  if (new URLSearchParams(location.search).get('map')) return null
   const fromQuery = new URLSearchParams(location.search).get('server')
   if (fromQuery) return fromQuery
   const configured = import.meta.env.VITE_SERVER_URL as string | undefined

@@ -3,6 +3,7 @@ import './style.css'
 import { Palette } from './palette'
 import { createSky } from './sky'
 import { buildArena } from './arena'
+import { buildSkylineArena, SKYLINE_FALL_Y, SKYLINE_LOOK } from './arenaSkyline'
 import { Player } from './player'
 import { LookControl } from './lookControl'
 import { DesktopInput } from './input/DesktopInput'
@@ -33,16 +34,18 @@ import { weaponIcon } from './weaponIcons'
 // --- Grundgerüst: Szene, Kamera, Renderer ---
 
 const scene = new THREE.Scene()
-scene.background = new THREE.Color(Palette.sky)
-const sky = createSky()
+// Testkarte Skyline (?map=skyline): offline, Tageslicht, Abgrund im hellen Dunst, Flugmodus mit H
+const isSkyline = new URLSearchParams(location.search).get('map') === 'skyline'
+scene.background = new THREE.Color(isSkyline ? SKYLINE_LOOK.background : Palette.sky)
+const sky = createSky(isSkyline ? SKYLINE_LOOK.sky : undefined)
 scene.add(sky)
-scene.fog = new THREE.Fog(Palette.fog, 15, 45)
+scene.fog = isSkyline ? new THREE.Fog(SKYLINE_LOOK.fog, 45, 140) : new THREE.Fog(Palette.fog, 15, 45)
 
 const camera = new THREE.PerspectiveCamera(
   75, // FOV
   window.innerWidth / window.innerHeight,
   0.1,
-  100
+  isSkyline ? 160 : 100
 )
 scene.add(camera)
 
@@ -57,18 +60,21 @@ appElement.appendChild(renderer.domElement)
 // --- Beleuchtung ---
 // Grundhelligkeit + gerichtetes Abendlicht; so hell, dass Kanten im
 // Dämmerlicht noch gut erkennbar sind
-const ambientLight = new THREE.AmbientLight(Palette.ambientLight, 1.0)
+const ambientLight = new THREE.AmbientLight(isSkyline ? SKYLINE_LOOK.ambient : Palette.ambientLight, isSkyline ? 0.55 : 1.0)
 scene.add(ambientLight)
-const skyLight = new THREE.HemisphereLight(0x9fb4d8, 0x1a1f2e, 1.4)
+const skyLight = isSkyline
+  ? new THREE.HemisphereLight(SKYLINE_LOOK.skyLight, SKYLINE_LOOK.groundLight, 1.1)
+  : new THREE.HemisphereLight(0x9fb4d8, 0x1a1f2e, 1.4)
 scene.add(skyLight)
 
-const sunLight = new THREE.DirectionalLight(Palette.sunLight, 2.8)
-sunLight.position.set(-15, 20, 10)
+const sunLight = new THREE.DirectionalLight(isSkyline ? SKYLINE_LOOK.sun : Palette.sunLight, isSkyline ? 2.8 : 2.8)
+if (isSkyline) sunLight.position.set(30, 55, 20)
+else sunLight.position.set(-15, 20, 10)
 scene.add(sunLight)
 
 // --- Arena aufbauen ---
 
-const arena = buildArena()
+const arena = isSkyline ? buildSkylineArena() : buildArena()
 // Nur die feste Welt (Spieler hängen sich später an arena.shootables): Granaten fliegen nur dagegen
 const worldMeshes = [...arena.shootables]
 scene.add(arena.group)
@@ -87,10 +93,12 @@ window.addEventListener('keydown', (event) => {
 
 // --- Ziel-Dummies (nur Singleplayer, respawnen automatisch) ---
 
-const targets = [
-  new Target(new THREE.Vector3(-14, 0.8, -6)), // freie Nord-Süd-Bahn x = -14 (z 8 bis -12)
-  new Target(new THREE.Vector3(14, 0.8, 6)),
-]
+const targets = isSkyline
+  ? []
+  : [
+      new Target(new THREE.Vector3(-14, 0.8, -6)), // freie Nord-Süd-Bahn x = -14 (z 8 bis -12)
+      new Target(new THREE.Vector3(14, 0.8, 6)),
+    ]
 const effects = new Effects(scene)
 const cameraShake = new CameraShake()
 const slideView = new SlideView(camera)
@@ -106,6 +114,7 @@ for (const target of targets) {
 const player = new Player(camera, arena.solids, arena.ramps, 'blue')
 const randomSpawnPoint =
   arena.spawnPoints[Math.floor(Math.random() * arena.spawnPoints.length)]
+if (isSkyline) player.groundLevel = -Infinity
 player.spawn(randomSpawnPoint)
 
 // Eigene Figur: nicht in der Szene (die Kamera säße im Kopf) und nicht in
@@ -438,6 +447,7 @@ function setActive(active: boolean) {
   if (active) {
     sound.unlock()
     overlayNotice.textContent = ''
+    if (isSkyline) showNotice('Testkarte Skyline (offline) · H: Flugmodus')
     cancelLeave()
     network.join()
   } else {
@@ -628,6 +638,7 @@ if (import.meta.env.DEV) Object.assign((window as unknown as { __dusk: object })
 
 // --- Einstellungen: Regler im Menü, gemerkt im Browser ---
 const settings = loadSettings()
+if (isSkyline) settings.minimap = false // Karte kennt die Höhen der Testkarte noch nicht (wird nicht gespeichert)
 const settingFormat: Record<NumericSettingKey, (value: number) => string> = {
   sensitivity: (value) => `${value.toFixed(2)}×`,
   fov: (value) => `${Math.round(value)}°`,
@@ -708,6 +719,14 @@ aimToggleCheckbox.addEventListener('change', () => {
   showSettingValues()
   saveSettings(settings)
 })
+// Testkarte: H schaltet den Flugmodus (Leertaste hoch, Ducken runter, Shift schneller)
+if (isSkyline) {
+  window.addEventListener('keydown', (event) => {
+    if (event.code !== 'KeyH' || event.repeat || event.target instanceof HTMLInputElement) return
+    player.flying = !player.flying
+    showNotice(player.flying ? 'Flugmodus an (H zum Beenden)' : 'Flugmodus aus')
+  })
+}
 // N schaltet die Karte um (nicht beim Tippen im Namensfeld)
 window.addEventListener('keydown', (event) => {
   if (event.code === 'KeyN' && !event.repeat && !(event.target instanceof HTMLInputElement)) setMinimapEnabled(!settings.minimap)
@@ -1135,6 +1154,11 @@ function animate() {
   if (isActive) {
     player.update(deltaSeconds)
     updateOwnFootsteps()
+    // Skyline: unter die Dächer gefallen = Absturz, neu an einem Spawn (online später durch den Server)
+    if (isSkyline && !player.flying && player.isAlive && player.feetHeight < SKYLINE_FALL_Y) {
+      player.spawn(arena.spawnPoints[Math.floor(Math.random() * arena.spawnPoints.length)])
+      showNotice('Abgestürzt')
+    }
   }
   // Respawn (online wie offline): volle Magazine, Startwaffe
   if (player.isAlive && !wasAlive) startLife()

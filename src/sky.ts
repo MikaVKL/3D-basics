@@ -5,14 +5,20 @@ import { Palette } from './palette'
 // tiefblau). Folgt der Kamera, damit man nie den Rand erreicht; ohne Nebel.
 const SKY_RADIUS = 90 // innerhalb der Kamera-Sichtweite (far = 100)
 
-export function createSky(): THREE.Mesh {
+export interface SkyColors {
+  horizon: number
+  middle: number
+  top: number
+}
+
+export function createSky(colors: SkyColors = { horizon: Palette.skyHorizon, middle: Palette.sky, top: Palette.skyTop }): THREE.Mesh {
   const material = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
     uniforms: {
-      horizon: { value: new THREE.Color(Palette.skyHorizon) },
-      middle: { value: new THREE.Color(Palette.sky) },
-      top: { value: new THREE.Color(Palette.skyTop) },
+      horizon: { value: new THREE.Color(colors.horizon) },
+      middle: { value: new THREE.Color(colors.middle) },
+      top: { value: new THREE.Color(colors.top) },
     },
     vertexShader: `
       varying float vHeight;
