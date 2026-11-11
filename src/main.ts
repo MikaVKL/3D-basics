@@ -674,6 +674,8 @@ const minimapCheckbox = document.querySelector<HTMLInputElement>('#setting-minim
 const minimapCheckboxValue = document.querySelector<HTMLOutputElement>('#setting-minimap-value')!
 const scopeBlurCheckbox = document.querySelector<HTMLInputElement>('#setting-scopeblur')!
 const scopeBlurCheckboxValue = document.querySelector<HTMLOutputElement>('#setting-scopeblur-value')!
+const aimToggleCheckbox = document.querySelector<HTMLInputElement>('#setting-aimtoggle')!
+const aimToggleCheckboxValue = document.querySelector<HTMLOutputElement>('#setting-aimtoggle-value')!
 
 function showSettingValues() {
   for (const key of Object.keys(settingSliders) as NumericSettingKey[]) {
@@ -684,6 +686,8 @@ function showSettingValues() {
   minimapCheckboxValue.textContent = settings.minimap ? 'An' : 'Aus'
   scopeBlurCheckbox.checked = settings.scopeBlur
   scopeBlurCheckboxValue.textContent = settings.scopeBlur ? 'An' : 'Aus'
+  aimToggleCheckbox.checked = settings.aimToggle
+  aimToggleCheckboxValue.textContent = settings.aimToggle ? 'Umschalten' : 'Halten'
 }
 
 function setMinimapEnabled(enabled: boolean) {
@@ -696,6 +700,11 @@ function setMinimapEnabled(enabled: boolean) {
 minimapCheckbox.addEventListener('change', () => setMinimapEnabled(minimapCheckbox.checked))
 scopeBlurCheckbox.addEventListener('change', () => {
   settings.scopeBlur = scopeBlurCheckbox.checked
+  showSettingValues()
+  saveSettings(settings)
+})
+aimToggleCheckbox.addEventListener('change', () => {
+  settings.aimToggle = aimToggleCheckbox.checked
   showSettingValues()
   saveSettings(settings)
 })
@@ -752,6 +761,7 @@ if (isTouchDevice) {
     setActive(locked)
   })
   desktopInput.onGadget = throwGadget
+  desktopInput.aimToggle = () => settings.aimToggle
   resetTouchLean = () => player.setLean(0) // Umschalter: neues Leben/Menü richtet auf
 
   activate = () => desktopInput.requestActivation()

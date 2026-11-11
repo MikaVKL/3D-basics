@@ -16,6 +16,8 @@ export class DesktopInput {
   private onLockChange: (locked: boolean) => void
   // Taste G (Taktik) und F (Bewegung): Gadget einsetzen (setzt main.ts)
   onGadget?: (slot: GadgetSlot) => void
+  // Einstellung "Zielen umschalten" (Standard: Halten)
+  aimToggle: () => boolean = () => false
 
   constructor(
     domElement: HTMLElement,
@@ -42,7 +44,8 @@ export class DesktopInput {
     document.addEventListener('mousedown', (e) => this.handleMouseDown(e))
     document.addEventListener('mouseup', (e) => {
       if (e.button === 0) this.weapon.setTrigger(false)
-      if (e.button === 2) this.weapon.setAiming(false)
+      // Umschalter-Modus: Zielen bleibt nach dem Loslassen, bis man wieder klickt
+      if (e.button === 2 && !this.aimToggle()) this.weapon.setAiming(false)
     })
     // Rechte Maustaste zielt: kein Kontextmenü im Spiel
     document.addEventListener('contextmenu', (e) => {
@@ -75,7 +78,7 @@ export class DesktopInput {
   private handleMouseDown(e: MouseEvent) {
     if (document.pointerLockElement !== this.domElement) return
     if (!this.player.isAlive) return
-    if (e.button === 2) this.weapon.setAiming(true)
+    if (e.button === 2) this.weapon.setAiming(this.aimToggle() ? !this.weapon.aimRequested : true)
     if (e.button !== 0) return
     this.weapon.setTrigger(true)
   }

@@ -8,11 +8,12 @@ export interface Settings {
   renderScale: number // Anteil der Bildpunkte (Pixeldichte x Faktor); weniger = flüssiger auf schwachen/hochauflösenden Geräten
   minimap: boolean
   scopeBlur: boolean // Zielfernrohr: Rand unscharf (aus = nur abgedunkelt, schont schwache Geräte)
+  aimToggle: boolean // Rechtsklick schaltet Zielen um statt zu halten (Touchpad: zwei Tasten gleichzeitig sind kaum möglich)
 }
 
 export type NumericSettingKey = 'sensitivity' | 'fov' | 'volume' | 'music' | 'renderScale'
 
-export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1, music: 0.5, renderScale: 1, minimap: true, scopeBlur: true }
+export const DEFAULT_SETTINGS: Settings = { sensitivity: 1, fov: 75, volume: 1, music: 0.5, renderScale: 1, minimap: true, scopeBlur: true, aimToggle: false }
 
 export const SETTING_RANGES: Record<NumericSettingKey, { min: number; max: number; step: number }> = {
   sensitivity: { min: 0.3, max: 8, step: 0.05 },
@@ -48,6 +49,7 @@ export function loadSettings(): Settings {
     renderScale: clampSetting('renderScale', stored.renderScale),
     minimap: typeof stored.minimap === 'boolean' ? stored.minimap : DEFAULT_SETTINGS.minimap,
     scopeBlur: typeof stored.scopeBlur === 'boolean' ? stored.scopeBlur : DEFAULT_SETTINGS.scopeBlur,
+    aimToggle: typeof stored.aimToggle === 'boolean' ? stored.aimToggle : DEFAULT_SETTINGS.aimToggle,
   }
 }
 

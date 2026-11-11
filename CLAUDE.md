@@ -381,7 +381,7 @@ Stolperfallen bei Headless-Tests:
   nur auf Touch ein **Umschalter**: Tippen an/aus, Nutzerwunsch; Nachladen/Wechsel
   pausieren es und es geht danach weiter, Messer/Tod/Menü beenden es; Button-
   Zustand folgt `weapon.aimRequested` in `main.ts`; `test:touch`/`test:layout`
-  prüfen ihn). Am Rechner bleibt es Halten.
+  prüfen ihn). Am Rechner ist es standardmäßig Halten; die Einstellung "Zielen umschalten" (`settings.aimToggle`, `DesktopInput.aimToggle`, Nutzerwunsch fürs Touchpad: zwei Tasten gleichzeitig gehen nicht) macht den Rechtsklick zum Umschalter (`tests/aim-toggle.mjs`).
 - **Ziehen und Wippen** (`weaponView.ts`): Wechsel = Absenken der alten Waffe (`LOWER_TIME`
   0,15 s) + Ziehen der neuen (`drawTime` je Waffe: Pistole/MP 0,15, Sturmgewehr/Messer 0,2,
   Schwere Pistole 0,25, Shotgun 0,3, Sniper 0,4 s). `drawPose()` gibt jeder Waffe eine
