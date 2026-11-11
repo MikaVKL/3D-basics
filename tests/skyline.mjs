@@ -80,6 +80,31 @@ try {
   }, W)
   check('Rampenfuß: hinunter und nach rechts abbiegen geht ohne Hängen (vorher 1 m Platz)', turn.footFeet < 12.1 && turn.z < 3.5 && Math.abs(turn.feet - 12) < 0.05, JSON.stringify(turn))
 
+  // Kein Hineinglitschen in die Rampe: der Streifen hinter dem oberen Rampenende muss zu sein
+  const slip = await page.evaluate((W) => {
+    __setup(-15.2, 3.2, Math.PI, 0, 12) // Blick nach Süden, neben dem Rampenende
+    __dusk.player.setMoveInput(0, 1)
+    __run(0.7) // nach Süden in Richtung hinter die Rampe
+    __aim(W)
+    __run(1.0) // dann nach Westen unter die Rampe
+    __dusk.player.setMoveInput(0, 0)
+    const p = __dusk.camera.position
+    return { x: +p.x.toFixed(2), z: +p.z.toFixed(2), feet: +__dusk.player.feetHeight.toFixed(2) }
+  }, W)
+  const insideRamp = slip.x < -15.7 && slip.z > 4.5
+  check('Rampe A: man kommt von hinten/seitlich nicht in die Rampe hinein', !insideRamp, JSON.stringify(slip))
+  const slipB = await page.evaluate((E) => {
+    __setup(15.2, -3.2, 0, 0, 12)
+    __dusk.player.setMoveInput(0, 1)
+    __run(0.7)
+    __aim(E)
+    __run(1.0)
+    __dusk.player.setMoveInput(0, 0)
+    const p = __dusk.camera.position
+    return { x: +p.x.toFixed(2), z: +p.z.toFixed(2) }
+  }, E)
+  check('Rampe B (gespiegelt): ebenso', !(slipB.x > 15.7 && slipB.z < -4.5), JSON.stringify(slipB))
+
   // Flankengang A -> C mit Knick (zu Fuß, Nordseite), gespiegelt C -> B (Südseite)
   const flank = await page.evaluate((E) => {
     __setup(-20, -6.35, E, 0, 12)

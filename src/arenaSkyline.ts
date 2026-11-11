@@ -103,6 +103,7 @@ export function buildSkylineArena(): ArenaResult {
   // Rampenfuß 3 m von der Westwand entfernt (vorher 1 m: beim Abbiegen viel zu eng), 3,5 m breit
   ramp(-26, -15.7, 4.5, 8, 'x', true, FLOOR, ROOF)
   box(-26, -15.7, FLOOR, ROOF, 4.3, 4.5)
+  box(-15.7, -14.8, FLOOR, HALL_TOP, 4.3, 8.2) // Streifen hinter dem oberen Rampenende zu: sonst läuft man seitlich unter die Rampe
   // Skybridge (Glasgang später): Boden, Wände, Decke
   box(-14, -6, FLOOR - 1, FLOOR, -1.9, 1.9)
   box(-14, -6, FLOOR, 15, -1.9, -1.5)
