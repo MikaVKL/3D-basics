@@ -265,6 +265,8 @@ const network: NetworkClient = new NetworkClient({
       showNotice(`Online-Runde beigetreten · Team ${TeamLabel[team]}`)
     }
     player.spawn(arena.spawnPoints[spawnIndex])
+    // Für den Server beginnt hier ein neues Leben (Waffenwahl, Gadgets) - auch wenn man gerade lebt
+    wasAlive = false
     scoreboard.setScores(scores)
     setTargetsActive(false)
   },
@@ -291,6 +293,9 @@ const network: NetworkClient = new NetworkClient({
       // Team-Ausgleich: der Server kann uns per Respawn die Seite wechseln lassen
       if (team !== player.team) setLocalTeam(team)
       player.spawn(arena.spawnPoints[spawnIndex])
+      // Rundenstart/Team-Ausgleich setzen auch Lebende neu: ohne neues Leben hielte man Waffen,
+      // die der Server (neue Wahl gilt ab jedem Spawn) nicht mehr kennt
+      wasAlive = false
     } else {
       remotePlayers.handleRespawn(id)
     }

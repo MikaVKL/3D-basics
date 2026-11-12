@@ -169,6 +169,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `tests/remote-muzzle.mjs` (in `npm test`) – Schüsse anderer: Strahl/Mündungsfeuer starten am Lauf der Figur (`PlayerAvatar.getMuzzleWorldPosition`, `BARREL_TIPS` je Modell = Vorderkante der Waffenteile), nicht an der Ego-Mündung des Schützen; Laufende bei allen 6 Modellen < 3 cm von der Kante
 - `npm run test:loadout` – Waffenauswahl online: Server kennt das Loadout (hello), ersetzt nicht
   gewählte Waffen, Schaden nach der gültigen Waffe, neue Wahl erst ab dem nächsten Spawn
+- `tests/respawn-alive.mjs` (in `npm test`) – Respawn ohne Tod (Rundenstart, Team-Ausgleich, Wiederbeitritt): Client beginnt wie der
+  Server ein neues Leben (neue Waffenwahl, volle Magazine, Gadgets bereit; `wasAlive = false` in `onRespawn`/`onWelcome`),
+  B sieht A's echte Waffe, Schaden passt dazu
 - `npm run test:smg` – Maschinenpistole: Taste 7, 14 Schuss/s, Streuung wächst schneller als
   beim Sturmgewehr, Tempo 105 %, Töne, Server 8 je Treffer + Ratenlimit
 - `npm run test:heavy` – Schwere Pistole: Taste 6, 45 Schaden, 0,5 s Feuerpause, Töne, Server 45/90
