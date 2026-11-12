@@ -40,6 +40,21 @@ try {
       const p = __dusk.camera.position
       return { x: +p.x.toFixed(2), z: +p.z.toFixed(2), feet: +__dusk.player.feetHeight.toFixed(2) }
     }
+    // Wegpunkte nacheinander ablaufen (Terrasse mit Pflanzkübeln: keine gerade Bahn); gibt Position nach jedem Punkt zurück
+    window.__route = (points) => {
+      const P = __dusk.player, c = __dusk.camera.position
+      const reached = []
+      for (const [x, z] of points) {
+        for (let i = 0; i < 240 && Math.hypot(x - c.x, z - c.z) > 0.25; i++) {
+          window.__aim(Math.atan2(-(x - c.x), -(z - c.z)))
+          P.setMoveInput(0, 1)
+          P.update(1 / 60)
+        }
+        reached.push([+c.x.toFixed(1), +c.z.toFixed(1)])
+      }
+      P.setMoveInput(0, 0)
+      return { reached, feet: +P.feetHeight.toFixed(2) }
+    }
   })
   const E = -Math.PI / 2, W = Math.PI / 2
 
@@ -106,21 +121,13 @@ try {
   check('Rampe B (gespiegelt): ebenso', !(slipB.x > 15.7 && slipB.z < -4.5), JSON.stringify(slipB))
 
   // Außenterrasse A -> C (offen, Nordseite): durch die Nordtür hinaus, an der Außenseite entlang, durch die Nordtür der Mitte hinein
-  const terrace = await page.evaluate((E) => {
-    __setup(-16.5, -5, 0, 0, 12) // in Halle A, Blick nach Norden zur Tür
-    __dusk.player.setMoveInput(0, 1)
-    __run(1.0)
-    const out = { x: __dusk.camera.position.x, z: __dusk.camera.position.z, feet: __dusk.player.feetHeight }
-    __aim(E) // an der Außenseite nach Osten
-    __run(2.2) // ~13 m bis vor die Tür der Mitte
-    const mid = { x: __dusk.camera.position.x, z: __dusk.camera.position.z, feet: __dusk.player.feetHeight }
-    __aim(Math.PI) // nach Süden durch die Tür der Mitte
-    __run(0.9)
-    __dusk.player.setMoveInput(0, 0)
-    const p = __dusk.camera.position
-    return { out: [+out.x.toFixed(1), +out.z.toFixed(1), out.feet], mid: [+mid.x.toFixed(1), +mid.z.toFixed(1), mid.feet], end: [+p.x.toFixed(1), +p.z.toFixed(1), +__dusk.player.feetHeight.toFixed(2)] }
-  }, E)
-  check('Terrasse: aus Halle A hinaus (z < -9,5), draußen entlang (12 m), in Halle C hinein (z > -7)', terrace.out[1] < -9.5 && terrace.mid[0] > -4.5 && terrace.mid[2] === 12 && terrace.end[1] > -7 && terrace.end[2] === 12, JSON.stringify(terrace))
+  // Terrasse Nord: aus der Tür von Halle A, an Pflanzkübeln vorbei (innen/außen im Wechsel), in die Tür der Mitte
+  const terrace = await page.evaluate(() => {
+    __setup(-16.5, -5, 0, 0, 12)
+    return __route([[-16.5, -10.2], [-15, -9.7], [-12.5, -9.7], [-11, -10.8], [-7, -10.8], [-6, -9.7], [-2.6, -9.7], [-2.6, -6.6]])
+  })
+  const tr = terrace.reached
+  check('Terrasse: aus Halle A hinaus (z < -9,5), an den Kübeln vorbei, in Halle C hinein (z > -7)', tr[0][1] < -9.5 && tr[6][0] > -3 && terrace.feet === 12 && tr[7][1] > -7 && Math.abs(tr[7][0] + 2.6) < 0.5, JSON.stringify(terrace))
   const rail = await page.evaluate(() => {
     __setup(-10, -10.2, 0, 0, 12)
     __dusk.player.setMoveInput(0, 1)
@@ -134,16 +141,10 @@ try {
   check('Reling hält: man fällt auf der Terrasse nicht von selbst hinunter', rail.north > -11.5 && rail.south < -8.9 && rail.feet === 12, JSON.stringify(rail))
   const terraceB = await page.evaluate(() => {
     __setup(16.5, 5, Math.PI, 0, 12)
-    __dusk.player.setMoveInput(0, 1)
-    __run(1.0)
-    const out = __dusk.camera.position.z
-    __aim(Math.PI / 2) // nach Westen an der Außenseite
-    __run(2.2)
-    const x = __dusk.camera.position.x
-    __dusk.player.setMoveInput(0, 0)
-    return { out: +out.toFixed(1), x: +x.toFixed(1), feet: +__dusk.player.feetHeight.toFixed(2) }
+    return __route([[16.5, 10.2], [15, 9.7], [12.5, 9.7], [11, 10.8], [7, 10.8], [6, 9.7], [2.6, 9.7], [2.6, 6.6]])
   })
-  check('Gespiegelt: Terrasse C -> B auf der Südseite', terraceB.out > 9.5 && terraceB.x < 4.5 && terraceB.feet === 12, JSON.stringify(terraceB))
+  const tb = terraceB.reached
+  check('Gespiegelt: Terrasse C -> B auf der Südseite', tb[0][1] > 9.5 && tb[6][0] < 3 && terraceB.feet === 12 && tb[7][1] < 7 && Math.abs(tb[7][0] - 2.6) < 0.5, JSON.stringify(terraceB))
 
   // Skybridge A -> C -> B (auf 12 m, drinnen)
   const bridge = await page.evaluate((E) => __walk(-20, 0, 12, E, 4.2), E)

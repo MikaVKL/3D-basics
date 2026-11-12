@@ -134,6 +134,9 @@ export function buildSkylineArena(): ArenaResult {
   windowedWall('x', -14, -6, FLOOR, 15, -1.9, -1.5, [[-13.5, -11.5], [-11, -9], [-8.5, -6.5]])
   windowedWall('x', -14, -6, FLOOR, 15, 1.5, 1.9, [[-13.5, -11.5], [-11, -9], [-8.5, -6.5]])
   box(-14, -6, 15, 15.3, -1.9, 1.9)
+  // Deckung in der Skybridge (versetzt links/rechts, 1,9 m Gasse bleiben)
+  box(-12.2, -10.8, FLOOR, FLOOR + 1.2, -1.5, -0.4, { cover: true })
+  box(-9.2, -7.8, FLOOR, FLOOR + 1.2, 0.4, 1.5, { cover: true })
   // Außenterrasse (offen, Reling): aus der Nordwand von Halle A hinaus, an der Außenseite entlang, durch die Nordwand
   // der Mitte wieder hinein. Gespiegelt: Südseite C -> B (auf der Rampenseite der Halle ist die Wand frei).
   box(-18.2, -1.5, FLOOR - 1, FLOOR, -11.5, -9) // Boden, 2,5 m breit
@@ -141,6 +144,10 @@ export function buildSkylineArena(): ArenaResult {
   box(-18.2, -1.5, FLOOR, FLOOR + 1.1, -11.7, -11.5) // Reling Außenkante (1,1 m, man kann drüberspringen)
   box(-14, -6, FLOOR, FLOOR + 1.1, -9.2, -9) // Reling zur Lücke hin
   box(-18.4, -18.2, FLOOR, FLOOR + 1.1, -11.7, -9) // Reling Westende
+  // Pflanzkübel (Kisten 1,1 m) auf der Terrasse, versetzt an Außen- und Innenseite, 1,4 m Gasse
+  box(-14.6, -13.2, FLOOR, FLOOR + 1.1, -11.5, -10.4, { cover: true })
+  box(-9.5, -8.1, FLOOR, FLOOR + 1.1, -10.1, -9, { cover: true })
+  box(-5, -3.6, FLOOR, FLOOR + 1.1, -11.5, -10.4, { cover: true })
   box(-6.2, -6, FLOOR, FLOOR + 1.1, -9, -8)
   box(-1.7, -1.5, FLOOR, FLOOR + 1.1, -11.7, -8) // Reling Ostende
   // Säulen und Deckung in der Halle
@@ -174,6 +181,9 @@ export function buildSkylineArena(): ArenaResult {
   box(-6, -4.8, FLOOR, ROOF_C - 0.3, -8, -7.2) // Nordwand mit Tür (x -4,8 .. -1,8) zur Terrasse, gespiegelt: Südwand
   windowedWall('x', -1.8, 6, FLOOR, ROOF_C - 0.3, -8, -7.2, [[1.5, 3.5]]) // Fenster 13 (gespiegelt: 14 in der Südwand)
   box(-4.8, -1.8, 15, ROOF_C - 0.3, -8, -7.2)
+  // Deckung auf dem Hallenboden der Mitte (1,2 m, je gespiegelt): neben dem Atrium, mit >= 1 m Abstand zu Säulen und Wänden
+  box(-2, -0.6, FLOOR, FLOOR + 1.2, -6.2, -4.8, { cover: true })
+  box(-4.8, -3.4, FLOOR, FLOOR + 1.2, 2.6, 4, { cover: true })
   box(-6, 6, ROOF_C - 0.3, ROOF_C, -8, -3) // Dachplatte mit Atrium-Loch 6 x 6 m
   box(-6, -3, ROOF_C - 0.3, ROOF_C, -3, 3)
   for (const [x, z] of [[-3.9, -5.6], [3.9, -5.6]]) box(x - 0.6, x + 0.6, FLOOR, ROOF_C - 0.3, z - 0.6, z + 0.6, { sym: false })
