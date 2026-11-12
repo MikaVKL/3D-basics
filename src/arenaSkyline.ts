@@ -32,11 +32,12 @@ export const SKYLINE_LOOK = {
 }
 
 // Augenhöhe 1,7 über dem Hallenboden; je zwei Spawns pro Seite in der eigenen Halle
+// weit auseinander (vorher 3-4 m Abstand): Westwand Nord/Süd, Mitte Nord, Ostseite vor der Skybridge-Tür
 const HALL_SPAWNS: Array<[number, number]> = [
-  [-26, -5.5],
-  [-26, -2],
-  [-23, 0.2],
-  [-22.5, -6],
+  [-27.5, -6.5],
+  [-27.5, 1.5],
+  [-21, -6.5],
+  [-17.5, -1],
 ]
 
 export function buildSkylineArena(): ArenaResult {
@@ -145,6 +146,9 @@ export function buildSkylineArena(): ArenaResult {
   // Säulen und Deckung in der Halle
   for (const [x, z] of [[-23, -4], [-23, 4], [-19, -4], [-19, 4]]) box(x - 0.6, x + 0.6, FLOOR, HALL_TOP, z - 0.6, z + 0.6)
   box(-22.5, -19.5, FLOOR, FLOOR + 1.2, -0.3, 0.9, { cover: true })
+  // Westhälfte war leer: je eine Kiste zwischen den Spawns an der Westwand und vor dem Rampenfuß
+  box(-28.7, -27.3, FLOOR, FLOOR + 1.2, -3.6, -2.2, { cover: true })
+  box(-27, -25.5, FLOOR, FLOOR + 1.2, 1.6, 2.8, { cover: true })
 
   // --- Dach A/B: Deckung, Sichtschutzwand ---
   box(-24.3, -21.7, ROOF, ROOF + 1.4, -4.7, -3.3, { cover: true })
