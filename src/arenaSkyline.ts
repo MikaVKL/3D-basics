@@ -11,6 +11,8 @@ const FLOOR = 12 // Hallenboden
 const HALL_TOP = 17.7 // Unterkante der Dachplatte über den Hallen A/B
 const ROOF = 18 // Dach A/B
 const ROOF_C = 20 // Dach der Mitte
+const WINDOW_SILL = 1 // Brüstung der Fenster (m über dem Boden)
+const WINDOW_TOP = 2.2 // Fensterunterkante 1, Oberkante 2,2 m: 2 m breit, 1,2 m hoch (geduckt auf der Brüstung ist der Kopf 1,3 m hoch: man kriecht nicht hindurch)
 const BELOW = -60 // Gebäudekörper reichen bis tief in den Nebel
 
 export const SKYLINE_FALL_Y = -20 // darunter: Absturz
@@ -61,6 +63,27 @@ export function buildSkylineArena(): ArenaResult {
     if (sym) place(-x1, -x0, -z1, -z0)
   }
 
+
+  // Wand mit Fenstern: durchgehende Teile zwischen den Fenstern, unter jedem Fenster die Brüstung (1 m), darüber der Sturz.
+  // run = Achse, entlang der die Wand läuft; windows = [von, bis] in dieser Achse (Fensterhöhe 1 bis 2,2 m über dem Boden y0).
+  // Schüsse gehen durch die Öffnung, Spieler nicht: Brüstung 1 m (Sprung darauf geht), aber die Öffnung ist nur 1,2 m hoch.
+  function windowedWall(run: 'x' | 'z', a0: number, a1: number, y0: number, y1: number, t0: number, t1: number, windows: Array<[number, number]>, sym = true) {
+    const sorted = [...windows].sort((p, q) => p[0] - q[0])
+    const piece = (from: number, to: number, lo: number, hi: number) => {
+      if (to - from < 1e-6 || hi - lo < 1e-6) return
+      if (run === 'x') box(from, to, lo, hi, t0, t1, { sym })
+      else box(t0, t1, lo, hi, from, to, { sym })
+    }
+    let cursor = a0
+    for (const [from, to] of sorted) {
+      piece(cursor, from, y0, y1)
+      piece(from, to, y0, y0 + WINDOW_SILL)
+      piece(from, to, y0 + WINDOW_TOP, y1)
+      cursor = to
+    }
+    piece(cursor, a1, y0, y1)
+  }
+
   // Schräge (Steg, Rampe) mit Sicht-Keil; gespiegelt für sym
   function ramp(minX: number, maxX: number, minZ: number, maxZ: number, axis: 'x' | 'z', ascending: boolean, bottom: number, top: number, sym = true) {
     const place = (rMinX: number, rMaxX: number, rMinZ: number, rMaxZ: number, rAscending: boolean) => {
@@ -87,11 +110,11 @@ export function buildSkylineArena(): ArenaResult {
   box(-30, -14, BELOW, FLOOR, -9, 9) // Körper bis in den Nebel, Oberseite = Hallenboden
   // Hallenwände (0,8 m); Ostwand mit Tür (3 m breit) zur Skybridge
   box(-30, -29.2, FLOOR, HALL_TOP, -9, 9)
-  box(-30, -18, FLOOR, HALL_TOP, -9, -8.2) // Nordwand mit Tür (x -18 .. -15) auf die Außenterrasse
+  windowedWall('x', -30, -18, FLOOR, HALL_TOP, -9, -8.2, [[-28.5, -26.5], [-24, -22]]) // Nordwand mit Tür (x -18 .. -15) auf die Außenterrasse, Fenster 1/2
   box(-15, -14, FLOOR, HALL_TOP, -9, -8.2)
   box(-18, -15, 15, HALL_TOP, -9, -8.2)
-  box(-30, -14, FLOOR, HALL_TOP, 8.2, 9)
-  box(-14.8, -14, FLOOR, HALL_TOP, -9, -1.5)
+  windowedWall('x', -30, -14, FLOOR, HALL_TOP, 8.2, 9, [[-29, -27]]) // Südwand, Fenster 3 (am Rampenfuß)
+  windowedWall('z', -9, -1.5, FLOOR, HALL_TOP, -14.8, -14, [[-7.7, -5.7], [-4.2, -2.2]]) // Ostwand, Fenster 4/5 (zur Lücke)
   box(-14.8, -14, FLOOR, HALL_TOP, 1.5, 9)
   box(-14.8, -14, 15, HALL_TOP, -1.5, 1.5) // Sturz über der Skybridge-Tür
   // Dachplatte mit Loch über der Rampe (Kopffreiheit)
@@ -106,8 +129,9 @@ export function buildSkylineArena(): ArenaResult {
   box(-15.7, -14.8, FLOOR, HALL_TOP, 4.3, 8.2) // Streifen hinter dem oberen Rampenende zu: sonst läuft man seitlich unter die Rampe
   // Skybridge (Glasgang später): Boden, Wände, Decke
   box(-14, -6, FLOOR - 1, FLOOR, -1.9, 1.9)
-  box(-14, -6, FLOOR, 15, -1.9, -1.5)
-  box(-14, -6, FLOOR, 15, 1.5, 1.9)
+  // Glasgang: je drei Scheiben-Öffnungen (2 m) pro Seite, Scheiben selbst folgen (Schüsse gehen vorerst durch)
+  windowedWall('x', -14, -6, FLOOR, 15, -1.9, -1.5, [[-13.5, -11.5], [-11, -9], [-8.5, -6.5]])
+  windowedWall('x', -14, -6, FLOOR, 15, 1.5, 1.9, [[-13.5, -11.5], [-11, -9], [-8.5, -6.5]])
   box(-14, -6, 15, 15.3, -1.9, 1.9)
   // Außenterrasse (offen, Reling): aus der Nordwand von Halle A hinaus, an der Außenseite entlang, durch die Nordwand
   // der Mitte wieder hinein. Gespiegelt: Südseite C -> B (auf der Rampenseite der Halle ist die Wand frei).
@@ -141,10 +165,10 @@ export function buildSkylineArena(): ArenaResult {
   // --- Mitte (Dach C, Halle, Atrium) ---
   box(-6, 6, BELOW, FLOOR, -8, 8, { sym: false })
   box(-6, -5.2, FLOOR, ROOF_C - 0.3, -8, -1.5) // Westwand mit Tür; gespiegelt: Ostwand
-  box(-6, -5.2, FLOOR, ROOF_C - 0.3, 1.5, 8)
+  windowedWall('z', 1.5, 8, FLOOR, ROOF_C - 0.3, -6, -5.2, [[3.2, 5.2]]) // Fenster 11 (gespiegelt: 12 in der Ostwand)
   box(-6, -5.2, 15, ROOF_C - 0.3, -1.5, 1.5)
   box(-6, -4.8, FLOOR, ROOF_C - 0.3, -8, -7.2) // Nordwand mit Tür (x -4,8 .. -1,8) zur Terrasse, gespiegelt: Südwand
-  box(-1.8, 6, FLOOR, ROOF_C - 0.3, -8, -7.2)
+  windowedWall('x', -1.8, 6, FLOOR, ROOF_C - 0.3, -8, -7.2, [[1.5, 3.5]]) // Fenster 13 (gespiegelt: 14 in der Südwand)
   box(-4.8, -1.8, 15, ROOF_C - 0.3, -8, -7.2)
   box(-6, 6, ROOF_C - 0.3, ROOF_C, -8, -3) // Dachplatte mit Atrium-Loch 6 x 6 m
   box(-6, -3, ROOF_C - 0.3, ROOF_C, -3, 3)

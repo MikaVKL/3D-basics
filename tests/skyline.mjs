@@ -186,6 +186,67 @@ try {
   check('Flugmodus (H): 2 s geradeaus ~32 m, durch Wände, Leertaste steigt', fly.on && fly.x > 0 && fly.high > fly.y + 15 && fly.off, JSON.stringify(fly))
   await page.evaluate(() => { __setup(-26, -5.5, 0, 0, 12); __run(0.5) })
 
+  // Fenster (Entwurf: 14 Fenster, 2 m breit, Brüstung 1 m; Öffnung 1,2 m hoch, damit man nicht hindurchkriecht)
+  const windows = await page.evaluate(() => {
+    const boxes = __dusk.arena.solids.map((s) => s.box)
+    // Strahl entlang der Achse von (x,y,z) um len Meter; Abstand bis zur ersten Box (Infinity = frei)
+    const cast = (x, y, z, dx, dz, len) => {
+      let hit = Infinity
+      for (const b of boxes) {
+        let t0 = 0, t1 = 1
+        const o = [x, y, z], d = [dx * len, 0, dz * len]
+        const lo = [b.min.x, b.min.y, b.min.z], hi = [b.max.x, b.max.y, b.max.z]
+        for (let i = 0; i < 3; i++) {
+          if (Math.abs(d[i]) < 1e-9) { if (o[i] < lo[i] || o[i] > hi[i]) { t0 = 2; break } }
+          else {
+            let ta = (lo[i] - o[i]) / d[i], tb = (hi[i] - o[i]) / d[i]
+            if (ta > tb) [ta, tb] = [tb, ta]
+            t0 = Math.max(t0, ta); t1 = Math.min(t1, tb)
+          }
+        }
+        if (t0 <= t1 && t1 > 0 && t0 < 1) hit = Math.min(hit, Math.max(0, t0) * len)
+      }
+      return hit
+    }
+    const eye = 13.7 // stehendes Auge in der Halle
+    return {
+      a1: cast(-27.5, eye, -6, 0, -1, 30), // durch Fenster 1 (Nordwand A) nach draußen
+      a1wall: cast(-25.5, eye, -6, 0, -1, 30), // zwischen den Fenstern: Wand
+      a3: cast(-28, eye, 6, 0, 1, 30), // Fenster 3 (Südwand A)
+      a4: cast(-17, eye, -6.7, 1, 0, 30), // Fenster 4 (Ostwand A) zur Lücke: dahinter die Westwand der Mitte
+      bridge: cast(-12.5, eye, 0, 0, -1, 40), // Skybridge-Scheibe 1: freier Blick nach Norden
+      bridgeWall: cast(-8.7, eye, 0, 0, -1, 40), // zwischen den Scheiben: Wand
+      c13: cast(2.5, eye, 0, 0, -1, 30), // Fenster 13 in der Nordwand der Mitte
+      b8: cast(27.5, eye, 6, 0, 1, 30), // gespiegelt: Fenster 8 (Südwand B)
+      below: cast(-27.5, 12.5, -6, 0, -1, 30), // unter der Brüstung: Wand
+      above: cast(-27.5, 14.6, -6, 0, -1, 30), // über dem Fenster: Wand
+    }
+  })
+  check('Fenster: Strahl durch Fenster 1 (Nordwand A) bis nach draußen frei, daneben, darunter und darüber Wand', windows.a1 > 20 && windows.a1wall < 4 && windows.below < 4 && windows.above < 4, JSON.stringify({ a1: windows.a1, a1wall: windows.a1wall, below: windows.below, above: windows.above }))
+  check('Fenster 3 (Südwand A) und gespiegelt Fenster 8 (Südwand B) frei', windows.a3 > 20 && windows.b8 > 20, JSON.stringify({ a3: windows.a3, b8: windows.b8 }))
+  check('Fenster 4 (Ostwand A): Blick über die Lücke endet an der Westwand der Mitte (nicht in Halle C)', windows.a4 > 8 && windows.a4 < 14, String(windows.a4))
+  check('Fenster 13 (Nordwand der Mitte) frei', windows.c13 > 20, String(windows.c13))
+  check('Skybridge: Scheibenöffnung frei, zwischen den Scheiben Wand', windows.bridge > 20 && windows.bridgeWall < 4, JSON.stringify({ bridge: windows.bridge, bridgeWall: windows.bridgeWall }))
+  const through = await page.evaluate(() => {
+    const P = __dusk.player
+    // Gehen: nach Norden gegen Fenster 1 - die Brüstung stoppt
+    __setup(-27.5, -6, 0, 0, 12)
+    P.update(1 / 60)
+    P.setMoveInput(0, 1)
+    for (let f = 0; f < 60; f++) P.update(1 / 60)
+    const walked = __dusk.camera.position.z
+    // Auf die Brüstung steigen und geduckt weiter: die 1,2 m hohe Öffnung lässt den Kopf (1,3 m) nicht durch
+    __setup(-27.5, -7.4, 0, 0, 13)
+    P.update(1 / 60)
+    P.setCrouching(true)
+    P.setMoveInput(0, 1)
+    for (let f = 0; f < 90; f++) P.update(1 / 60)
+    P.setMoveInput(0, 0)
+    P.setCrouching(false)
+    return { walked: +walked.toFixed(2), crawl: +__dusk.camera.position.z.toFixed(2) }
+  })
+  check('Man kommt durch kein Fenster (gehen: Brüstung, geduckt auf der Brüstung: zu niedrig)', through.walked > -8 && through.crawl > -8.5, JSON.stringify(through))
+
   // Draw Calls an vier Blickpunkten (Budget wie Nexus)
   let worst = 0
   for (const [x, y, z] of [[-26, 12, -5.5], [0, 20, 0], [-24, 18, 0], [10, 21, -9]]) {
