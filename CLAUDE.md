@@ -229,6 +229,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `node tests/topdown.mjs [ordner]` – Draufsicht der Arena (Norden oben,
   Meterraster, Spawns S0..S7) als `topdown.png` und `topdown-unten.png` (ohne
   obere Ebene). Für Abstimmungen über Kartenänderungen mitschicken.
+- `node tests/sightlines.mjs [raster=1.5]` – Sichtlinien-Messung (Werkzeug, nicht in `npm test`): Standpunkte im Raster auf
+  allen begehbaren Flächen, freie Sicht Auge -> Auge je Paar, Verteilung der Sichtweiten Nexus gegen Skyline (Sniper-Frage).
+  Nach Kartenumbauten neu laufen lassen.
 - `npm test` – alles Schnelle hintereinander.
 
 Stolperfallen bei Headless-Tests:

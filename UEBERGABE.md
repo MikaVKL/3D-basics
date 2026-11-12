@@ -5,7 +5,7 @@ was gerade läuft und was als Nächstes dran ist. Nach dem Abarbeiten bitte die 
 
 ## Wo wir stehen
 
-- Branch `claude/multiplayer-fps-networking-s0y8bp`, jeder Schritt wird auch auf `claude/modest-keller-5dphta` gepusht (nur der und `main` deployen, die Seite
+- Branch `claude/peaceful-mayer-wnignw` (wechselt je Sitzung), jeder Schritt wird auch auf `claude/modest-keller-5dphta` gepusht (nur der und `main` deployen, die Seite
   https://mikavkl.github.io/3D-basics/ ist nach jedem Push in ~1 Min. aktuell; harter Neuladen mit Strg+Shift+R).
 - Zuletzt gebaut (alles getestet, gepusht): Teamauswahl am Start (Rot/Blau/Automatisch mit Spielerzahl, bis 2 Spieler Abstand, 1 gegen 3 geht),
   Draw Calls der Arena 163 -> 29 (`bakeStaticParts`), Einstellung "Zielen umschalten" (Touchpad), Testkarte **Skyline**, Schwinghaken-Prototyp.
@@ -19,7 +19,9 @@ was gerade läuft und was als Nächstes dran ist. Nach dem Abarbeiten bitte die 
   Tageslicht-Look (Nutzerwunsch: weg vom dunklen Lasertag, Sonne, helle Texturen); ob Nexus auch so werden soll, ist offen.
 - Nutzer-Rückmeldung: gefällt (Löcher, Stege), "noch roh, genau richtig"; **Proportionen stellenweise eng/weit** (konkret: Rampenfuß, ist behoben), weitere Stellen
   will er beim nächsten Durchlauf nennen. Modus: **Team-Deathmatch**, Capture the Flag ist vom Tisch. Sniper-Sorge: Karte soll auch Nahkampf bieten
-  (Hallen/Terrasse), Messung per Sichtlinien-Test nach dem Aufbau, ein Schildpaket im Atrium nur falls nötig.
+  (Hallen/Terrasse). **Gemessen** (`node tests/sightlines.mjs`, Raster 1,5 m, Auge -> Auge über alle Standpunkte): Skyline hat deutlich WENIGER lange
+  Sichtlinien als Nexus (über 30 m: 7,8 % gegen 20,9 %; über 40 m: 1,9 % gegen 6,7 %; Median 11,7 m gegen 19,2 m; unter 10 m: 41,6 % gegen 18,0 %;
+  Standpunkte mit Sicht über 30 m: 63 % gegen 99 %). Schildpaket im Atrium also nicht nötig. Nach Umbauten (Fenster, Glas) neu messen.
 
 ## Schwinghaken (Prototyp, nur auf der Testkarte)
 
@@ -30,7 +32,7 @@ was gerade läuft und was als Nächstes dran ist. Nach dem Abarbeiten bitte die 
 ## Nächste Schritte (mit Nutzer abgestimmt bzw. vorgeschlagen)
 
 1. **Rückmeldung zu Skyline und Schwinghaken abwarten**, dann Werte/Proportionen nachziehen. Skyline polieren: Fenster in den Hallen (Schüsse durch, Spieler nicht),
-   Glas der Skybridge, Proportionen, Sichtlinien messen (Anteil langer Sichtlinien im Vergleich zu Nexus).
+   Glas der Skybridge, Proportionen; danach Sichtlinien neu messen (`node tests/sightlines.mjs`).
 2. **Zweite Karte online**: Karten als Daten (ID, Grenzen, Spawns), Server würfelt beim Start und meldet die ID in `welcome`, Client baut nach ID,
    `PROTOCOL_VERSION` erhöhen. Dafür Server-Grenzen (`sanitizeState`: `MAX_HEIGHT` 30 m, Arena-Grenzen) und Bewegungsprüfung auf die Höhen/den Abgrund anpassen,
    Sturztod serverseitig, Minimap für die Höhenebenen. Erst wenn Skyline sich gut anfühlt.
@@ -48,7 +50,7 @@ Enterhaken-Beschreibung). Dafür bei Neuem Logik und Darstellung trennen; vor de
 
 - Tests: `npm test` oder einzeln `node tests/<name>.mjs`; **zwei Testskripte nie gleichzeitig** (Ports 5199/8099), `pkill -f "[v]ite.js --port 5199"` räumt auf.
   In diesem Container (4 Kerne) sind `background.mjs` (schon vor den Änderungen), `ping.mjs`, `fps.mjs`, `weapons.mjs`, `sniper.mjs` unter Last flaky: einzeln und bei ruhiger CPU laufen lassen.
-- Commit-Messages deutsch mit `Getestet:`, Fußzeilen `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` und `Claude-Session: ...`
+- Commit-Messages deutsch mit `Getestet:`, Fußzeilen `Co-Authored-By: ...` und `Claude-Session: ...` (gibt die jeweilige Sitzung vor)
   (Nachricht per Datei im Scratchpad, `git commit -F`). Antworten an den Nutzer deutsch. Keine Bots im Spiel. Kleine, einzeln testbare Schritte; Design-Fragen erst vorschlagen.
 - `PROTOCOL_VERSION` steht auf 22 (Teamwunsch `hello.team` und `GET /teams` sind optional bzw. neu, kein Bruch).
 - Das Spiel ist nach jedem Push live (Pages + Render-Server). Neue Testkarten/Prototypen nur hinter Adresse oder Schalter lassen.
