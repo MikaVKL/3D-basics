@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - claude/modest-keller-5dphta
+      - claude/multiplayer-fps-networking-s0y8bp
   workflow_dispatch:
 
 permissions:
