@@ -201,6 +201,9 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
 - `tests/afk.mjs` (in `npm test`) – AFK-Erkennung mit rohen WebSocket-Clients (`AFK_TIMEOUT_MS` per Umgebung verkürzt): Stillstand und
   Rundungsrauschen = raus, langsames Umschauen (9°/s) und Schleichen = bleibt (Vergleich gegen `activityState`, den Zustand der
   letzten erkannten Aktivität, nicht gegen den vorigen Tick)
+- `tests/payload.mjs` (in `npm test`) – kaputte Verbindungen: ungültiger WebSocket-Frame und 1-MB-Nachricht beenden nur die eigene
+  Verbindung (`socket.on('error')` im Server ist Pflicht: ohne ihn beendet jeder Protokollfehler eines Clients den Serverprozess;
+  `maxPayload` 4096 Bytes, echte Nachrichten haben ~300)
 - `npm run test:movement-check` – Prüf-Logik der Server-Bewegungsprüfung mit
   24000 echten Zuständen (0 Fehlalarme bei Ping/Bündelung/Hintergrund-Tab)
   und simulierten Cheats (Teleport, Speedhack, Fliegen)

@@ -419,8 +419,12 @@ const httpServer = createServer((request, response) => {
   response.end(`Nexus Arena Server - ${clients.size}/${MAX_PLAYERS} Spieler\n`)
 })
 
+// Größte echte Nachricht (Zustand) hat ~350 Zeichen; ohne Grenze nimmt ws bis 100 MB je Nachricht an
+const MAX_MESSAGE_BYTES = 4096
+
 const wss = new WebSocketServer({
   server: httpServer,
+  maxPayload: MAX_MESSAGE_BYTES,
   verifyClient: ({ origin }: { origin: string }) =>
     ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin),
 })
@@ -555,6 +559,10 @@ wss.on('connection', (socket) => {
       broadcastRoster()
     }
   }
+
+  // Ohne Handler beendet jeder Protokollfehler eines Clients (ungültiger Frame, zu große Nachricht) den ganzen
+  // Serverprozess; ws schließt die betroffene Verbindung danach selbst
+  socket.on('error', (error) => console.log(`Verbindungsfehler${client ? ` (Spieler ${client.id})` : ''}: ${error.message}`))
 
   socket.on('pong', () => {
     if (client) client.alive = true
