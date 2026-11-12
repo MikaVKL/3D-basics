@@ -44,7 +44,8 @@ export class HitFeedback {
   showDamageNumber(position: THREE.Vector3, damage: number, headshot: boolean, camera: THREE.Camera) {
     const element = document.createElement('div')
     element.className = headshot ? 'damage-number headshot' : 'damage-number'
-    element.textContent = String(damage)
+    // Mit Schadensabfall (MP, Shotgun) ist der Wert krumm
+    element.textContent = String(Math.max(1, Math.round(damage)))
     document.body.appendChild(element)
     this.damageNumbers.push({
       element,

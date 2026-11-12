@@ -153,6 +153,8 @@ Die Tests starten Vite und Spielserver selbst auf eigenen Ports (5199/8099).
   Ton, Kill-Feed-Markierung und -Dauer
 - `npm run test:balance` – Waffen-Balance (reine Rechnung): DPS und Zeit bis zum Tod je Waffe
   auf 5/20 m, prüft u. a. MP nah nicht schneller als Pistole, Falloff, Kopftreffer-Verhältnis
+- `tests/damage-numbers.mjs` (in `npm test`) – Schadenszahlen auf Distanz: Einzelschuss rechnet den Schadensabfall wie der Server
+  (`damageFactor` in `Weapon.applyHit`, MP auf 14 m zeigt 6 statt 7), Anzeige als ganze Zahl (Shotgun zeigte z. B. 12.878882419472053)
 - `npm run test:gadget` – Rauchgranate: Wurf per G, Abklingzeit 25 s und Anzeige, Flug, Wolke und
   Landeton, Sichtsperre (Strahl durch die Wolke), 8 s Dauer, Wandwurf fällt auf den Boden,
   tot = kein Wurf, Respawn = bereit. `tests/gadget-net.mjs` (läuft mit): andere sehen Wurf/Wolke am

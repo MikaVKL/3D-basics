@@ -490,7 +490,8 @@ export class Weapon {
       if (markImpact) this.spawnImpactMarker(hit)
     } else if (damageable) {
       const headshot = hit.object.userData.headshot === true
-      const damage = this.stats.damage * (headshot ? HEADSHOT_MULTIPLIER : 1)
+      // Schadensabfall nach Entfernung wie beim Server (MP), sonst zeigt die Schadenszahl mehr, als abgezogen wird
+      const damage = this.stats.damage * damageFactor(this.stats, hit.distance) * (headshot ? HEADSHOT_MULTIPLIER : 1)
       const wasAlive = damageable.isAlive
       damageable.takeDamage(damage, headshot)
       const killed = wasAlive && !damageable.isAlive
