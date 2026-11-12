@@ -49,7 +49,8 @@ const HEARTBEAT_INTERVAL_MS = 10000
 // im Hintergrund beantwortet noch Pings) -> entfernen
 const STALE_STATE_MS = 15000
 // So lange ohne Bewegung, Umschauen oder Schuss -> zurück zum Startbildschirm
-const AFK_TIMEOUT_MS = 90000
+// (per Umgebungsvariable kürzer, nur für Tests)
+const AFK_TIMEOUT_MS = Number(process.env.AFK_TIMEOUT_MS) || 90000
 
 interface Client {
   id: PlayerId
@@ -80,6 +81,8 @@ interface Client {
   correctionTimes: number[] // Zeitpunkte der letzten Korrekturen (Rauswurf bei Häufung)
   lastStateAt: number
   lastActivityAt: number
+  // Zustand bei der letzten erkannten Aktivität: Vergleichsbasis, damit sich langsames Umschauen/Schleichen aufsummiert
+  activityState: PlayerNetworkState | null
   removing: boolean // wird gerade entfernt (Close läuft noch)
   ping: number | null // vom Client gemeldet (nur Anzeige)
   pingShown: number | null // zuletzt in der Spielerliste verschickt
@@ -349,6 +352,8 @@ function respawn(client: Client, now: number) {
   const spawnIndex = pickSpawnIndex(client.team)
   // Sofort am Spawn führen, sonst sehen andere kurz die alte Position
   if (client.state) client.state = { ...client.state, position: { ...SPAWN_POINTS[spawnIndex] } }
+  // Das Umsetzen selbst ist keine Aktivität des Spielers
+  client.activityState = client.state
   client.life += 1
   client.loadout = client.pendingLoadout
   client.gadgetReadyAt = { tactic: 0, move: 0 } // jedes Leben beginnt mit bereiten Gadgets
@@ -478,6 +483,7 @@ wss.on('connection', (socket) => {
         correctionTimes: [],
         lastStateAt: performance.now(),
         lastActivityAt: performance.now(),
+        activityState: null,
         removing: false,
         ping: null,
         pingShown: null,
@@ -527,7 +533,10 @@ wss.on('connection', (socket) => {
           }
         }
         client.lastStateAt = now
-        if (isActivity(client.state, state)) client.lastActivityAt = now
+        if (isActivity(client.activityState, state)) {
+          client.lastActivityAt = now
+          client.activityState = state
+        }
         client.state = state
         client.stateTime = message.time
       }
