@@ -131,6 +131,9 @@ export class Weapon {
   private aimWanted = false
   aimAmount = 0
 
+  // Server hat Friendly Fire an: Teamkameraden sind trefferbar (offline aus)
+  friendlyFire = false
+
   get shooterTeam(): Team {
     return this.team
   }
@@ -459,7 +462,7 @@ export class Weapon {
 
       const damageable = hit.object.userData.damageable as Damageable | undefined
       const targetTeam = hit.object.userData.team as Team | undefined
-      if (damageable && targetTeam !== this.shooterTeam && !damageable.invulnerable) {
+      if (damageable && (this.friendlyFire || targetTeam !== this.shooterTeam) && !damageable.invulnerable) {
         const head = hit.object.userData.headshot === true
         const entry = targets.get(damageable) ?? { damage: 0, hit: 0, head: 0, point: hit.point.clone() }
         entry.damage += stats.damage * damageFactor(stats, hit.distance) * (head ? HEADSHOT_MULTIPLIER : 1)
@@ -485,7 +488,7 @@ export class Weapon {
     const damageable = hit.object.userData.damageable as Damageable | undefined
     const targetTeam = hit.object.userData.team as Team | undefined
 
-    if (damageable && (targetTeam === this.shooterTeam || damageable.invulnerable)) {
+    if (damageable && ((!this.friendlyFire && targetTeam === this.shooterTeam) || damageable.invulnerable)) {
       // Teamkamerad oder Spawn-Schutz: wie ein Wand-Treffer
       if (markImpact) this.spawnImpactMarker(hit)
     } else if (damageable) {
@@ -563,7 +566,7 @@ export class Weapon {
   private isMeleeTarget(hit: THREE.Intersection | undefined): hit is THREE.Intersection {
     if (!hit) return false
     const damageable = hit.object.userData.damageable as Damageable | undefined
-    return !!damageable && damageable.isAlive && !damageable.invulnerable && hit.object.userData.team !== this.shooterTeam
+    return !!damageable && damageable.isAlive && !damageable.invulnerable && (this.friendlyFire || hit.object.userData.team !== this.shooterTeam)
   }
 
   // Zielhilfe fürs Messer: Strahlen in Ringen um die Blickrichtung, der

@@ -104,6 +104,8 @@ export type ServerMessage =
       spawnIndex: number
       scores: Scores
       killsToWin: number
+      // Friendly Fire an: auch Teamkameraden nehmen Schaden (vorerst Standard des Servers; optional, kein Protokollbruch)
+      friendlyFire?: boolean
     }
   | { t: 'roster'; players: RosterEntry[] }
   | { t: 'rejected'; reason: RejectReason }

@@ -50,6 +50,8 @@ const HEARTBEAT_INTERVAL_MS = 10000
 const STALE_STATE_MS = 15000
 // So lange ohne Bewegung, Umschauen oder Schuss -> zurück zum Startbildschirm
 // (per Umgebungsvariable kürzer, nur für Tests)
+// Friendly Fire (Nutzerwunsch, vorerst an): Teamkameraden nehmen Schaden; FRIENDLY_FIRE=off schaltet es wieder aus
+const FRIENDLY_FIRE = process.env.FRIENDLY_FIRE !== 'off'
 const AFK_TIMEOUT_MS = Number(process.env.AFK_TIMEOUT_MS) || 90000
 
 interface Client {
@@ -500,6 +502,7 @@ wss.on('connection', (socket) => {
         spawnIndex,
         scores,
         killsToWin: KILLS_TO_WIN_ACTIVE,
+        friendlyFire: FRIENDLY_FIRE,
       })
       broadcastRoster()
       if (nextRoundAt !== null && roundWinner !== null) {
@@ -603,7 +606,7 @@ function handleHit(shooter: Client, targetId: unknown, headshotFlag: boolean, ra
   const target = typeof targetId === 'number' ? clients.get(targetId) : undefined
   if (!target || target === shooter) return
   if (!isAlive(shooter) || !isAlive(target)) return
-  if (target.team === shooter.team) return
+  if (target.team === shooter.team && !FRIENDLY_FIRE) return
   if (!shooter.state || !target.state) return
 
   const now = performance.now()
@@ -633,12 +636,13 @@ function handleHit(shooter: Client, targetId: unknown, headshotFlag: boolean, ra
   send(target.socket, { t: 'hurt', by: shooter.id })
   if (killed) {
     target.respawnAt = now + RESPAWN_DELAY * 1000
-    scores[shooter.team] += 1
+    // Teamkill zählt nicht für den Punktestand des Teams (sonst könnte man die Runde selbst beenden)
+    if (target.team !== shooter.team) scores[shooter.team] += 1
     shooter.kills += 1
     target.deaths += 1
     broadcast({ t: 'kill', killer: shooter.id, victim: target.id, scores, headshot, weapon: shooter.state.weapon })
     broadcastRoster()
-    if (scores[shooter.team] >= KILLS_TO_WIN_ACTIVE) endRound(shooter.team, now)
+    if (target.team !== shooter.team && scores[shooter.team] >= KILLS_TO_WIN_ACTIVE) endRound(shooter.team, now)
     console.log(`Spieler ${shooter.id} hat Spieler ${target.id} eliminiert (${scores.red}:${scores.blue})`)
   }
 }

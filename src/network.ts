@@ -39,7 +39,7 @@ export interface NetworkHandlers {
   getLoadout: () => Loadout
   // Gewünschtes Team (null = automatisch)
   getTeamChoice: () => Team | null
-  onWelcome: (team: Team, spawnIndex: number, scores: Scores, killsToWin: number) => void
+  onWelcome: (team: Team, spawnIndex: number, scores: Scores, killsToWin: number, friendlyFire: boolean) => void
   // Snapshot ohne den eigenen Eintrag
   onSnapshot: (players: SnapshotEntry[]) => void
   onOwnVitals: (health: number, shield: number, spawnProtected: boolean) => void
@@ -219,7 +219,7 @@ export class NetworkClient {
         this.localId = message.id
         this.life = 0
         this.resetPing()
-        this.handlers.onWelcome(message.team, message.spawnIndex, message.scores, message.killsToWin)
+        this.handlers.onWelcome(message.team, message.spawnIndex, message.scores, message.killsToWin, message.friendlyFire === true)
         break
       case 'roster':
         this.roster.clear()

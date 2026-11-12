@@ -259,7 +259,8 @@ const network: NetworkClient = new NetworkClient({
   getName: () => nameInput.value,
   getLoadout: () => loadoutScreen.loadout,
   getTeamChoice: () => teamChoice,
-  onWelcome: (team, spawnIndex, scores, killsToWin) => {
+  onWelcome: (team, spawnIndex, scores, killsToWin, friendlyFire) => {
+    weapon.friendlyFire = friendlyFire
     scoreGoal.textContent = `Erstes Team mit ${killsToWin} Kills gewinnt`
     setLocalTeam(team)
     player.networkControlled = true
@@ -365,6 +366,7 @@ const network: NetworkClient = new NetworkClient({
   onDisconnect: () => {
     if (isActive && !document.hidden) showNotice('Verbindung zum Server verloren – Singleplayer, verbinde neu …')
     nextRoundAt = null
+    weapon.friendlyFire = false
     roundBanner.classList.add('hidden')
     player.networkControlled = false
     player.spawnProtected = false
