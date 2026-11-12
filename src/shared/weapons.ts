@@ -58,8 +58,8 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     reloadTime: 2,
     range: 100,
     moveSpeed: 0.92,
-    spreadPerHeat: 0.006,
-    maxSpread: 0.035,
+    spreadPerHeat: 0.01, // Nutzerwunsch: man soll teilweise wirklich zielen müssen; Salven bleiben genau, Dauerfeuer streut ab ~15 m
+    maxSpread: 0.06,
     aimZoom: 0.65,
     aimSpeed: 8,
     drawTime: 0.2,
@@ -85,7 +85,7 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
   },
   shotgun: {
     label: 'Shotgun',
-    damage: 8, // je Korn, 8 Körner = 64 aus nächster Nähe
+    damage: 10, // je Korn, 8 Körner = 80 aus nächster Nähe (Zwei-Schuss-Kill auch mit ein paar Fehlkörnern)
     fireInterval: 0.83,
     automatic: false,
     magazine: 6,
@@ -98,8 +98,8 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     aimSpeed: 8,
     drawTime: 0.3,
     pellets: 8,
-    pelletSpread: 0.07,
-    falloff: { start: 5, end: 16, min: 0.15 },
+    pelletSpread: 0.055,
+    falloff: { start: 7, end: 20, min: 0.2 },
   },
   sniper: {
     label: 'Sniper',
@@ -146,8 +146,8 @@ export const WEAPONS: Record<WeaponId, WeaponStats> = {
     reloadTime: 2,
     range: 50,
     moveSpeed: 1.03,
-    spreadPerHeat: 0.012, // streut schneller und stärker als das Sturmgewehr
-    maxSpread: 0.07,
+    spreadPerHeat: 0.018, // streut schneller und stärker als das Sturmgewehr (Nutzerwunsch: mehr Bloom)
+    maxSpread: 0.1,
     falloff: { start: 8, end: 30, min: 0.45 }, // nur auf kurze Distanz stark
     aimZoom: 0.85,
     aimSpeed: 10,

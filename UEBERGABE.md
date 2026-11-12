@@ -11,6 +11,13 @@ was gerade läuft und was als Nächstes dran ist. Nach dem Abarbeiten bitte die 
   Draw Calls der Arena 163 -> 29 (`bakeStaticParts`), Einstellung "Zielen umschalten" (Touchpad), Testkarte **Skyline**, Schwinghaken-Prototyp.
 - Nutzer (Mika, Zeitzone UTC+2) spielt am Laptop (Touchpad) und iPad. Er testet neue Stände direkt auf der Website.
 
+## Aktuell (Stand 2026-11-12, nach dem letzten Chat)
+
+- **Friendly Fire online an** (`FRIENDLY_FIRE=off` bei Render schaltet es aus; Teamkills zählen nicht für den Team-Score), `tests/friendly-fire.mjs`.
+- **Waffenbalance** (Nutzerwunsch): Sturmgewehr mehr Bloom (+1,0 cm/m je Schuss, Deckel 6,0), Shotgun gebufft (8 x 10, Kegel 0,055, Abfall 7..20 m), MP mehr Bloom (0,018/0,1). Werte in `src/shared/weapons.ts`, Tests angepasst (balance, smg, shotgun, weapons).
+- **Skyline-Fenster gebaut** (14 + 12 Scheibenöffnungen, Öffnung 1,2 m hoch, damit man nicht hindurchkriecht), Sichtlinien nahezu unverändert (>30 m: 7,7 %). Fable hat Netzcode-Fehler behoben (Server-Absturz, AFK, Rundenstart, Schadenszahlen).
+- Parallele Chats: jeder auf eigenem Branch pushen und dann zusammenführen (Hot-Spots: `CLAUDE.md`, `UEBERGABE.md`, `package.json`, `main.ts`, `server/index.ts`); jeder Push auf `claude/modest-keller-5dphta` startet den Render-Server neu.
+
 ## Testkarte Skyline (`?map=skyline`, nur offline, `src/arenaSkyline.ts`)
 
 - Adresse: https://mikavkl.github.io/3D-basics/?map=skyline . **H = Flugmodus** (Leertaste hoch, Ducken runter, Shift schneller), Absturz unter -20 m = neu am Spawn.

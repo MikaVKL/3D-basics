@@ -19,7 +19,7 @@ try {
     const s = WEAPONS.shotgun
     return [3, 5, 10.5, 16, 40].map((d) => Number(damageFactor(s, d).toFixed(3)))
   })
-  check('Schadensfaktor: voll bis 5 m, Mitte 0,575, ab 16 m 0,15', factors.join() === '1,1,0.575,0.15,0.15', factors.join())
+  check('Schadensfaktor: voll bis 7 m, 10,5 m 0,785, ab 20 m 0,2', factors.join() === '1,1,0.785,0.446,0.2', factors.join())
 
   await page.keyboard.press('Digit2')
   await wait(500)
@@ -49,14 +49,14 @@ try {
       t.visible = true
     })
 
-  // Nah: alle 8 Körner treffen, 8 Strahlen, 64 Schaden in EINER Meldung
+  // Nah: alle 8 Körner treffen, 8 Strahlen, 80 Schaden in EINER Meldung
   await dummyReset()
   await teleport(page, -14, 1.7, -4.5)
   await wait(200)
   await shootAt(page, [-14, 1.1, -6])
   const near = await page.evaluate(() => ({ tracers: __dusk.weapon.tracers.length, dmg: window.__dmg.slice(), sounds: window.__sounds.slice(), ammo: __dusk.weapon.ammo }))
   check('Schuss: 8 Strahlen', near.tracers === 8, String(near.tracers))
-  check('Nah (1,5 m): ein Treffer mit 64 Schaden', near.dmg.length === 1 && Math.abs(near.dmg[0] - 64) < 0.01, JSON.stringify(near.dmg))
+  check('Nah (1,5 m): ein Treffer mit 80 Schaden', near.dmg.length === 1 && Math.abs(near.dmg[0] - 80) < 0.01, JSON.stringify(near.dmg))
   check('Knall-Ton', near.sounds.includes('shotgunShot'), near.sounds.join())
 
   await wait(700)
@@ -76,7 +76,7 @@ try {
     total += await page.evaluate(() => window.__dmg.reduce((a, b) => a + b, 0))
   }
   const average = total / runs
-  check('Fern (12 m): im Mittel deutlich unter 64 und über 0', average > 1 && average < 25, `Ø ${average.toFixed(1)}`)
+  check('Fern (12 m): im Mittel deutlich unter 80 und über 0', average > 1 && average < 45, `Ø ${average.toFixed(1)}`)
 
   // --- Mehrspieler: Server rechnet nach ---
   const A = await openGame(browser, { name: 'Anna', errors })
@@ -102,21 +102,28 @@ try {
   await shootAt(A, [0, 1.0, 5])
   await wait(700)
   const near2 = await vitals()
-  // 8 Körner x 8 = 64: Schild 25 weg, 39 aufs Leben
-  check('Server: 3 m, 8 Körner = 64 Schaden (Schild 0, Leben 61)', near2.shield === 0 && near2.health === 61, JSON.stringify(near2))
+  // 8 Körner x 10 = 80: Schild 25 weg, 55 aufs Leben
+  check('Server: 3 m, 8 Körner = 80 Schaden (Schild 0, Leben 45)', near2.shield === 0 && near2.health === 45, JSON.stringify(near2))
   check('B hört den Knall', (await B.evaluate(() => window.__sounds)).includes('shotgunShot'))
 
-  // Gefälschte Meldung: 99 Körner aus ~13 m - Server begrenzt auf 8 und mindert nach Entfernung
+  // Frische Runde für B: zweiter Nahschuss tötet (45 Leben < 80), Respawn abwarten (Spawn-Schutz 2 s)
+  await shootAt(A, [0, 1.0, 5])
+  await wait(700)
+  check('Zweiter Schuss (80) tötet B', !(await B.evaluate(() => __dusk.player.isAlive)))
+  await wait(6500)
+  await teleport(B, 0, 1.7, 5)
   await teleport(A, 0, 1.7, 18)
   await wait(1200)
+
+  // Gefälschte Meldung: 99 Körner aus ~13 m - Server begrenzt auf 8 und mindert nach Entfernung
   await A.evaluate(() => {
     const id = [...__dusk.network.remotePlayers][0]
     __dusk.network.sendHit(id, false, { hit: 99, head: 0 })
   })
   await wait(500)
   const far = await vitals()
-  // 64 x Faktor(12,5 m = 0,45) ~ 29 -> Leben ~ 32 (ungebremst wäre B tot)
-  check('Server: 99 gemeldete Körner begrenzt, Entfernung mindert (13 m)', far.health > 25 && far.health < 40 && (await B.evaluate(() => __dusk.player.isAlive)), JSON.stringify(far))
+  // 80 x Faktor(12,5 m = 0,66) ~ 53: Schild 25 weg, Leben ~ 72 (ungebremst wäre B tot)
+  check('Server: 99 gemeldete Körner begrenzt, Entfernung mindert (13 m)', far.health > 65 && far.health < 80 && (await B.evaluate(() => __dusk.player.isAlive)), JSON.stringify(far))
 
   check('keine Konsolenfehler', errors.length === 0, errors.join(' | '))
 } finally {

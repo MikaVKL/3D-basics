@@ -310,13 +310,13 @@ Stolperfallen bei Headless-Tests:
 - Kopftreffer = 2× Schaden; Schadenszahlen bei jedem Treffer (Kopf rot),
   Kill-Feed markiert Kopftreffer-Kills und zeigt Einträge 6 s.
 - Waffen (abgestimmt): 1 Pistole (20, 5/s, 12er, Tempo 100 %),
-  2 Sturmgewehr (12, 10/s auto, 30er, 92 %, Streuung ab dem 4. Schuss),
+  2 Sturmgewehr (12, 10/s auto, 30er, 92 %, Streuung ab dem 4. Schuss, **mehr Bloom auf Nutzerwunsch** "man soll teilweise wirklich zielen müssen": +1,0 cm/m je Schuss bis 6,0 cm/m (vorher 0,6 bis 3,5); Salven bleiben genau, Dauerfeuer trifft auf 15 m ~71 %, 25 m ~46 %),
   3 Messer (50, 2/s, 2,5 m, 115 %, Kopf auch 2x; Zielhilfe: Strahlen-Ringe bis
   ~14° um das Fadenkreuz + 0,2 s Trefferfenster nach dem Klick, damit der Stich
   auch ohne perfektes Zielen/Timing trifft - wichtig für Touch). Wechsel 0,3 s, Respawn mit
   Pistole. Server prüft Reichweite je Waffe (+2 m Zuschlag für Verzögerung).
-  **Geplant (abgestimmt, in dieser Reihenfolge):** Shotgun (fertig: 8 Körner x 8, Faktor
-  1 bis 5 m, linear auf 0,15 bei 16 m, 6er-Magazin, 0,83 s; `hit`-Nachricht mit
+  **Geplant (abgestimmt, in dieser Reihenfolge):** Shotgun (fertig, **nach Nutzerrückmeldung "nicht so gut" gebufft**: 8 Körner x 10 = 80, Kegel 0,055, Faktor
+  1 bis 7 m, linear auf 0,2 bei 20 m (vorher 8 x 8, 0,07, 5..16 m, 0,15), 6er-Magazin, 0,83 s; Zwei-Schuss-Kill bis ~9 m auch mit ein paar Fehlkörnern; `hit`-Nachricht mit
   `pellets`/`headPellets`, Server begrenzt auf die Waffe und mindert nach Entfernung;
   andere sehen nur einen Strahl je Schuss), Sniper (fertig, Taste 5: 70, Kopf 140,
   1,25 s, 5er, Zoom 0,25 mit Linsenbild-Overlay `#scope` (nur der Kreis scharf; Rand,
@@ -327,7 +327,7 @@ Stolperfallen bei Headless-Tests:
   Reichweite 150 m), schwere Pistole
   (fertig, Taste 6: 45, Kopf 90, 0,5 s, 7er, 1,8 s Nachladen, Tempo 97 %), Maschinenpistole
   (fertig, nach Nutzerrückmeldung "zu stark, Pistole sinnlos" abgeschwächt: 7, 12/s auto,
-  25er, 2 s Nachladen, Reichweite 50 m, Tempo 103 %, Streuung 0,012/Hitze bis 0,07,
+  25er, 2 s Nachladen, Reichweite 50 m, Tempo 103 %, Streuung 0,018/Hitze bis 0,1 (vorher 0,012/0,07, Nutzerwunsch mehr Bloom),
   Schadensabfall 8..30 m auf 45 %; nah langsamer als die Pistole (TTK 1,42 s gegen 1,20 s),
   dafür automatisch und mobil; `npm run test:balance` hält die Verhältnisse fest). Zielgeschwindigkeit je Waffe `aimSpeed` (1/s): Sniper 3
   (~0,33 s bis zum Linsenbild), Schwere Pistole 7, Sturmgewehr/Shotgun 8, Pistole/Messer 9,

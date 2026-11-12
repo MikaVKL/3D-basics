@@ -147,7 +147,7 @@ try {
   const first = Math.max(...spread.slice(0, 3))
   const later = Math.max(...spread.slice(8))
   check('erste Schüsse der Salve genau', first < 0.001, `${first.toFixed(4)} rad`)
-  check('Dauerfeuer streut, begrenzt', later > 0.01 && Math.max(...spread) <= 0.0351, `bis ${Math.max(...spread).toFixed(4)} rad`)
+  check('Dauerfeuer streut, begrenzt', later > 0.01 && Math.max(...spread) <= 0.0601, `bis ${Math.max(...spread).toFixed(4)} rad`)
 
   // Lauftempo über Physik-Simulation
   const distance = (weaponId) =>

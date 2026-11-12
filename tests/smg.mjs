@@ -43,7 +43,7 @@ try {
   })
   check('Dauerfeuer: ~12 Schuss in 1 s', burst.shots >= 11 && burst.shots <= 13, String(burst.shots))
   const rifleMax = await page.evaluate(async () => (await import('/3D-basics/src/shared/weapons.ts')).WEAPONS.rifle.maxSpread)
-  check('Streuung nach 1 s Dauerfeuer: MP über dem Maximum des Sturmgewehrs (0,035), höchstens 0,07', burst.spread > rifleMax && burst.spread <= 0.0701, `MP ${burst.spread.toFixed(3)}`)
+  check('Streuung nach 1 s Dauerfeuer: MP über dem Maximum des Sturmgewehrs (0,06), höchstens 0,1', burst.spread > rifleMax && burst.spread <= 0.1001, `MP ${burst.spread.toFixed(3)}`)
 
   const speeds = await page.evaluate(() => {
     const P = __dusk.player
