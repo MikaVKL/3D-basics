@@ -43,7 +43,18 @@ try {
   }
   await wait(500)
   check('Runde vorbei, A lebt', await A.evaluate(() => __dusk.player.isAlive && !document.querySelector('#round-banner').classList.contains('hidden')))
-  await wait(4200)
+  // Rundenpause: der Server lehnt Würfe ab - der Client wirft dann gar nicht erst (sonst Abklingzeit weg, nur lokal sichtbar)
+  const pause = await A.evaluate(() => {
+    const cd = __dusk.gadgets.cooldowns.tactic
+    const saved = { ...cd }
+    cd.remaining = 0
+    __dusk.throwGadget()
+    const result = { remaining: cd.remaining, notice: document.querySelector('#notice-banner').textContent }
+    Object.assign(cd, saved)
+    return result
+  })
+  check('Rundenpause: kein Wurf, keine Abklingzeit, Hinweis', pause.remaining === 0 && /Runde/.test(pause.notice), JSON.stringify(pause))
+  await wait(3700)
 
   const after = await A.evaluate(() => ({
     slots: __dusk.weapon.slots.join(),

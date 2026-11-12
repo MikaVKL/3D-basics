@@ -186,6 +186,11 @@ function toggleSwing() {
 
 function throwGadget(slot: GadgetSlot) {
   if (!isActive || !player.isAlive) return
+  // Rundenpause: der Server lehnt Würfe ab, sie wären nur lokal zu sehen und kosteten die Abklingzeit
+  if (nextRoundAt !== null) {
+    showNotice('Runde vorbei – Gadgets gehen gleich wieder')
+    return
+  }
   if (gadgets.selected[slot] === 'swing') {
     toggleSwing()
     return
