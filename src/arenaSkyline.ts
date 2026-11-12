@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { createCrateTexture, createPanelTexture, worldBox, CRATE_TILE, PANEL_TILE } from './surfaceTextures'
+import { createConcreteTexture, createCorrugatedTexture, createFloorTexture, createMetalTexture, createWoodTexture, floorOverlay, worldBox, CRATE_TILE, PANEL_TILE } from './surfaceTextures'
 import { addEdgeOutline, bakeStaticParts, createWedgeGeometry, type ArenaResult, type Ramp, type Solid } from './arena'
 
 // Karte "Skyline" (Testgerüst, nur über ?map=skyline und nur offline): drei Hochhäuser ohne Boden dazwischen
@@ -28,6 +28,9 @@ export const SKYLINE_LOOK = {
   sun: 0xfff1d6,
   wall: 0xc4cbd3, // heller Beton
   crate: 0xdcae6c, // helles Holz
+  floor: 0xb9c0c7, // Bodenfliesen, etwas dunkler als die Wand
+  metal: 0xaebdcc, // Stahl: Reling, Masten, Kran
+  container: 0xc4573a, // rostrotes Wellblech
   edge: 0x6f8197, // Kanten dezent statt Neon
 }
 
@@ -46,15 +49,19 @@ export function buildSkylineArena(): ArenaResult {
   const ramps: Ramp[] = []
   const shootableExtras: THREE.Object3D[] = []
 
-  const wallMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.wall, map: createPanelTexture(), roughness: 0.9, metalness: 0.0 })
-  const crateMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.crate, map: createCrateTexture(), roughness: 0.8, metalness: 0.0 })
+  const wallMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.wall, map: createConcreteTexture(), roughness: 0.95, metalness: 0.0 })
+  const crateMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.crate, map: createWoodTexture(), roughness: 0.8, metalness: 0.0 })
+  const floorMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.floor, map: createFloorTexture(), roughness: 0.85, metalness: 0.0 })
+  const metalMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.metal, map: createMetalTexture(), roughness: 0.6, metalness: 0.0 })
+  const containerMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.container, map: createCorrugatedTexture(), roughness: 0.7, metalness: 0.0 })
 
   // Quader von-bis; sym = zusätzlich um 180° um die Mitte gespiegelt (Haus B bzw. zweite Hälfte der Mitte)
-  function box(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, options: { sym?: boolean; cover?: boolean } = {}) {
-    const { sym = true, cover = false } = options
+  function box(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, options: { sym?: boolean; cover?: boolean; look?: 'metal' | 'container' } = {}) {
+    const { sym = true, cover = false, look } = options
     const place = (ax0: number, ax1: number, az0: number, az1: number) => {
-      const material = cover ? crateMaterial : wallMaterial
-      const mesh = new THREE.Mesh(worldBox(ax1 - ax0, y1 - y0, az1 - az0, cover ? CRATE_TILE : PANEL_TILE), material)
+      const material = cover ? crateMaterial : look === 'metal' ? metalMaterial : look === 'container' ? containerMaterial : wallMaterial
+      const tile = cover ? CRATE_TILE : look === 'metal' ? 2 : look === 'container' ? 2.4 : PANEL_TILE
+      const mesh = new THREE.Mesh(worldBox(ax1 - ax0, y1 - y0, az1 - az0, tile), material)
       mesh.position.set((ax0 + ax1) / 2, (y0 + y1) / 2, (az0 + az1) / 2)
       addEdgeOutline(mesh, SKYLINE_LOOK.edge)
       group.add(mesh)
@@ -64,6 +71,17 @@ export function buildSkylineArena(): ArenaResult {
     if (sym) place(-x1, -x0, -z1, -z0)
   }
 
+
+  // Boden-Auflage mit Fliesenmuster: reine Optik 3 cm über der Oberkante (nicht in solids/shootables)
+  function floor(x0: number, x1: number, y: number, z0: number, z1: number, sym = true) {
+    const place = (ax0: number, ax1: number, az0: number, az1: number) => {
+      const mesh = new THREE.Mesh(floorOverlay(ax1 - ax0, az1 - az0), floorMaterial)
+      mesh.position.set((ax0 + ax1) / 2, y + 0.03, (az0 + az1) / 2)
+      group.add(mesh)
+    }
+    place(x0, x1, z0, z1)
+    if (sym) place(-x1, -x0, -z1, -z0)
+  }
 
   // Wand mit Fenstern: durchgehende Teile zwischen den Fenstern, unter jedem Fenster die Brüstung (1 m), darüber der Sturz.
   // run = Achse, entlang der die Wand läuft; windows = [von, bis] in dieser Achse (Fensterhöhe 1 bis 2,2 m über dem Boden y0).
@@ -141,15 +159,23 @@ export function buildSkylineArena(): ArenaResult {
   // der Mitte wieder hinein. Gespiegelt: Südseite C -> B (auf der Rampenseite der Halle ist die Wand frei).
   box(-18.2, -1.5, FLOOR - 1, FLOOR, -11.5, -9) // Boden, 2,5 m breit
   box(-6, -1.5, FLOOR - 1, FLOOR, -9, -8) // Stück vor der Tür der Mitte
-  box(-18.2, -1.5, FLOOR, FLOOR + 1.1, -11.7, -11.5) // Reling Außenkante (1,1 m, man kann drüberspringen)
-  box(-14, -6, FLOOR, FLOOR + 1.1, -9.2, -9) // Reling zur Lücke hin
-  box(-18.4, -18.2, FLOOR, FLOOR + 1.1, -11.7, -9) // Reling Westende
+  box(-18.2, -1.5, FLOOR, FLOOR + 1.1, -11.7, -11.5, { look: 'metal' }) // Reling Außenkante (1,1 m, man kann drüberspringen)
+  box(-14, -6, FLOOR, FLOOR + 1.1, -9.2, -9, { look: 'metal' }) // Reling zur Lücke hin
+  box(-18.4, -18.2, FLOOR, FLOOR + 1.1, -11.7, -9, { look: 'metal' }) // Reling Westende
   // Pflanzkübel (Kisten 1,1 m) auf der Terrasse, versetzt an Außen- und Innenseite, 1,4 m Gasse
   box(-14.6, -13.2, FLOOR, FLOOR + 1.1, -11.5, -10.4, { cover: true })
   box(-9.5, -8.1, FLOOR, FLOOR + 1.1, -10.1, -9, { cover: true })
   box(-5, -3.6, FLOOR, FLOOR + 1.1, -11.5, -10.4, { cover: true })
-  box(-6.2, -6, FLOOR, FLOOR + 1.1, -9, -8)
-  box(-1.7, -1.5, FLOOR, FLOOR + 1.1, -11.7, -8) // Reling Ostende
+  box(-6.2, -6, FLOOR, FLOOR + 1.1, -9, -8, { look: 'metal' })
+  box(-1.7, -1.5, FLOOR, FLOOR + 1.1, -11.7, -8, { look: 'metal' }) // Reling Ostende
+  floor(-29.2, -14.8, FLOOR, -8.2, 8.2) // Hallenboden
+  floor(-14, -6, FLOOR, -1.5, 1.5) // Skybridge
+  floor(-18.2, -1.5, FLOOR, -11.5, -9) // Terrasse
+  floor(-6, -1.5, FLOOR, -9, -8)
+  floor(-30, -21.2, ROOF, -9, 9) // Dach A/B
+  floor(-21.2, -15.7, ROOF, -9, 4.1)
+  floor(-21.2, -15.7, ROOF, 8.2, 9)
+  floor(-15.7, -14, ROOF, -9, 9)
   // Säulen und Deckung in der Halle
   for (const [x, z] of [[-23, -4], [-23, 4], [-19, -4], [-19, 4]]) box(x - 0.6, x + 0.6, FLOOR, HALL_TOP, z - 0.6, z + 0.6)
   box(-22.5, -19.5, FLOOR, FLOOR + 1.2, -0.3, 0.9, { cover: true })
@@ -166,12 +192,12 @@ export function buildSkylineArena(): ArenaResult {
   box(-22.5, -22.1, ROOF, ROOF + 2.4, -2, 3) // Wand: bricht die Längsachse des Dachs
 
   // --- Kran mit hängendem Container (Zwischenplattform) und Mast ---
-  box(-15.6, -14.8, ROOF, 24.4, 3.8, 4.6) // Kranturm auf dem Dachrand
-  box(-15.6, -8.4, 24, 24.4, 4, 4.4) // Ausleger
-  box(-9.3, -9.1, 16, 24, 4.1, 4.3) // Seil
-  box(-13, -7, 13.6, 16, 2.8, 5.5) // Container (Oberseite 16 m)
-  box(-16.3, -15.7, ROOF, ROOF + 8, -8.1, -7.5) // Funkmasten
-  box(-28.3, -27.7, ROOF, ROOF + 8, -8.1, -7.5)
+  box(-15.6, -14.8, ROOF, 24.4, 3.8, 4.6, { look: 'metal' }) // Kranturm auf dem Dachrand
+  box(-15.6, -8.4, 24, 24.4, 4, 4.4, { look: 'metal' }) // Ausleger
+  box(-9.3, -9.1, 16, 24, 4.1, 4.3, { look: 'metal' }) // Seil
+  box(-13, -7, 13.6, 16, 2.8, 5.5, { look: 'container' }) // Container (Oberseite 16 m)
+  box(-16.3, -15.7, ROOF, ROOF + 8, -8.1, -7.5, { look: 'metal' }) // Funkmasten
+  box(-28.3, -27.7, ROOF, ROOF + 8, -8.1, -7.5, { look: 'metal' })
 
   // --- Mitte (Dach C, Halle, Atrium) ---
   box(-6, 6, BELOW, FLOOR, -8, 8, { sym: false })
@@ -187,11 +213,14 @@ export function buildSkylineArena(): ArenaResult {
   box(-6, 6, ROOF_C - 0.3, ROOF_C, -8, -3) // Dachplatte mit Atrium-Loch 6 x 6 m
   box(-6, -3, ROOF_C - 0.3, ROOF_C, -3, 3)
   for (const [x, z] of [[-3.9, -5.6], [3.9, -5.6]]) box(x - 0.6, x + 0.6, FLOOR, ROOF_C - 0.3, z - 0.6, z + 0.6, { sym: false })
+  floor(-6, 6, FLOOR, -7.2, 7.2, false) // Hallenboden der Mitte
+  floor(-6, 6, ROOF_C, -8, -3) // Dach C (Atrium-Loch bleibt frei)
+  floor(-6, -3, ROOF_C, -3, 3)
   // Dach C: Deckung, Mast
   box(-5.1, -2.5, ROOF_C, ROOF_C + 1.4, -6.3, -4.9, { cover: true })
   box(-4.8, -3.2, ROOF_C, ROOF_C + 1.4, 4, 5.6, { cover: true })
   box(-1.2, 1.2, ROOF_C, ROOF_C + 2.4, -6.9, -4.5) // Wasserturm (Block)
-  box(-5.3, -4.7, ROOF_C, ROOF_C + 8, -7.3, -6.7)
+  box(-5.3, -4.7, ROOF_C, ROOF_C + 8, -7.3, -6.7, { look: 'metal' })
   // Stege A -> C (Rampe 18 -> 20 m), gespiegelt C -> B
   ramp(-14, -6, -6.25, -3.75, 'x', true, ROOF, ROOF_C)
   // Werbetafeln (Haken-Anker), schweben vor den Dächern

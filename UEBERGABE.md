@@ -18,6 +18,12 @@ was gerade läuft und was als Nächstes dran ist. Nach dem Abarbeiten bitte die 
 - **Skyline-Fenster gebaut** (14 + 12 Scheibenöffnungen, Öffnung 1,2 m hoch, damit man nicht hindurchkriecht), Sichtlinien nahezu unverändert (>30 m: 7,7 %). Fable hat Netzcode-Fehler behoben (Server-Absturz, AFK, Rundenstart, Schadenszahlen).
 - Parallele Chats: jeder auf eigenem Branch pushen und dann zusammenführen (Hot-Spots: `CLAUDE.md`, `UEBERGABE.md`, `package.json`, `main.ts`, `server/index.ts`); jeder Push auf `claude/modest-keller-5dphta` startet den Render-Server neu.
 
+## Zuletzt (Skyline-Politur, Branch `claude/multiplayer-fps-networking-s0y8bp`, auch auf `claude/modest-keller-5dphta` gepusht = live)
+
+- Deploy kommt nur von `main` und `claude/modest-keller-5dphta` (Pages-Umgebung lässt andere Branches nicht zu, Versuch scheiterte): nach jedem Schritt auch dorthin pushen (Nutzer hat das erlaubt).
+- Gebaut: Spawns/Deckung Halle, Mitte, Skybridge, Terrassen-Kübel, neue Texturen (siehe CLAUDE.md, Skyline). Offen: Nutzer soll Skyline ansehen (https://mikavkl.github.io/3D-basics/?map=skyline) und Proportionen/Texturen bewerten; Sichtlinien nach Politur: > 30 m 7,9 %.
+- Danach laut Nutzer: Karte online bringen (Schritt 2 unten).
+
 ## Testkarte Skyline (`?map=skyline`, nur offline, `src/arenaSkyline.ts`)
 
 - Adresse: https://mikavkl.github.io/3D-basics/?map=skyline . **H = Flugmodus** (Leertaste hoch, Ducken runter, Shift schneller), Absturz unter -20 m = neu am Spawn.
