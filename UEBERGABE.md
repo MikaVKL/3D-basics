@@ -29,19 +29,21 @@ was gerade läuft und was als Nächstes dran ist. Nach dem Abarbeiten bitte die 
   Details in `CLAUDE.md`. Der Server lehnt ihn ab, `PROTOTYPE_GADGETS`. Noch offen: Gefühl (Seillänge, Tempo, Einholen), Seil durch Wände, Seil für andere Spieler,
   Online-Anbindung. Wartet auf Rückmeldung nach dem Ausprobieren.
 
-## Fehlersuche Netzcode/Server (2026-11-12, läuft)
+## Fehlersuche Netzcode/Server/Client (2026-11-12)
 
-- Gelesen: `server/index.ts`, `network.ts`, `remotePlayers.ts`, `shared/protocol|gameRules|movementRules`, Netz-Handler in `main.ts`.
-  Noch NICHT gründlich gelesen: `weapon.ts`, `player.ts`, `gadgets.ts` (Client-Seite von Treffern, Bewegung, Gadgets).
-- Behoben (je mit Test): Server-Absturz bei ungültigem WebSocket-Frame (`tests/payload.mjs`), Waffenwahl/Magazin/Gadgets nach Respawn ohne Tod
-  (`tests/respawn-alive.mjs`), AFK-Rauswurf bei langsamem Umschauen (`tests/afk.mjs`).
-- Gefunden, NICHT geändert (Vorschlag an Nutzer, wartet auf Antwort):
-  1. Rundenpause: Gadget-Wurf lehnt der Server ab, der Client wirft trotzdem lokal (Abklingzeit weg, andere sehen nichts; ein Sprungpad
-     existiert dann nur beim Werfer). Vorschlag: im Client während der Pause nicht werfen. Ebenso zeigt der Client in der Pause Treffermarker,
-     obwohl der Server nichts abzieht.
-  2. Treffer-Ratenlimit (Vorrat 3): Shotgun, die mehrmals hintereinander zwei Gegner je Schuss trifft, verliert den 6. Treffer (je Gegner
-     eine `hit`-Nachricht). Selten; Lösung wäre ein Token je Schuss statt je Ziel.
-  3. Kein Limit für Nachrichten je Sekunde (z. B. `setName`-Flut löst je Nachricht eine Spielerliste an alle aus). Nur bei Böswilligen relevant.
+- Gelesen: `server/index.ts`, `network.ts`, `remotePlayers.ts`, `shared/protocol|gameRules|movementRules`, Netz-Handler in `main.ts`,
+  `weapon.ts`, Eingabe (`input/`). Nur überflogen: `player.ts` (Bewegung, hat eigene Fuzz-Tests), `gadgets.ts`.
+- Behoben (je mit Test, in `npm test`): Server-Absturz bei ungültigem WebSocket-Frame (`payload.mjs`), Waffenwahl/Magazin/Gadgets nach
+  Respawn ohne Tod und Gadget-Sperre in der Rundenpause (`respawn-alive.mjs`), AFK-Rauswurf bei langsamem Umschauen (`afk.mjs`),
+  Schadenszahlen ohne Entfernungsabfall/ungerundet (`damage-numbers.mjs`). Bot-Dauertest danach (4 Bots, 90 s): keine Probleme.
+- Gefunden, NICHT geändert (klein, dem Nutzer genannt):
+  1. Treffer-Ratenlimit (Vorrat 3): Shotgun, die mehrmals hintereinander zwei Gegner je Schuss trifft, verliert etwa den 6. Treffer
+     (je Gegner eine `hit`-Nachricht; nur am Code hergeleitet). Lösung wäre ein Token je Schuss statt je Ziel.
+  2. Kein Limit für Nachrichten je Sekunde (z. B. `setName`-Flut löst je Nachricht eine Spielerliste an alle aus). Nur bei Böswilligen.
+  3. Rundenpause: der Client zeigt Treffermarker/Schadenszahlen, obwohl der Server nichts abzieht.
+  4. Wer später beitritt, sieht schon liegende Sprungpads/Rauchwolken nicht (kein Zustand im Server). Nach einem Hintergrund-Tab laufen
+     Pads/Rauch lokal länger als bei den anderen (Zeit je Bild auf 0,1 s gedeckelt).
+  5. `tests/shotgun.mjs` "Schuss: 8 Strahlen" wackelt gelegentlich (Bildrate), kein Spielfehler.
 
 ## Nächste Schritte (mit Nutzer abgestimmt bzw. vorgeschlagen)
 
