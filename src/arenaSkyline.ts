@@ -17,22 +17,66 @@ const BELOW = -60 // Gebäudekörper reichen bis tief in den Nebel
 
 export const SKYLINE_FALL_Y = -20 // darunter: Absturz
 
-// Tageslicht statt Lasertag-Dämmerung (Nutzerwunsch): Sonne, blauer Himmel, heller Dunst, helle Oberflächen
-export const SKYLINE_LOOK = {
-  background: 0xbcd8f2,
-  sky: { horizon: 0xe3f0fb, middle: 0xa4cdf2, top: 0x5b97dc },
-  fog: 0xd2e5f6,
-  ambient: 0xffffff,
-  skyLight: 0xd3e8ff,
-  groundLight: 0xf0e6d4,
-  sun: 0xfff1d6,
-  wall: 0xc4cbd3, // heller Beton
-  crate: 0xdcae6c, // helles Holz
-  floor: 0xb9c0c7, // Bodenfliesen, etwas dunkler als die Wand
-  metal: 0xaebdcc, // Stahl: Reling, Masten, Kran
-  container: 0xc4573a, // rostrotes Wellblech
-  edge: 0x6f8197, // Kanten dezent statt Neon
+// Tageslicht statt Lasertag-Dämmerung (Nutzerwunsch): Sonne, blauer Himmel, heller Dunst, helle Oberflächen.
+// Mehrere Vorlagen zum Vergleichen (Nutzer: "sieht nach Baustelle aus"), Wahl über ?look=<name>, Standard "beton".
+interface SkylineLook {
+  clean: boolean // true = lackierte Paneele ohne Schrauben/Schlieren
+  background: number
+  sky: { horizon: number; middle: number; top: number }
+  fog: number
+  ambient: number
+  skyLight: number
+  groundLight: number
+  sun: number
+  wall: number
+  floor: number
+  crate: number
+  metal: number
+  container: number
+  edge: number
 }
+
+const DAY = { ambient: 0xffffff, skyLight: 0xd3e8ff, groundLight: 0xf0e6d4, sun: 0xfff1d6 }
+const BLUE_SKY = { background: 0xbcd8f2, sky: { horizon: 0xe3f0fb, middle: 0xa4cdf2, top: 0x5b97dc }, fog: 0xd2e5f6 }
+
+export const SKYLINE_LOOKS: Record<string, SkylineLook> = {
+  // bisher: grauer Beton, helles Holz, rostrote Container
+  beton: { clean: false, ...BLUE_SKY, ...DAY, wall: 0xc4cbd3, floor: 0xb9c0c7, crate: 0xdcae6c, metal: 0xaebdcc, container: 0xc4573a, edge: 0x6f8197 },
+  // A: weißes Hightech-Gebäude, türkise Kanten und Kisten, helle Böden
+  weiss: { clean: true, ...BLUE_SKY, ...DAY, wall: 0xf2f5f8, floor: 0xcfd9e2, crate: 0x2fb5b0, metal: 0x9db2c6, container: 0x1f8f9c, edge: 0x2aa6b0 },
+  // B: warmer Sandstein, Terrakotta-Böden, dunkles Holz, blaue Akzente (Mittelmeer-Sonne)
+  sand: {
+    clean: true,
+    background: 0xc9dff0, sky: { horizon: 0xf6ead6, middle: 0xb4d4ee, top: 0x6aa3e0 }, fog: 0xeadfcb,
+    ambient: 0xfff6e8, skyLight: 0xe3efff, groundLight: 0xf4d9b4, sun: 0xffe2b0,
+    wall: 0xecd9b9, floor: 0xcf8559, crate: 0x8a5a36, metal: 0x4f6f94, container: 0x2f6aa8, edge: 0xa9825a,
+  },
+  // C: Hafen - dunkler Stahl-Anthrazit, helle Böden, gelbe Warnkisten, orange Container
+  hafen: {
+    clean: true,
+    background: 0xb7d2ea, sky: { horizon: 0xdbe9f5, middle: 0x9ac4ec, top: 0x4f8ed6 }, fog: 0xc8dced,
+    ...DAY,
+    wall: 0x6c7a8a, floor: 0xd2d6da, crate: 0xf0b92b, metal: 0x3d4652, container: 0xe0672c, edge: 0x2f3a46,
+  },
+  // D: Pastell-Lowpoly - Mint-Wände, Korallen-Böden, kräftige Kisten (heiter, kein Industrie-Eindruck)
+  pastell: {
+    clean: true,
+    background: 0xc7e3f5, sky: { horizon: 0xeaf6fb, middle: 0xb0dbf4, top: 0x6fb0e8 }, fog: 0xdcedf5,
+    ...DAY,
+    wall: 0xbfe6d6, floor: 0xf2c7b4, crate: 0xff8f6b, metal: 0x7aa3c8, container: 0x7b6fd0, edge: 0x5fa38c,
+  },
+}
+
+function chooseLook(): SkylineLook {
+  try {
+    const name = new URLSearchParams(window.location.search).get('look') ?? 'beton'
+    return SKYLINE_LOOKS[name] ?? SKYLINE_LOOKS.beton
+  } catch {
+    return SKYLINE_LOOKS.beton
+  }
+}
+
+export const SKYLINE_LOOK = chooseLook()
 
 // Augenhöhe 1,7 über dem Hallenboden; je zwei Spawns pro Seite in der eigenen Halle
 // weit auseinander (vorher 3-4 m Abstand): Westwand Nord/Süd, Mitte Nord, Ostseite vor der Skybridge-Tür
@@ -49,9 +93,9 @@ export function buildSkylineArena(): ArenaResult {
   const ramps: Ramp[] = []
   const shootableExtras: THREE.Object3D[] = []
 
-  const wallMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.wall, map: createConcreteTexture(), roughness: 0.95, metalness: 0.0 })
+  const wallMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.wall, map: createConcreteTexture(SKYLINE_LOOK.clean), roughness: 0.95, metalness: 0.0 })
   const crateMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.crate, map: createWoodTexture(), roughness: 0.8, metalness: 0.0 })
-  const floorMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.floor, map: createFloorTexture(), roughness: 0.85, metalness: 0.0 })
+  const floorMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.floor, map: createFloorTexture(SKYLINE_LOOK.clean), roughness: 0.85, metalness: 0.0 })
   const metalMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.metal, map: createMetalTexture(), roughness: 0.6, metalness: 0.0 })
   const containerMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.container, map: createCorrugatedTexture(), roughness: 0.7, metalness: 0.0 })
 

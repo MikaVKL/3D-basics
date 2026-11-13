@@ -96,11 +96,22 @@ function speckle(g: CanvasRenderingContext2D, random: () => number, count: numbe
 }
 
 // Beton: Körnung, Plattenfugen, Schrauben in den Ecken, schwache senkrechte Schlieren
-export function createConcreteTexture(): THREE.Texture {
+export function createConcreteTexture(clean = false): THREE.Texture {
   return canvasTexture((g) => {
     const random = seeded(11)
-    g.fillStyle = gray(236)
+    g.fillStyle = gray(clean ? 248 : 236)
     g.fillRect(0, 0, SKY_SIZE, SKY_SIZE)
+    if (clean) {
+      // lackierte Paneele: kaum Körnung, helle Fuge mit Schattenkante, keine Schrauben/Schlieren
+      speckle(g, random, 1200, 8, 246)
+      g.strokeStyle = gray(212)
+      g.lineWidth = 6
+      g.strokeRect(3, 3, SKY_SIZE - 6, SKY_SIZE - 6)
+      g.strokeStyle = gray(236)
+      g.lineWidth = 2
+      g.strokeRect(8, 8, SKY_SIZE - 16, SKY_SIZE - 16)
+      return
+    }
     speckle(g, random, 5000, 34, 232)
     for (let i = 0; i < 14; i++) {
       g.fillStyle = `rgba(90, 100, 110, ${0.03 + random() * 0.05})`
@@ -119,10 +130,24 @@ export function createConcreteTexture(): THREE.Texture {
 }
 
 // Boden: vier Fliesen je Feld mit leicht verschiedenem Ton, Fugen, Abrieb
-export function createFloorTexture(): THREE.Texture {
+export function createFloorTexture(clean = false): THREE.Texture {
   return canvasTexture((g) => {
     const random = seeded(23)
     const half = SKY_SIZE / 2
+    if (clean) {
+      // große, ruhige Fliesen: zwei Töne im Schachbrett, feine helle Fuge
+      for (let ty = 0; ty < 2; ty++) {
+        for (let tx = 0; tx < 2; tx++) {
+          g.fillStyle = gray((tx + ty) % 2 === 0 ? 250 : 232)
+          g.fillRect(tx * half, ty * half, half, half)
+        }
+      }
+      speckle(g, random, 900, 6, 240)
+      g.strokeStyle = gray(205)
+      g.lineWidth = 2
+      g.strokeRect(1, 1, SKY_SIZE - 2, SKY_SIZE - 2)
+      return
+    }
     for (let ty = 0; ty < 2; ty++) {
       for (let tx = 0; tx < 2; tx++) {
         g.fillStyle = gray(Math.round(212 + random() * 30))
