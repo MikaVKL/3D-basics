@@ -18,7 +18,7 @@ const BELOW = -60 // Gebäudekörper reichen bis tief in den Nebel
 export const SKYLINE_FALL_Y = -20 // darunter: Absturz
 
 // Tageslicht statt Lasertag-Dämmerung (Nutzerwunsch): Sonne, blauer Himmel, heller Dunst, helle Oberflächen.
-// Mehrere Vorlagen zum Vergleichen (Nutzer: "sieht nach Baustelle aus"), Wahl über ?look=<name>, Standard "beton".
+// Mehrere Vorlagen zum Vergleichen (Nutzer: "sieht nach Baustelle aus"), Wahl über ?look=<name>, Standard "hafen" (Nutzerwahl).
 interface SkylineLook {
   clean: boolean // true = lackierte Paneele ohne Schrauben/Schlieren
   background: number
@@ -69,7 +69,7 @@ export const SKYLINE_LOOKS: Record<string, SkylineLook> = {
 
 function chooseLook(): SkylineLook {
   try {
-    const name = new URLSearchParams(window.location.search).get('look') ?? 'beton'
+    const name = new URLSearchParams(window.location.search).get('look') ?? 'hafen'
     return SKYLINE_LOOKS[name] ?? SKYLINE_LOOKS.beton
   } catch {
     return SKYLINE_LOOKS.beton
@@ -100,8 +100,8 @@ export function buildSkylineArena(): ArenaResult {
   const containerMaterial = new THREE.MeshStandardMaterial({ color: SKYLINE_LOOK.container, map: createCorrugatedTexture(), roughness: 0.7, metalness: 0.0 })
 
   // Quader von-bis; sym = zusätzlich um 180° um die Mitte gespiegelt (Haus B bzw. zweite Hälfte der Mitte)
-  function box(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, options: { sym?: boolean; cover?: boolean; look?: 'metal' | 'container' } = {}) {
-    const { sym = true, cover = false, look } = options
+  function box(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, options: { sym?: boolean; cover?: boolean; look?: 'metal' | 'container'; visual?: boolean } = {}) {
+    const { sym = true, cover = false, look, visual = false } = options
     const place = (ax0: number, ax1: number, az0: number, az1: number) => {
       const material = cover ? crateMaterial : look === 'metal' ? metalMaterial : look === 'container' ? containerMaterial : wallMaterial
       const tile = cover ? CRATE_TILE : look === 'metal' ? 2 : look === 'container' ? 2.4 : PANEL_TILE
@@ -109,12 +109,27 @@ export function buildSkylineArena(): ArenaResult {
       mesh.position.set((ax0 + ax1) / 2, (y0 + y1) / 2, (az0 + az1) / 2)
       addEdgeOutline(mesh, SKYLINE_LOOK.edge)
       group.add(mesh)
-      solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh), kind: cover ? 'cover' : undefined })
+      if (!visual) solids.push({ mesh, box: new THREE.Box3().setFromObject(mesh), kind: cover ? 'cover' : undefined })
     }
     place(x0, x1, z0, z1)
     if (sym) place(-x1, -x0, -z1, -z0)
   }
 
+
+  // Schräge Strebe von a nach b (Stahl, reine Optik ohne Kollision), gespiegelt um die Mitte wie box()
+  function strut(a: [number, number, number], b: [number, number, number], thickness = 0.3, sym = true) {
+    const place = (p: THREE.Vector3, q: THREE.Vector3) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, thickness, p.distanceTo(q)), metalMaterial)
+      mesh.position.copy(p).add(q).multiplyScalar(0.5)
+      mesh.lookAt(q)
+      addEdgeOutline(mesh, SKYLINE_LOOK.edge)
+      group.add(mesh)
+    }
+    const pa = new THREE.Vector3(...a)
+    const pb = new THREE.Vector3(...b)
+    place(pa, pb)
+    if (sym) place(new THREE.Vector3(-a[0], a[1], -a[2]), new THREE.Vector3(-b[0], b[1], -b[2]))
+  }
 
   // Boden-Auflage mit Fliesenmuster: reine Optik 3 cm über der Oberkante (nicht in solids/shootables)
   function floor(x0: number, x1: number, y: number, z0: number, z1: number, sym = true) {
@@ -269,6 +284,37 @@ export function buildSkylineArena(): ArenaResult {
   ramp(-14, -6, -6.25, -3.75, 'x', true, ROOF, ROOF_C)
   // Werbetafeln (Haken-Anker), schweben vor den Dächern
   box(-4, 4, 19, 23, -11.5, -10.5)
+
+  // --- Stützen und Auflager (reine Optik, keine Kollision): Nutzer "Verbindungen nicht verankert" ---
+  // Skybridge: zwei Träger unter dem Boden, V-Streben gegen die Hallenwände (x = -14 und -6)
+  for (const z of [-1.5, 1.5]) {
+    box(-14, -6, 10.3, 11, z - 0.2, z + 0.2, { look: 'metal', visual: true })
+    strut([-14, 8.6, z], [-10, 10.4, z])
+    strut([-6, 8.6, z], [-10, 10.4, z])
+  }
+  // Terrassen: Randträger, Konsolen an der Hallenwand (z = -9) bzw. Wand der Mitte (z = -8), Gitterträger über der Lücke
+  box(-18.2, -1.5, 10.3, 11, -11.5, -11.1, { look: 'metal', visual: true })
+  box(-14, -6, 9.6, 11, -11.3, -10.9, { look: 'metal', visual: true })
+  box(-14, -6, 9.6, 11, -9.6, -9.2, { look: 'metal', visual: true })
+  for (const x of [-17.2, -15.2]) strut([x, 8.6, -9], [x, 10.4, -11.3])
+  for (const x of [-4.6, -2.6]) strut([x, 8.6, -8], [x, 10.4, -11.3])
+  strut([-14, 8.6, -9.4], [-12, 10.3, -11.3])
+  strut([-6, 8.6, -8.4], [-8, 10.3, -11.3])
+  // Steg A -> C (18 -> 20 m): Träger unter dem Keil, V-Streben gegen die Wände von Halle A und der Mitte
+  for (const z of [-5.9, -4.1]) box(-14, -6, 17.2, 18, z - 0.2, z + 0.2, { look: 'metal', visual: true })
+  strut([-14, 14.9, -5], [-10, 17.2, -5])
+  strut([-6, 14.9, -5], [-10, 17.2, -5])
+  // Kran: Fußplatte, Knotenblech zwischen Turm und Ausleger, zweites Seil am Container
+  box(-16.3, -14.1, ROOF, ROOF + 0.3, 3.3, 5.1, { look: 'metal', visual: true })
+  strut([-15.2, 21.4, 4.2], [-11.8, 24, 4.2])
+  strut([-15.2, 21.4, 4.2], [-15.2, 24, 4.2], 0.2)
+  box(-12.1, -11.9, 16, 24, 4.1, 4.3, { look: 'metal', visual: true })
+  // Masten: Fußplatten
+  box(-16.8, -15.2, ROOF, ROOF + 0.3, -8.6, -7, { look: 'metal', visual: true })
+  box(-28.8, -27.2, ROOF, ROOF + 0.3, -8.6, -7, { look: 'metal', visual: true })
+  box(-5.8, -4.2, ROOF_C, ROOF_C + 0.3, -7.8, -6.2, { look: 'metal', visual: true })
+  // Werbetafel: zwei Ausleger zurück zum Dach der Mitte
+  for (const x of [-2.7, 2.3]) box(x, x + 0.4, 19.3, 19.7, -10.5, -8, { look: 'metal', visual: true })
 
   group.updateMatrixWorld(true)
   bakeStaticParts(group, new Set())
